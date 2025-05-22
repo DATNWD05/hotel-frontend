@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
-import IconifyIcon from 'components/base/IconifyIcon';
+import IconifyIcon from '../../../components/base/IconifyIcon';
 
 // Icon ngôn ngữngữ
 interface Language {

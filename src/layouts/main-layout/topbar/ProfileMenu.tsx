@@ -8,7 +8,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
 import ButtonBase from '@mui/material/ButtonBase';
 import ListItemIcon from '@mui/material/ListItemIcon';
-import IconifyIcon from 'components/base/IconifyIcon';
+import IconifyIcon from '../../../components/base/IconifyIcon';
 import ProfileImage from 'assets/images/profile.png';
 
 // Icon hình thằng người
