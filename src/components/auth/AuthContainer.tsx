@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Register from './Register';
 import Login from './Login';
 import '../../css/RegisterLogin.css';
 
 const AuthContainer = () => {
+  const location = useLocation();
   const [isSignUpActive, setIsSignUpActive] = useState(false);
+
+  // Khi URL thay đổi, set lại trạng thái isSignUpActive
+  useEffect(() => {
+    if (location.pathname.includes('/register')) {
+      setIsSignUpActive(true);
+    } else {
+      setIsSignUpActive(false);
+    }
+  }, [location]);
 
   return (
     <div className={`container ${isSignUpActive ? 'right-panel-active' : ''}`}>
