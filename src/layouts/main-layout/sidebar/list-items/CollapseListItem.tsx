@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MenuItem } from 'routes/sitemap';
+import { MenuItem } from '../../../../routes/sitemap';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import List from '@mui/material/List';
@@ -7,7 +7,7 @@ import Collapse from '@mui/material/Collapse';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
-import IconifyIcon from 'components/base/IconifyIcon';
+import IconifyIcon from '../../../../components/base/IconifyIcon';
 
 const CollapseListItem = ({ subheader, active, items, icon }: MenuItem) => {
   const [open, setOpen] = useState(false);
