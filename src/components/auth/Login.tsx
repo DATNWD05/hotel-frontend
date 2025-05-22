@@ -44,18 +44,43 @@ const Login = () => {
         <input
           type="email"
           placeholder="Email"
-          {...register("email", { required: "Email không được để trống" })}
+          {...register("email", {
+            required: "Email không được để trống",
+            pattern: {
+              value: /^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$/,
+              message: "Email không đúng định dạng",
+            },
+            validate: (value) =>
+              value.endsWith("@gmail.com") ||
+              "Email phải kết thúc bằng @gmail.com",
+          })}
         />
-        {errors.email && <span>{errors.email.message}</span>}
+        {errors.email && (
+          <span style={{ color: "red", fontWeight: "600" }}>
+            {errors.email.message}
+          </span>
+        )}
 
         <input
           type="password"
           placeholder="Password"
           {...register("password", {
             required: "Mật khẩu không được để trống",
+            minLength: {
+              value: 6,
+              message: "Mật khẩu phải có ít nhất 6 ký tự",
+            },
+            pattern: {
+              value: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/,
+              message: "Mật khẩu phải chứa ít nhất 1 chữ cái và 1 số",
+            },
           })}
         />
-        {errors.password && <span>{errors.password.message}</span>}
+        {errors.password && (
+          <span style={{ color: "red", fontWeight: "600" }}>
+            {errors.password.message}
+          </span>
+        )}
 
         <Link to="#">Forgot your password?</Link>
 

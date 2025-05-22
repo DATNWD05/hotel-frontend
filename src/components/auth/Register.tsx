@@ -18,7 +18,6 @@ const Register = () => {
     try {
       await api.post("/register", data);
       alert("Đăng ký thành công! Bạn có thể đăng nhập.");
-      // Không redirect vội → giữ nguyên UI cho người dùng nhấn Sign In
     } catch (error: unknown) {
       console.error("Register failed:", error);
       alert("Đăng ký thất bại. Vui lòng thử lại.");
@@ -33,23 +32,64 @@ const Register = () => {
         <input
           type="text"
           placeholder="Name"
-          {...register("name", { required: "Tên không được để trống" })}
+          {...register("name", {
+            required: "Tên không được để trống",
+            minLength: {
+              value: 2,
+              message: "Tên phải có ít nhất 2 ký tự",
+            },
+            pattern: {
+              value: /^[A-Za-zÀ-ỹ\s]+$/u,
+              message: "Tên chỉ được chứa chữ cái và khoảng trắng",
+            },
+          })}
         />
-        {errors.name && <span>{errors.name.message}</span>}
+        {errors.name && (
+          <span style={{ color: "red", fontWeight: "600" }}>
+            {errors.name.message}
+          </span>
+        )}
 
         <input
           type="email"
           placeholder="Email"
-          {...register("email", { required: "Email không được để trống" })}
+          {...register("email", {
+            required: "Email không được để trống",
+            pattern: {
+              value: /^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$/,
+              message: "Email không đúng định dạng",
+            },
+            validate: (value) =>
+              value.endsWith("@gmail.com") ||
+              "Email phải kết thúc bằng @gmail.com",
+          })}
         />
-        {errors.email && <span>{errors.email.message}</span>}
+        {errors.email && (
+          <span style={{ color: "red", fontWeight: "600" }}>
+            {errors.email.message}
+          </span>
+        )}
 
         <input
           type="password"
           placeholder="Password"
-          {...register("password", { required: "Mật khẩu không được để trống" })}
+          {...register("password", {
+            required: "Mật khẩu không được để trống",
+            minLength: {
+              value: 6,
+              message: "Mật khẩu phải có ít nhất 6 ký tự",
+            },
+            pattern: {
+              value: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{6,}$/,
+              message: "Mật khẩu phải chứa ít nhất 1 chữ cái và 1 số",
+            },
+          })}
         />
-        {errors.password && <span>{errors.password.message}</span>}
+        {errors.password && (
+          <span style={{ color: "red", fontWeight: "600" }}>
+            {errors.password.message}
+          </span>
+        )}
 
         <button type="submit">SIGN UP</button>
       </form>
