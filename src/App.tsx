@@ -4,6 +4,8 @@ import AuthContainer from './components/auth/AuthContainer';
 import Dashboard from './pages/Dashboard';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
+import User from './pages/User/User';
+import AddUser from './pages/User/AddUser';
 
 function App() {
   return (
@@ -11,6 +13,8 @@ function App() {
       {/* Main */}
       <Route path='/' element={<MainLayout />}>
         <Route index element={<Dashboard />} />
+      <Route path="user" element={<User/>} />
+      <Route path="user/add" element={<AddUser/>} />
       </Route>
 
       {/* Auth */}
