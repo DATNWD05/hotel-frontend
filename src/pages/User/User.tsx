@@ -12,7 +12,6 @@ import {
   CircularProgress,
   Typography,
   TextField,
-  Box,
   Select,
   MenuItem,
   FormControl,
@@ -51,7 +50,6 @@ const User: React.FC = () => {
   });
   const [addErrors, setAddErrors] = useState<ValidationErrors>({});
 
-  // Fetch employees from API
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -172,7 +170,6 @@ const User: React.FC = () => {
   const handleSaveEdit = async (id: number, updatedEmployee: Omit<Employee, 'id'>) => {
     const errors = validateForm(updatedEmployee);
     if (Object.keys(errors).length > 0) {
-      // Ở đây không cần setErrors vì EditUserForm tự xử lý lỗi
       return;
     }
 
@@ -251,7 +248,6 @@ const User: React.FC = () => {
     }
   };
 
-  // Hàm xử lý sự kiện cho TextField
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setNewEmployee((prev) => ({ ...prev, [name]: value }));
@@ -259,12 +255,17 @@ const User: React.FC = () => {
     setAddErrors(errors);
   };
 
-  // Hàm xử lý sự kiện cho Select
   const handleSelectChange = (event: SelectChangeEvent<string>) => {
     const value = event.target.value;
     setNewEmployee((prev) => ({ ...prev, role: value }));
     const errors = validateForm({ ...newEmployee, role: value });
     setAddErrors(errors);
+  };
+
+  const setEmployeeInEdit = (id: number, updatedEmployee: Employee) => {
+    setEmployees((prev) =>
+      prev.map((emp) => (emp.id === id ? { ...emp, ...updatedEmployee } : emp))
+    );
   };
 
   return (
@@ -312,15 +313,72 @@ const User: React.FC = () => {
               {employees.map((employee) => (
                 <TableRow key={employee.id}>
                   {editId === employee.id ? (
-                    <TableCell colSpan={4}>
-                      <EditUserForm
-                        employee={employee}
-                        onSave={(updatedEmployee) =>
-                          handleSaveEdit(employee.id, updatedEmployee)
-                        }
-                        onCancel={handleCancelEdit}
-                      />
-                    </TableCell>
+                    <>
+                      <TableCell>
+                        <TextField
+                          label="Họ Tên"
+                          name="name"
+                          value={employee.name}
+                          onChange={(e) =>
+                            setEmployeeInEdit(employee.id, { ...employee, name: e.target.value })
+                          }
+                          fullWidth
+                          variant="outlined"
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <TextField
+                          label="Địa Chỉ Email"
+                          name="email"
+                          value={employee.email}
+                          onChange={(e) =>
+                            setEmployeeInEdit(employee.id, { ...employee, email: e.target.value })
+                          }
+                          fullWidth
+                          variant="outlined"
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <FormControl fullWidth variant="outlined" size="small">
+                          <InputLabel>Vai Trò</InputLabel>
+                          <Select
+                            name="role"
+                            value={employee.role}
+                            onChange={(e) =>
+                              setEmployeeInEdit(employee.id, { ...employee, role: e.target.value })
+                            }
+                            label="Vai Trò"
+                          >
+                            <MenuItem value="Quản lí">Quản lí</MenuItem>
+                            <MenuItem value="Lễ tân">Lễ tân</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          className="action save"
+                          title="Lưu"
+                          onClick={() => handleSaveEdit(employee.id, {
+                            name: employee.name,
+                            email: employee.email,
+                            role: employee.role,
+                          })}
+                          disabled={loading}
+                        >
+                          <CheckIcon style={{ color: 'green' }} />
+                        </IconButton>
+                        <IconButton
+                          className="action delete"
+                          title="Hủy"
+                          onClick={handleCancelEdit}
+                          disabled={loading}
+                        >
+                          <DeleteIcon style={{ color: 'red' }} />
+                        </IconButton>
+                      </TableCell>
+                    </>
                   ) : (
                     <>
                       <TableCell>{employee.name}</TableCell>
@@ -416,128 +474,6 @@ const User: React.FC = () => {
         </TableContainer>
       )}
     </div>
-  );
-};
-
-// Component con cho form chỉnh sửa
-const EditUserForm: React.FC<{
-  employee: Employee;
-  onSave: (employee: Omit<Employee, 'id'>) => void;
-  onCancel: () => void;
-}> = ({ employee, onSave, onCancel }) => {
-  const [formData, setFormData] = useState<Omit<Employee, 'id'>>({
-    name: employee.name,
-    email: employee.email,
-    role: employee.role,
-  });
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<ValidationErrors>({});
-
-  const validateForm = (data: Omit<Employee, 'id'>): ValidationErrors => {
-    const errors: ValidationErrors = {};
-    if (!data.name.trim()) errors.name = 'Họ tên không được để trống';
-    else if (data.name.length > 50) errors.name = 'Họ tên không được vượt quá 50 ký tự';
-    if (!data.email.trim()) errors.email = 'Email không được để trống';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.email = 'Email không hợp lệ';
-    if (!data.role) errors.role = 'Vui lòng chọn vai trò';
-    return errors;
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    const newErrors = validateForm({ ...formData, [name]: value });
-    setErrors(newErrors);
-  };
-
-  const handleSelectChange = (event: SelectChangeEvent<string>) => {
-    const value = event.target.value;
-    setFormData((prev) => ({ ...prev, role: value }));
-    const newErrors = validateForm({ ...formData, role: value });
-    setErrors(newErrors);
-  };
-
-  const handleSubmit = () => {
-    const newErrors = validateForm(formData);
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    onSave(formData);
-  };
-
-  return (
-    <Box sx={{ padding: 2, background: '#fff', borderRadius: 2 }}>
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-      )}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-        <TextField
-          label="Họ Tên"
-          name="name"
-          value={formData.name}
-          onChange={handleInputChange}
-          variant="outlined"
-          size="small"
-          required
-          error={!!errors.name}
-          helperText={errors.name}
-        />
-        <TextField
-          label="Email"
-          name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleInputChange}
-          variant="outlined"
-          size="small"
-          required
-          error={!!errors.email}
-          helperText={errors.email}
-        />
-        <FormControl variant="outlined" size="small" sx={{ minWidth: 120 }} error={!!errors.role}>
-          <InputLabel>Vai Trò</InputLabel>
-          <Select
-            name="role"
-            value={formData.role}
-            onChange={handleSelectChange}
-            label="Vai Trò"
-          >
-            <MenuItem value="Quản lí">Quản lí</MenuItem>
-            <MenuItem value="Lễ tân">Lễ tân</MenuItem>
-          </Select>
-          {errors.role && (
-            <Typography color="error" variant="caption">
-              {errors.role}
-            </Typography>
-          )}
-        </FormControl>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <IconButton
-            className="action save"
-            title="Lưu"
-            onClick={handleSubmit}
-            disabled={loading}
-          >
-            <CheckIcon style={{ color: 'green' }} />
-          </IconButton>
-          <IconButton
-            className="action delete"
-            title="Hủy"
-            onClick={onCancel}
-            disabled={loading}
-          >
-            <DeleteIcon style={{ color: 'red' }} />
-          </IconButton>
-        </Box>
-      </Box>
-    </Box>
   );
 };
 
