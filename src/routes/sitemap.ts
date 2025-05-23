@@ -19,33 +19,92 @@ export interface MenuItem {
 
 const sitemap: MenuItem[] = [
   {
-    id: 'dashboard',
-    subheader: 'Dashboard',
+    id: 'oderRoom',
+    subheader: 'Đặt Phòng',
     path: '/',
-    icon: 'ri:dashboard-fill',
-    // active: true,
+    icon: 'material-symbols:hotel', // khách sạn
+    active: true,
   },
   {
-    id: 'activity',
-    subheader: 'Activity',
+    id: 'room',
+    subheader: 'Phòng',
+    icon: 'mdi:door', // cửa/phòng
+    active: true,
+    items: [
+      {
+        name: 'Loại Phòng',
+        pathName: 'roomtype',
+        path: '/room/type',
+      },
+      {
+        name: 'Tầng',
+        pathName: 'floor',
+        path: '/room/floor',
+      },
+      {
+        name: 'Cài Đặt Giá',
+        pathName: 'price',
+        path: '/room/price',
+      },
+    ],
+  },
+  {
+    id: 'user',
+    subheader: 'User',
+    path: '/user',
+    icon: 'material-symbols:person', // biểu tượng người
+  },
+  {
+    id: 'client',
+    subheader: 'Khách hàng',
+    path: '/client',
+    icon: 'material-symbols:group', // nhóm người
+  },
+  {
+    id: 'calenda',
+    subheader: 'Lịch',
+    path: '/calenda',
+    icon: 'material-symbols:calendar-month', // lịch
+  },
+  {
+    id: 'finance',
+    subheader: 'Tài chính',
+    path: '/',
+    icon: 'mdi:finance', // tài chính
+  },
+  {
+    id: 'service',
+    subheader: 'Dịch vụ',
     path: '#!',
-    icon: 'ic:baseline-show-chart',
+    icon: 'material-symbols:room-service-outline', // dịch vụ phòng
   },
   {
-    id: 'library',
-    subheader: 'Library',
-    path: '/auth',
-    icon: 'material-symbols:local-library-outline',
+    id: 'report',
+    subheader: 'Báo cáo',
+    path: '#!',
+    icon: 'material-symbols:analytics-outline', // biểu tượng báo cáo
+  },
+  {
+    id: 'account',
+    subheader: 'Tài khoản',
+    path: '#!',
+    icon: 'material-symbols:account-circle', // tài khoản cá nhân
+  },
+  {
+    id: 'settings',
+    subheader: 'Cài đặt',
+    path: '#!',
+    icon: 'material-symbols:settings', // bánh răng
   },
   {
     id: 'authentication',
-    subheader: 'Authentication',
-    icon: 'ic:round-security',
-    // active: true,
+    subheader: 'Xác thực người dùng',
+    icon: 'material-symbols:security', // bảo mật
+    active: true,
     items: [
       {
         name: 'Đăng nhập',
-        pathName: 'sigin',
+        pathName: 'signin',
         path: '/auth/login',
       },
       {
@@ -54,25 +113,7 @@ const sitemap: MenuItem[] = [
         path: '/auth/register',
       },
     ],
-  },
-  {
-    id: 'schedules',
-    subheader: 'Schedules',
-    path: '#!',
-    icon: 'ic:outline-calendar-today',
-  },
-  {
-    id: 'payouts',
-    subheader: 'Payouts',
-    path: '#!',
-    icon: 'material-symbols:account-balance-wallet-outline',
-  },
-  {
-    id: 'settings',
-    subheader: 'Settings',
-    path: '#!',
-    icon: 'ic:outline-settings',
-  },
+  }
 ];
 
 export default sitemap;
