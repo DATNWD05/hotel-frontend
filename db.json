@@ -1,16 +1,11 @@
 {
   "users": [
     {
-      "id": 0,
-      "name": "Thắng",
+      "id": "6ef0",
+      "name": "Mạnh Thắng",
       "email": "thangtmph49748@gmail.com",
-      "role": "Quản lí"
-    },
-    {
-      "name": "Đăng Dương ",
-      "email": "thang123@gmail.com",
-      "role": "Lễ tân",
-      "id": "9775"
+      "password": "123456",
+      "role": "Lễ tân"
     }
   ]
 }

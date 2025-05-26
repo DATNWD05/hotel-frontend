@@ -1,36 +1,51 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import '../../css/User.css'
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { SelectChangeEvent } from "@mui/material/Select";
+import "../../css/User.css";
 import {
   TextField,
   Button,
   Box,
   Typography,
   CircularProgress,
-} from '@mui/material';
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Paper,
+} from "@mui/material";
+import api from "../../api/axios";
 
-interface Employee {
-  id: number;
+interface UserForm {
   name: string;
   email: string;
+  password: string;
   role: string;
 }
 
 const AddUser: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<Employee>({
-    id: 0, // ID sẽ được API tự sinh hoặc bạn có thể tạo logic tăng dần
-    name: '',
-    email: '',
-    role: '',
+  const [formData, setFormData] = useState<UserForm>({
+    name: "",
+    email: "",
+    password: "",
+    role: "",
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | { name?: string; value: unknown }>
+  ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name) {
+      setFormData((prev) => ({ ...prev, [name]: value as string }));
+    }
+  };
+
+  const handleSelectChange = (e: SelectChangeEvent) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name!]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,84 +54,135 @@ const AddUser: React.FC = () => {
     setError(null);
 
     try {
-      // Gửi yêu cầu POST đến API
-      const response = await axios.post('http://localhost:3001/users', formData);
-
-      if (response.status === 201) {
-        // Thêm thành công, chuyển hướng về trang danh sách
-        navigate('/user');
+      const response = await api.post("/register", formData);
+      if (response.status === 201 || response.status === 200) {
+        navigate("/user");
       } else {
-        throw new Error('Failed to add new employee');
+        throw new Error("Failed to add new user");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'An error occurred while adding employee';
+        err instanceof Error
+          ? err.message
+          : "An error occurred while adding user";
       setError(errorMessage);
-      console.error('Error adding employee:', errorMessage);
+      console.error("Error adding user:", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Box className="add-user-wrapper">
-      <Typography variant="h4" gutterBottom>
-        Add New Employee
-      </Typography>
-      {error && (
-        <Typography color="error" className="error-message">
-          {error}
+    <Box
+      sx={{
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#f5f7ff",
+        padding: 2,
+      }}
+    >
+      <Paper
+        elevation={3}
+        sx={{
+          width: "100%",
+          maxWidth: 500,
+          padding: 4,
+          borderRadius: 4,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+        }}
+      >
+        <Typography variant="h5" fontWeight="bold" gutterBottom>
+          Thêm người dùng mới
         </Typography>
-      )}
-      <form onSubmit={handleSubmit}>
-        <TextField
-          label="Họ Tên"
-          name="name"
-          value={formData.name}
-          onChange={handleChange}
-          fullWidth
-          margin="normal"
-          required
-        />
-        <TextField
-          label="Địa Chỉ Email"
-          name="email"
-          type="email"
-          value={formData.email}
-          onChange={handleChange}
-          fullWidth
-          margin="normal"
-          required
-        />
-        <TextField
-          label="Vai Trò"
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          fullWidth
-          margin="normal"
-          required
-        />
-        <Box className="form-actions">
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={20} /> : null}
-          >
-            Save
-          </Button>
-          <Button
+
+        {error && (
+          <Typography color="error" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <TextField
+            label="Họ Tên"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            required
             variant="outlined"
-            color="secondary"
-            onClick={() => navigate('/user')}
-            disabled={loading}
+          />
+          <TextField
+            label="Email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            required
+            variant="outlined"
+          />
+          <TextField
+            label="Mật khẩu"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            required
+          />
+          <FormControl fullWidth required margin="normal">
+            <InputLabel>Vai Trò</InputLabel>
+            <Select
+              name="role"
+              value={formData.role}
+              onChange={handleSelectChange}
+              label="Vai Trò"
+            >
+              <MenuItem value="manager">Quản lí</MenuItem>
+              <MenuItem value="receptionist">Lễ tân</MenuItem>
+              <MenuItem value="accountant">Kế toán</MenuItem>
+              <MenuItem value="housekeeping">Nhân viên dọn phòng</MenuItem>
+            </Select>
+          </FormControl>
+
+          <Box
+            mt={3}
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "20px",
+            }}
           >
-            Cancel
-          </Button>
-        </Box>
-      </form>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => navigate("/user")}
+              disabled={loading}
+              sx={{
+                borderColor: "#9e9e9e", // ép border
+                color: "#333", // đảm bảo chữ không tàng hình
+              }}
+            >
+              Hủy
+            </Button>
+
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={loading}
+              startIcon={loading ? <CircularProgress size={20} /> : null}
+            >
+              Lưu
+            </Button>
+          </Box>
+        </form>
+      </Paper>
     </Box>
   );
 };

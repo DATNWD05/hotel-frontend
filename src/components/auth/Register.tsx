@@ -16,7 +16,7 @@ const Register = () => {
 
   const onSubmit = async (data: RegisterInputs) => {
     try {
-      await api.post("/register", data);
+      await api.post("/user", data);
       alert("Đăng ký thành công! Bạn có thể đăng nhập.");
     } catch (error: unknown) {
       console.error("Register failed:", error);
