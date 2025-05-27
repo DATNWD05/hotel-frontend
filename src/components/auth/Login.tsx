@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import api from "../../api/axios";
+// import api from "../../api/axios";
 import axios from "axios";
 
 type LoginInputs = {
@@ -13,9 +13,9 @@ const Login = () => {
 
   const {register,handleSubmit,formState: { errors }} = useForm<LoginInputs>();
 
-  const onSubmit = async (data: LoginInputs) => {
+  const onSubmit = async (data: LoginInputs) => { 
     try {
-      const response = await api.post("/login", data);
+      const response = await axios.post("http://localhost:3001/login", data);
 
       const { user, token } = response.data;
 

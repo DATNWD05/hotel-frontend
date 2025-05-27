@@ -1,11 +1,49 @@
 {
   "users": [
     {
-      "id": "6ef0",
-      "name": "Mạnh Thắng",
-      "email": "thangtmph49748@gmail.com",
+      "id": 1,
+      "name": "Nguyễn Văn A",
+      "email": "a@gmail.com",
       "password": "123456",
-      "role": "Lễ tân"
+      "role": "receptionist",
+      "status": "active"
+    },
+    {
+      "id": "2db4",
+      "name": "Manh Thang",
+      "email": "thangtmph49748@gmail.com",
+      "password": "$2b$10$yPmrdCoQVaGSfJIQlTN/ou.r044tti1lBysb5g/kPUvXJSnhPoIQK"
+    },
+    {
+      "name": "Thanh Thong",
+      "email": "admin@gmail.com",
+      "password": "$2b$10$yPmrdCoQVaGSfJIQlTN/ou.r044tti1lBysb5g/kPUvXJSnhPoIQK",
+      "id": 2,
+      "role": "manager"
+    }
+  ],
+  "usersss": [
+    {
+      "id": "LT001",
+      "name": "Thanh",
+      "email": "thang@gmail.com",
+      "phone": "0968653830",
+      "hire_date": "2025-05-27",
+      "department_id": "1",
+      "status": "active",
+      "password": "123456",
+      "role": "receptionist"
+    },
+    {
+      "id": "QL001",
+      "name": "Thanh thong",
+      "email": "thang@gmail.com",
+      "phone": "12345678",
+      "hire_date": "2025-05-27",
+      "department_id": "4",
+      "status": "active",
+      "password": "123456",
+      "role": "manager"
     }
   ]
 }

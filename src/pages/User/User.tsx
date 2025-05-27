@@ -280,6 +280,19 @@ const User: React.FC = () => {
     setAddErrors(errors);
   };
 
+  const getRoleLabel = (role: string): string => {
+    const roleMap: Record<string, string> = {
+      manager: "Quản lí",
+      receptionist: "Lễ tân",
+      accountant: "Kế toán",
+      housekeeping: "Nhân viên dọn phòng",
+    };
+
+    return roleMap[role] || role; // Nếu không khớp thì hiển thị nguyên văn
+  };
+
+  const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+
   return (
     <div className="table-wrapper">
       <div className="table-title">
@@ -342,7 +355,7 @@ const User: React.FC = () => {
                     <>
                       <TableCell>{employee.name}</TableCell>
                       <TableCell>{employee.email}</TableCell>
-                      <TableCell>{employee.role}</TableCell>
+                      <TableCell>{getRoleLabel(employee.role)}</TableCell>
                       <TableCell align="center">
                         {/* Xem thông tin nhân viên */}
                         <IconButton
@@ -365,13 +378,15 @@ const User: React.FC = () => {
                         </IconButton>
 
                         {/* Xóa */}
-                        <IconButton
-                          className="action delete"
-                          title="Xóa"
-                          onClick={() => handleDelete(employee.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
+                        {employee.id !== currentUser.id && (
+                          <IconButton
+                            className="action delete"
+                            title="Xóa"
+                            onClick={() => handleDelete(employee.id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        )}
                       </TableCell>
                     </>
                   )}
@@ -419,8 +434,12 @@ const User: React.FC = () => {
                         onChange={handleSelectChange}
                         label="Vai Trò"
                       >
-                        <MenuItem value="Quản lí">Quản lí</MenuItem>
-                        <MenuItem value="Lễ tân">Lễ tân</MenuItem>
+                        <MenuItem value="manager">Quản lí</MenuItem>
+                        <MenuItem value="receptionist">Lễ tân</MenuItem>
+                        <MenuItem value="accountant">Kế toán</MenuItem>
+                        <MenuItem value="housekeeping">
+                          Nhân viên dọn phòng
+                        </MenuItem>
                       </Select>
                       {addErrors.role && (
                         <Typography color="error" variant="caption">
