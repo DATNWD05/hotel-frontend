@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -16,13 +17,13 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-} from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
-import CheckIcon from '@mui/icons-material/Check';
-import axios from 'axios';
+} from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+import CheckIcon from "@mui/icons-material/Check";
+import axios from "axios";
 
 interface Employee {
   id: number;
@@ -43,10 +44,10 @@ const User: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [newEmployee, setNewEmployee] = useState<Omit<Employee, 'id'>>({
-    name: '',
-    email: '',
-    role: '',
+  const [newEmployee, setNewEmployee] = useState<Omit<Employee, "id">>({
+    name: "",
+    email: "",
+    role: "",
   });
   const [addErrors, setAddErrors] = useState<ValidationErrors>({});
 
@@ -56,7 +57,7 @@ const User: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const response = await axios.get('http://localhost:3001/users');
+        const response = await axios.get("http://localhost:3001/users");
 
         if (response.status === 200) {
           const data = response.data;
@@ -67,14 +68,16 @@ const User: React.FC = () => {
           } else if (data && Array.isArray(data.users)) {
             users = data.users;
           } else {
-            throw new Error('Định dạng dữ liệu không đúng: danh sách người dùng không phải là mảng');
+            throw new Error(
+              "Định dạng dữ liệu không đúng: danh sách người dùng không phải là mảng"
+            );
           }
 
           users = users.map((user) => ({
             id: user.id || 0,
-            name: user.name || 'Không xác định',
-            email: user.email || 'Không xác định',
-            role: user.role || 'Không xác định',
+            name: user.name || "Không xác định",
+            email: user.email || "Không xác định",
+            role: user.role || "Không xác định",
           }));
 
           setEmployees(users);
@@ -83,9 +86,9 @@ const User: React.FC = () => {
         }
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
+          err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu";
         setError(errorMessage);
-        console.error('Lỗi khi tải danh sách nhân viên:', errorMessage);
+        console.error("Lỗi khi tải danh sách nhân viên:", errorMessage);
       } finally {
         setLoading(false);
       }
@@ -94,13 +97,15 @@ const User: React.FC = () => {
     fetchEmployees();
   }, []);
 
-  const validateForm = (data: Omit<Employee, 'id'>): ValidationErrors => {
+  const validateForm = (data: Omit<Employee, "id">): ValidationErrors => {
     const errors: ValidationErrors = {};
-    if (!data.name.trim()) errors.name = 'Họ tên không được để trống';
-    else if (data.name.length > 50) errors.name = 'Họ tên không được vượt quá 50 ký tự';
-    if (!data.email.trim()) errors.email = 'Email không được để trống';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.email = 'Email không hợp lệ';
-    if (!data.role) errors.role = 'Vui lòng chọn vai trò';
+    if (!data.name.trim()) errors.name = "Họ tên không được để trống";
+    else if (data.name.length > 50)
+      errors.name = "Họ tên không được vượt quá 50 ký tự";
+    if (!data.email.trim()) errors.email = "Email không được để trống";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email))
+      errors.email = "Email không hợp lệ";
+    if (!data.role) errors.role = "Vui lòng chọn vai trò";
     return errors;
   };
 
@@ -111,7 +116,7 @@ const User: React.FC = () => {
 
   const handleCancelAdd = () => {
     setShowAddForm(false);
-    setNewEmployee({ name: '', email: '', role: '' });
+    setNewEmployee({ name: "", email: "", role: "" });
     setAddErrors({});
   };
 
@@ -124,9 +129,12 @@ const User: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/users', newEmployee);
+      const response = await axios.post(
+        "http://localhost:3001/users",
+        newEmployee
+      );
       if (response.status === 201) {
-        const updatedResponse = await axios.get('http://localhost:3001/users');
+        const updatedResponse = await axios.get("http://localhost:3001/users");
         if (updatedResponse.status === 200) {
           const data = updatedResponse.data;
           let users: Employee[] = [];
@@ -137,23 +145,23 @@ const User: React.FC = () => {
           }
           users = users.map((user) => ({
             id: user.id || 0,
-            name: user.name || 'Không xác định',
-            email: user.email || 'Không xác định',
-            role: user.role || 'Không xác định',
+            name: user.name || "Không xác định",
+            email: user.email || "Không xác định",
+            role: user.role || "Không xác định",
           }));
           setEmployees(users);
         }
         setShowAddForm(false);
-        setNewEmployee({ name: '', email: '', role: '' });
+        setNewEmployee({ name: "", email: "", role: "" });
         setAddErrors({});
       } else {
-        throw new Error('Không thể thêm nhân viên mới');
+        throw new Error("Không thể thêm nhân viên mới");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Đã xảy ra lỗi khi thêm nhân viên';
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi thêm nhân viên";
       setError(errorMessage);
-      console.error('Lỗi khi thêm nhân viên:', errorMessage);
+      console.error("Lỗi khi thêm nhân viên:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -167,7 +175,10 @@ const User: React.FC = () => {
     setEditId(null);
   };
 
-  const handleSaveEdit = async (id: number, updatedEmployee: Omit<Employee, 'id'>) => {
+  const handleSaveEdit = async (
+    id: number,
+    updatedEmployee: Omit<Employee, "id">
+  ) => {
     const errors = validateForm(updatedEmployee);
     if (Object.keys(errors).length > 0) {
       return;
@@ -181,7 +192,7 @@ const User: React.FC = () => {
       });
 
       if (response.status === 200) {
-        const updatedResponse = await axios.get('http://localhost:3001/users');
+        const updatedResponse = await axios.get("http://localhost:3001/users");
         if (updatedResponse.status === 200) {
           const data = updatedResponse.data;
           let users: Employee[] = [];
@@ -192,21 +203,23 @@ const User: React.FC = () => {
           }
           users = users.map((user) => ({
             id: user.id || 0,
-            name: user.name || 'Không xác định',
-            email: user.email || 'Không xác định',
-            role: user.role || 'Không xác định',
+            name: user.name || "Không xác định",
+            email: user.email || "Không xác định",
+            role: user.role || "Không xác định",
           }));
           setEmployees(users);
         }
         setEditId(null);
       } else {
-        throw new Error('Không thể cập nhật thông tin nhân viên');
+        throw new Error("Không thể cập nhật thông tin nhân viên");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật thông tin nhân viên';
+        err instanceof Error
+          ? err.message
+          : "Đã xảy ra lỗi khi cập nhật thông tin nhân viên";
       setError(errorMessage);
-      console.error('Lỗi khi cập nhật nhân viên:', errorMessage);
+      console.error("Lỗi khi cập nhật nhân viên:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -218,7 +231,7 @@ const User: React.FC = () => {
       const response = await axios.delete(`http://localhost:3001/users/${id}`);
 
       if (response.status === 200) {
-        const updatedResponse = await axios.get('http://localhost:3001/users');
+        const updatedResponse = await axios.get("http://localhost:3001/users");
         if (updatedResponse.status === 200) {
           const data = updatedResponse.data;
           let users: Employee[] = [];
@@ -229,20 +242,20 @@ const User: React.FC = () => {
           }
           users = users.map((user) => ({
             id: user.id || 0,
-            name: user.name || 'Không xác định',
-            email: user.email || 'Không xác định',
-            role: user.role || 'Không xác định',
+            name: user.name || "Không xác định",
+            email: user.email || "Không xác định",
+            role: user.role || "Không xác định",
           }));
           setEmployees(users);
         }
       } else {
-        throw new Error('Không thể xóa nhân viên');
+        throw new Error("Không thể xóa nhân viên");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Đã xảy ra lỗi khi xóa nhân viên';
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi xóa nhân viên";
       setError(errorMessage);
-      console.error('Lỗi khi xóa nhân viên:', errorMessage);
+      console.error("Lỗi khi xóa nhân viên:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -276,6 +289,8 @@ const User: React.FC = () => {
             Employee <b>Details</b>
           </h2>
           <Button
+            component={RouterLink}
+            to="add"
             variant="contained"
             className="btn-add-new"
             startIcon={<AddIcon />}
@@ -297,7 +312,9 @@ const User: React.FC = () => {
           {error}
         </Typography>
       ) : employees.length === 0 ? (
-        <Typography className="no-data">Không tìm thấy nhân viên nào.</Typography>
+        <Typography className="no-data">
+          Không tìm thấy nhân viên nào.
+        </Typography>
       ) : (
         <TableContainer component={Paper} className="table-container">
           <Table className="table">
@@ -320,7 +337,10 @@ const User: React.FC = () => {
                           name="name"
                           value={employee.name}
                           onChange={(e) =>
-                            setEmployeeInEdit(employee.id, { ...employee, name: e.target.value })
+                            setEmployeeInEdit(employee.id, {
+                              ...employee,
+                              name: e.target.value,
+                            })
                           }
                           fullWidth
                           variant="outlined"
@@ -333,7 +353,10 @@ const User: React.FC = () => {
                           name="email"
                           value={employee.email}
                           onChange={(e) =>
-                            setEmployeeInEdit(employee.id, { ...employee, email: e.target.value })
+                            setEmployeeInEdit(employee.id, {
+                              ...employee,
+                              email: e.target.value,
+                            })
                           }
                           fullWidth
                           variant="outlined"
@@ -347,7 +370,10 @@ const User: React.FC = () => {
                             name="role"
                             value={employee.role}
                             onChange={(e) =>
-                              setEmployeeInEdit(employee.id, { ...employee, role: e.target.value })
+                              setEmployeeInEdit(employee.id, {
+                                ...employee,
+                                role: e.target.value,
+                              })
                             }
                             label="Vai Trò"
                           >
@@ -360,14 +386,16 @@ const User: React.FC = () => {
                         <IconButton
                           className="action save"
                           title="Lưu"
-                          onClick={() => handleSaveEdit(employee.id, {
-                            name: employee.name,
-                            email: employee.email,
-                            role: employee.role,
-                          })}
+                          onClick={() =>
+                            handleSaveEdit(employee.id, {
+                              name: employee.name,
+                              email: employee.email,
+                              role: employee.role,
+                            })
+                          }
                           disabled={loading}
                         >
-                          <CheckIcon style={{ color: 'green' }} />
+                          <CheckIcon style={{ color: "green" }} />
                         </IconButton>
                         <IconButton
                           className="action delete"
@@ -375,7 +403,7 @@ const User: React.FC = () => {
                           onClick={handleCancelEdit}
                           disabled={loading}
                         >
-                          <DeleteIcon style={{ color: 'red' }} />
+                          <DeleteIcon style={{ color: "red" }} />
                         </IconButton>
                       </TableCell>
                     </>
@@ -433,7 +461,12 @@ const User: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>
-                    <FormControl fullWidth variant="outlined" size="small" error={!!addErrors.role}>
+                    <FormControl
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      error={!!addErrors.role}
+                    >
                       <InputLabel>Vai Trò</InputLabel>
                       <Select
                         name="role"
@@ -457,14 +490,14 @@ const User: React.FC = () => {
                       title="Lưu"
                       onClick={handleSaveNew}
                     >
-                      <CheckIcon style={{ color: 'green' }} />
+                      <CheckIcon style={{ color: "green" }} />
                     </IconButton>
                     <IconButton
                       className="action delete"
                       title="Hủy"
                       onClick={handleCancelAdd}
                     >
-                      <DeleteIcon style={{ color: 'red' }} />
+                      <DeleteIcon style={{ color: "red" }} />
                     </IconButton>
                   </TableCell>
                 </TableRow>

@@ -39,7 +39,7 @@ const Register = () => {
               message: "Tên phải có ít nhất 2 ký tự",
             },
             pattern: {
-              value: /^[A-Za-zÀ-ỹ\s]+$/u,
+              value: /^[A-Za-zÀ-ỹ\s]+$/,
               message: "Tên chỉ được chứa chữ cái và khoảng trắng",
             },
           })}

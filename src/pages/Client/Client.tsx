@@ -23,6 +23,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import { SelectChangeEvent } from '@mui/material/Select'; // ✅ Import đúng
 import '../../css/Client.css';
 
 interface Client {
@@ -89,16 +90,9 @@ const Client: React.FC = () => {
         const response = await axios.get('http://localhost:3001/clients');
 
         if (response.status === 200) {
-          const data = response.data;
-
-          let users: Client[] = [];
-          if (Array.isArray(data)) {
-            users = data;
-          } else if (data && Array.isArray(data.clients)) {
-            users = data.clients;
-          } else {
-            throw new Error('Định dạng dữ liệu không đúng: danh sách khách hàng không phải là mảng');
-          }
+          let users: Client[] = Array.isArray(response.data)
+            ? response.data
+            : response.data.clients || [];
 
           users = users.map((user) => ({
             id: user.id || 0,
@@ -135,31 +129,6 @@ const Client: React.FC = () => {
     fetchClients();
   }, []);
 
-  const handleViewDetails = (id: number) => {
-    if (selectedClientId === id && editClientId !== id) {
-      setSelectedClientId(null);
-    } else {
-      setSelectedClientId(id);
-      setEditClientId(null);
-      setEditFormData(null);
-      setValidationErrors({});
-      setEditError(null);
-    }
-  };
-
-  const handleEdit = (client: Client) => {
-    if (editClientId === client.id) {
-      setEditClientId(null);
-      setEditFormData(null);
-    } else {
-      setSelectedClientId(client.id);
-      setEditClientId(client.id);
-      setEditFormData({ ...client });
-      setValidationErrors({});
-      setEditError(null);
-    }
-  };
-
   const validateForm = (data: Client): ValidationErrors => {
     const errors: ValidationErrors = {};
     if (!data.name.trim()) errors.name = 'Họ tên không được để trống';
@@ -195,14 +164,23 @@ const Client: React.FC = () => {
     }
   };
 
-  const handleSelectChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+  // ✅ Sửa kiểu tham số từ React.ChangeEvent => SelectChangeEvent
+  const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     if (name && editFormData) {
-      const updatedData = { ...editFormData, [name]: value as string };
+      const updatedData = { ...editFormData, [name]: value };
       setEditFormData(updatedData);
       const errors = validateForm(updatedData);
       setValidationErrors(errors);
     }
+  };
+
+  const handleEdit = (client: Client) => {
+    setSelectedClientId(client.id);
+    setEditClientId(client.id);
+    setEditFormData({ ...client });
+    setValidationErrors({});
+    setEditError(null);
   };
 
   const handleSave = async () => {
@@ -243,6 +221,18 @@ const Client: React.FC = () => {
     setEditFormData(null);
     setValidationErrors({});
     setEditError(null);
+  };
+
+  const handleViewDetails = (id: number) => {
+    if (selectedClientId === id && editClientId !== id) {
+      setSelectedClientId(null);
+    } else {
+      setSelectedClientId(id);
+      setEditClientId(null);
+      setEditFormData(null);
+      setValidationErrors({});
+      setEditError(null);
+    }
   };
 
   return (

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   TextField,
   Button,
@@ -10,9 +10,10 @@ import {
   Typography,
   CircularProgress,
   Box,
-} from '@mui/material';
-import axios from 'axios';
-import '../../css/Client.css';
+  SelectChangeEvent,
+} from "@mui/material";
+import axios from "axios";
+import "../../css/Client.css";
 
 interface FormData {
   name: string;
@@ -48,61 +49,71 @@ interface ValidationErrors {
 const AddClient: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-    dob: '',
-    gender: '',
-    country: '',
-    company: '',
-    cccdPassport: '',
-    balance: '0 đ',
-    issueDate: '',
-    storageCount: '0',
-    storageStatus: '',
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    dob: "",
+    gender: "",
+    country: "",
+    company: "",
+    cccdPassport: "",
+    balance: "0 đ",
+    issueDate: "",
+    storageCount: "0",
+    storageStatus: "",
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
 
   const validateForm = (data: FormData): ValidationErrors => {
     const errors: ValidationErrors = {};
-    if (!data.name.trim()) errors.name = 'Họ tên không được để trống';
-    else if (data.name.length > 50) errors.name = 'Họ tên không được vượt quá 50 ký tự';
-    if (!data.email.trim()) errors.email = 'Email không được để trống';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) errors.email = 'Email không hợp lệ';
-    if (!data.phone.trim()) errors.phone = 'Số điện thoại không được để trống';
-    else if (!/^\d{10,11}$/.test(data.phone)) errors.phone = 'Số điện thoại không hợp lệ';
-    if (!data.address.trim()) errors.address = 'Địa chỉ không được để trống';
-    if (!data.dob.trim()) errors.dob = 'Ngày sinh không được để trống';
-    if (!data.gender) errors.gender = 'Vui lòng chọn giới tính';
-    if (!data.country.trim()) errors.country = 'Quốc gia không được để trống';
-    if (!data.cccdPassport.trim()) errors.cccdPassport = 'CCCD/Passport không được để trống';
-    if (!data.issueDate.trim()) errors.issueDate = 'Ngày phát hành không được để trống';
-    if (!data.storageStatus) errors.storageStatus = 'Vui lòng chọn tình trạng lưu trữ';
+    if (!data.name.trim()) errors.name = "Họ tên không được để trống";
+    else if (data.name.length > 50)
+      errors.name = "Họ tên không được vượt quá 50 ký tự";
+    if (!data.email.trim()) errors.email = "Email không được để trống";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email))
+      errors.email = "Email không hợp lệ";
+    if (!data.phone.trim()) errors.phone = "Số điện thoại không được để trống";
+    else if (!/^\d{10,11}$/.test(data.phone))
+      errors.phone = "Số điện thoại không hợp lệ";
+    if (!data.address.trim()) errors.address = "Địa chỉ không được để trống";
+    if (!data.dob.trim()) errors.dob = "Ngày sinh không được để trống";
+    if (!data.gender) errors.gender = "Vui lòng chọn giới tính";
+    if (!data.country.trim()) errors.country = "Quốc gia không được để trống";
+    if (!data.cccdPassport.trim())
+      errors.cccdPassport = "CCCD/Passport không được để trống";
+    if (!data.issueDate.trim())
+      errors.issueDate = "Ngày phát hành không được để trống";
+    if (!data.storageStatus)
+      errors.storageStatus = "Vui lòng chọn tình trạng lưu trữ";
     if (data.storageCount && parseInt(data.storageCount) < 0)
-      errors.storageCount = 'Số lần lưu trữ không được nhỏ hơn 0';
+      errors.storageCount = "Số lần lưu trữ không được nhỏ hơn 0";
     if (data.balance) {
-      const balanceValue = parseFloat(data.balance.replace(/[^0-9.-]+/g, ''));
+      const balanceValue = parseFloat(data.balance.replace(/[^0-9.-]+/g, ""));
       if (isNaN(balanceValue) || balanceValue < 0)
-        errors.balance = 'Số dư hiện tại không hợp lệ';
+        errors.balance = "Số dư hiện tại không hợp lệ";
     }
     return errors;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     const errors = validateForm({ ...formData, [name]: value });
     setValidationErrors(errors);
   };
 
-  const handleSelectChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+  const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     if (name) {
-      setFormData((prev) => ({ ...prev, [name]: value as string }));
-      const errors = validateForm({ ...formData, [name]: value as string });
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      const errors = validateForm({ ...formData, [name]: value });
       setValidationErrors(errors);
     }
   };
@@ -116,27 +127,29 @@ const AddClient: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost:3001/clients', {
+      const response = await axios.post("http://localhost:3001/clients", {
         ...formData,
         bookings: [],
       });
       if (response.status === 201) {
-        navigate('/client');
+        navigate("/client");
       } else {
-        throw new Error('Không thể thêm khách hàng mới');
+        throw new Error("Không thể thêm khách hàng mới");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Đã xảy ra lỗi khi thêm khách hàng';
+        err instanceof Error
+          ? err.message
+          : "Đã xảy ra lỗi khi thêm khách hàng";
       setError(errorMessage);
-      console.error('Lỗi khi thêm khách hàng:', errorMessage);
+      console.error("Lỗi khi thêm khách hàng:", errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    navigate('/client');
+    navigate("/client");
   };
 
   return (
@@ -245,7 +258,12 @@ const AddClient: React.FC = () => {
                 error={!!validationErrors.dob}
                 helperText={validationErrors.dob}
               />
-              <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.gender}>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!validationErrors.gender}
+              >
                 <InputLabel>Giới tính</InputLabel>
                 <Select
                   name="gender"
@@ -312,7 +330,7 @@ const AddClient: React.FC = () => {
                 variant="outlined"
                 size="small"
                 error={!!validationErrors.balance}
-                helperText={validationErrors.balance || 'Ví dụ: 1,500,000 đ'}
+                helperText={validationErrors.balance || "Ví dụ: 1,500,000 đ"}
               />
             </Box>
             <Box display="flex" gap={2}>
@@ -344,7 +362,12 @@ const AddClient: React.FC = () => {
               />
             </Box>
             <Box display="flex" gap={2}>
-              <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.storageStatus}>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!validationErrors.storageStatus}
+              >
                 <InputLabel>Tình trạng lưu trữ</InputLabel>
                 <Select
                   name="storageStatus"
