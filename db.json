@@ -1,3 +1,81 @@
 {
-  "users": []
+  "users": [],
+  "clients": [
+    {
+      "id": "234sd",
+      "name": "Nguyễn Đăng  Dương",
+      "email": "thang@gmail.com",
+      "phone": "0123456789",
+      "address": "123 Đường ABC, Quận 1, TP.HCM",
+      "dob": "03/05/1990",
+      "gender": "Nam",
+      "country": "Việt Nam",
+      "company": "TravelAgency",
+      "cccdPassport": "123456789",
+      "balance": "1,500,000 đ",
+      "issueDate": "234234-02-04",
+      "storageCount": "2",
+      "storageStatus": "Chưa xử lý",
+      "bookings": [
+        {
+          "id": 1,
+          "code": "P0800496",
+          "source": "travelAgency",
+          "bookingDate": "02/06/2025",
+          "checkInDate": "03/06/2025",
+          "checkOutDate": "05/06/2025",
+          "bookingStatus": "Hoàn thành",
+          "paymentStatus": "Chưa thanh toán",
+          "amount": "1,500,000 đ",
+          "note": "-"
+        },
+        {
+          "id": 2,
+          "code": "P0800497",
+          "source": "direct",
+          "bookingDate": "10/05/2025",
+          "checkInDate": "12/05/2025",
+          "checkOutDate": "15/05/2025",
+          "bookingStatus": "Đã hủy",
+          "paymentStatus": "Đã thanh toán",
+          "amount": "2,000,000 đ",
+          "note": "Hoàn tiền 50%"
+        }
+      ]
+    },
+    {
+      "id": "e5a9",
+      "name": "Smartphone",
+      "email": "duongndph49460@gmail.com",
+      "phone": "0986690871",
+      "address": "ádasd",
+      "dob": "2025-05-20",
+      "gender": "Nữ",
+      "country": "123",
+      "company": "Không xác định",
+      "cccdPassport": "123123",
+      "balance": "0 đ",
+      "issueDate": "0012-12-13",
+      "storageCount": "0",
+      "storageStatus": "Hoàn tất",
+      "bookings": []
+    },
+    {
+      "id": "12c9",
+      "name": "hgdfhh",
+      "email": "duongndph49460@gmail.com",
+      "phone": "0986690871",
+      "address": "3453455",
+      "dob": "5345-03-04",
+      "gender": "Nam",
+      "country": "dfgfg",
+      "company": "Dương",
+      "cccdPassport": "123123",
+      "balance": "0 đ",
+      "issueDate": "0034-05-31",
+      "storageCount": "0",
+      "storageStatus": "Hoàn tất",
+      "bookings": []
+    }
+  ]
 }
