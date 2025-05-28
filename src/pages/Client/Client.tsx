@@ -22,27 +22,23 @@ import {
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { SelectChangeEvent } from '@mui/material/Select'; // ✅ Import đúng
+import { SelectChangeEvent } from '@mui/material/Select';
 import '../../css/Client.css';
+import api from '../../api/axios';
 
 interface Client {
-  id: number;
+  id: number; // Đổi thành number
+  cccd: string;
   name: string;
+  gender: string;
   email: string;
   phone: string;
+  date_of_birth: string;
+  nationality: string;
   address: string;
-  dob: string;
-  gender: string;
-  country: string;
-  company: string;
-  cccdPassport: string;
-  balance: string;
-  issueDate: string;
-  storageCount: string;
-  storageStatus: string;
+  note: string;
   bookings: {
-    id: number;
+    id: number; // Đổi thành number
     code: string;
     source: string;
     bookingDate: string;
@@ -60,14 +56,11 @@ interface ValidationErrors {
   email?: string;
   phone?: string;
   address?: string;
-  dob?: string;
+  date_of_birth?: string;
   gender?: string;
-  country?: string;
-  cccdPassport?: string;
-  issueDate?: string;
-  storageStatus?: string;
-  storageCount?: string;
-  balance?: string;
+  nationality?: string;
+  cccd?: string;
+  note?: string;
 }
 
 const Client: React.FC = () => {
@@ -87,7 +80,7 @@ const Client: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const response = await axios.get('http://localhost:3001/clients');
+        const response = await api.get('/customers');
 
         if (response.status === 200) {
           let users: Client[] = Array.isArray(response.data)
@@ -95,21 +88,22 @@ const Client: React.FC = () => {
             : response.data.clients || [];
 
           users = users.map((user) => ({
-            id: user.id || 0,
+            id: Number(user.id) || 0, // Chuyển id từ string sang number
+            cccd: user.cccd || 'Không xác định',
             name: user.name || 'Không xác định',
             email: user.email || 'Không xác định',
             phone: user.phone || 'Không xác định',
             address: user.address || 'Không xác định',
-            dob: user.dob || 'Không xác định',
+            date_of_birth: user.date_of_birth || 'Không xác định',
             gender: user.gender || 'Không xác định',
-            country: user.country || 'Không xác định',
-            company: user.company || 'Không xác định',
-            cccdPassport: user.cccdPassport || 'Không xác định',
-            balance: user.balance || '0 đ',
-            issueDate: user.issueDate || 'Không xác định',
-            storageCount: user.storageCount || '0',
-            storageStatus: user.storageStatus || 'Không xác định',
-            bookings: user.bookings || [],
+            nationality: user.nationality || 'Không xác định',
+            note: user.note || '',
+            bookings: user.bookings
+              ? user.bookings.map((booking) => ({
+                  ...booking,
+                  id: Number(booking.id) || 0, // Chuyển id của booking sang number
+                }))
+              : [],
           }));
 
           setClients(users);
@@ -138,19 +132,12 @@ const Client: React.FC = () => {
     if (!data.phone.trim()) errors.phone = 'Số điện thoại không được để trống';
     else if (!/^\d{10,11}$/.test(data.phone)) errors.phone = 'Số điện thoại không hợp lệ';
     if (!data.address.trim()) errors.address = 'Địa chỉ không được để trống';
-    if (!data.dob.trim()) errors.dob = 'Ngày sinh không được để trống';
+    if (!data.date_of_birth.trim()) errors.date_of_birth = 'Ngày sinh không được để trống';
     if (!data.gender) errors.gender = 'Vui lòng chọn giới tính';
-    if (!data.country.trim()) errors.country = 'Quốc gia không được để trống';
-    if (!data.cccdPassport.trim()) errors.cccdPassport = 'CCCD/Passport không được để trống';
-    if (!data.issueDate.trim()) errors.issueDate = 'Ngày phát hành không được để trống';
-    if (!data.storageStatus) errors.storageStatus = 'Vui lòng chọn tình trạng lưu trữ';
-    if (data.storageCount && parseInt(data.storageCount) < 0)
-      errors.storageCount = 'Số lần lưu trữ không được nhỏ hơn 0';
-    if (data.balance) {
-      const balanceValue = parseFloat(data.balance.replace(/[^0-9.-]+/g, ''));
-      if (isNaN(balanceValue) || balanceValue < 0)
-        errors.balance = 'Số dư hiện tại không hợp lệ';
-    }
+    if (!data.nationality.trim()) errors.nationality = 'Quốc gia không được để trống';
+    if (!data.cccd.trim()) errors.cccd = 'CCCD không được để trống';
+    else if (!/^\d{12}$/.test(data.cccd)) errors.cccd = 'CCCD phải là dãy số gồm 12 chữ số';
+    if (data.note && data.note.length > 200) errors.note = 'Ghi chú không được vượt quá 200 ký tự';
     return errors;
   };
 
@@ -164,7 +151,6 @@ const Client: React.FC = () => {
     }
   };
 
-  // ✅ Sửa kiểu tham số từ React.ChangeEvent => SelectChangeEvent
   const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     if (name && editFormData) {
@@ -194,7 +180,7 @@ const Client: React.FC = () => {
 
     setEditLoading(true);
     try {
-      const response = await axios.put(`http://localhost:3001/clients/${editFormData.id}`, editFormData);
+      const response = await api.put(`/customers/${editFormData.id}`, editFormData);
       if (response.status === 200) {
         setClients((prev) =>
           prev.map((client) =>
@@ -353,16 +339,16 @@ const Client: React.FC = () => {
                                 <Box display="flex" gap={2}>
                                   <TextField
                                     label="Ngày sinh"
-                                    name="dob"
+                                    name="date_of_birth"
                                     type="date"
-                                    value={editFormData.dob}
+                                    value={editFormData.date_of_birth}
                                     onChange={handleChange}
                                     fullWidth
                                     variant="outlined"
                                     size="small"
                                     InputLabelProps={{ shrink: true }}
-                                    error={!!validationErrors.dob}
-                                    helperText={validationErrors.dob}
+                                    error={!!validationErrors.date_of_birth}
+                                    helperText={validationErrors.date_of_birth}
                                   />
                                   <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.gender}>
                                     <InputLabel>Giới tính</InputLabel>
@@ -387,101 +373,39 @@ const Client: React.FC = () => {
                                 <Box display="flex" gap={2}>
                                   <TextField
                                     label="Quốc gia"
-                                    name="country"
-                                    value={editFormData.country}
+                                    name="nationality"
+                                    value={editFormData.nationality}
                                     onChange={handleChange}
                                     fullWidth
                                     variant="outlined"
                                     size="small"
-                                    error={!!validationErrors.country}
-                                    helperText={validationErrors.country}
+                                    error={!!validationErrors.nationality}
+                                    helperText={validationErrors.nationality}
                                   />
                                   <TextField
-                                    label="Công ty"
-                                    name="company"
-                                    value={editFormData.company}
+                                    label="CCCD"
+                                    name="cccd"
+                                    value={editFormData.cccd}
                                     onChange={handleChange}
                                     fullWidth
                                     variant="outlined"
                                     size="small"
-                                  />
-                                </Box>
-                              </Box>
-
-                              <h3>Thông tin lưu trữ</h3>
-                              <Box display="flex" flexDirection="column" gap={2}>
-                                <Box display="flex" gap={2}>
-                                  <TextField
-                                    label="CCCD/Passport"
-                                    name="cccdPassport"
-                                    value={editFormData.cccdPassport}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    variant="outlined"
-                                    size="small"
-                                    error={!!validationErrors.cccdPassport}
-                                    helperText={validationErrors.cccdPassport}
-                                  />
-                                  <TextField
-                                    label="Số dư hiện tại"
-                                    name="balance"
-                                    value={editFormData.balance}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    variant="outlined"
-                                    size="small"
-                                    error={!!validationErrors.balance}
-                                    helperText={validationErrors.balance || 'Ví dụ: 1,500,000 đ'}
+                                    error={!!validationErrors.cccd}
+                                    helperText={validationErrors.cccd || "Ví dụ: 123456789012"}
                                   />
                                 </Box>
                                 <Box display="flex" gap={2}>
                                   <TextField
-                                    label="Ngày phát hành"
-                                    name="issueDate"
-                                    type="date"
-                                    value={editFormData.issueDate}
+                                    label="Ghi chú"
+                                    name="note"
+                                    value={editFormData.note}
                                     onChange={handleChange}
                                     fullWidth
                                     variant="outlined"
                                     size="small"
-                                    InputLabelProps={{ shrink: true }}
-                                    error={!!validationErrors.issueDate}
-                                    helperText={validationErrors.issueDate}
+                                    error={!!validationErrors.note}
+                                    helperText={validationErrors.note || "Tối đa 200 ký tự"}
                                   />
-                                  <TextField
-                                    label="Số lần lưu trữ"
-                                    name="storageCount"
-                                    type="number"
-                                    value={editFormData.storageCount}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    variant="outlined"
-                                    size="small"
-                                    error={!!validationErrors.storageCount}
-                                    helperText={validationErrors.storageCount}
-                                    inputProps={{ min: 0 }}
-                                  />
-                                </Box>
-                                <Box display="flex" gap={2}>
-                                  <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.storageStatus}>
-                                    <InputLabel>Tình trạng lưu trữ</InputLabel>
-                                    <Select
-                                      name="storageStatus"
-                                      value={editFormData.storageStatus}
-                                      onChange={handleSelectChange}
-                                      label="Tình trạng lưu trữ"
-                                    >
-                                      <MenuItem value="">Chọn tình trạng</MenuItem>
-                                      <MenuItem value="Hoàn tất">Hoàn tất</MenuItem>
-                                      <MenuItem value="Đang xử lý">Đang xử lý</MenuItem>
-                                      <MenuItem value="Chưa xử lý">Chưa xử lý</MenuItem>
-                                    </Select>
-                                    {validationErrors.storageStatus && (
-                                      <Typography color="error" variant="caption">
-                                        {validationErrors.storageStatus}
-                                      </Typography>
-                                    )}
-                                  </FormControl>
                                 </Box>
                               </Box>
 
@@ -523,30 +447,15 @@ const Client: React.FC = () => {
                                     <TableCell><strong>Địa chỉ:</strong> {client.address}</TableCell>
                                   </TableRow>
                                   <TableRow>
-                                    <TableCell><strong>Ngày sinh:</strong> {client.dob}</TableCell>
+                                    <TableCell><strong>Ngày sinh:</strong> {client.date_of_birth}</TableCell>
                                     <TableCell><strong>Giới tính:</strong> {client.gender}</TableCell>
                                   </TableRow>
                                   <TableRow>
-                                    <TableCell><strong>Quốc gia:</strong> {client.country}</TableCell>
-                                    <TableCell><strong>Công ty:</strong> {client.company}</TableCell>
-                                  </TableRow>
-                                </TableBody>
-                              </Table>
-
-                              <h3>Thông tin lưu trữ</h3>
-                              <Table className="detail-table">
-                                <TableBody>
-                                  <TableRow>
-                                    <TableCell><strong>CCCD/Passport:</strong> {client.cccdPassport}</TableCell>
-                                    <TableCell><strong>Số dư hiện tại:</strong> {client.balance}</TableCell>
+                                    <TableCell><strong>Quốc gia:</strong> {client.nationality}</TableCell>
+                                    <TableCell><strong>CCCD:</strong> {client.cccd}</TableCell>
                                   </TableRow>
                                   <TableRow>
-                                    <TableCell><strong>Ngày phát hành:</strong> {client.issueDate}</TableCell>
-                                    <TableCell><strong>Số lần lưu trữ:</strong> {client.storageCount}</TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell><strong>Tình trạng lưu trữ:</strong> {client.storageStatus}</TableCell>
-                                    <TableCell></TableCell>
+                                    <TableCell colSpan={2}><strong>Ghi chú:</strong> {client.note}</TableCell>
                                   </TableRow>
                                 </TableBody>
                               </Table>

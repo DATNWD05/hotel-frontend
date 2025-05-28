@@ -4,49 +4,190 @@
       "name": "Thắng 087 Trần",
       "email": "a@gmail.com",
       "role": "Lễ tân",
-      "id": 1
-    },
-    {
-      "name": "Tran manh Thang",
-      "email": "thang123@gmail.com",
-      "role": "Quản lí",
-      "id": 2
+      "id": "1"
     }
   ],
   "clients": [
     {
       "id": 1,
-      "name": "Nguyễn Văn A",
-      "email": "a@gmail.com",
+      "cccd": "123456790123",
+      "name": "Anh Quang Trần",
+      "email": "thang@gmail.commm",
       "phone": "0123456789",
-      "address": "Hà Nội",
-      "dob": "1990-01-01",
-      "gender": "Nam",
-      "country": "Việt Nam",
-      "company": "ABC Corp",
-      "cccdPassport": "123456789",
-      "balance": "1,000,000 đ",
-      "issueDate": "2020-01-01",
-      "storageCount": "3",
-      "storageStatus": "Hoàn tất",
+      "address": "123 Đường ABC, Quận 1, TP.HCM",
+      "date_of_birth": "2025-05-16",
+      "gender": "Nữ",
+      "nationality": "Việt Nam",
+      "note": "dm thắng",
+      "bookings": [
+        {
+          "id": "1",
+          "code": "P0800496",
+          "source": "travelAgency",
+          "bookingDate": "2025-06-02",
+          "checkInDate": "2025-06-03",
+          "checkOutDate": "2025-06-05",
+          "bookingStatus": "Hoàn thành",
+          "paymentStatus": "Chưa thanh toán",
+          "amount": "1,500,000 đ",
+          "note": "-"
+        },
+        {
+          "id": "2",
+          "code": "P0800497",
+          "source": "direct",
+          "bookingDate": "2025-05-10",
+          "checkInDate": "2025-05-12",
+          "checkOutDate": "2025-05-15",
+          "bookingStatus": "Đã hủy",
+          "paymentStatus": "Đã thanh toán",
+          "amount": "2,000,000 đ",
+          "note": "Hoàn tiền 50%"
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "cccd": "001205422512",
+      "name": "Brook",
+      "gender": "Không xác định",
+      "email": "brook@gmail.com",
+      "phone": "0987654321",
+      "date_of_birth": "2025-05-06",
+      "nationality": "Nhật Bản",
+      "address": "456 Đường XYZ, Quận 3, TP.HCM",
+      "note": "",
+      "bookings": [
+        {
+          "id": "1",
+          "code": "P0800500",
+          "source": "online",
+          "bookingDate": "2025-05-20",
+          "checkInDate": "2025-05-22",
+          "checkOutDate": "2025-05-25",
+          "bookingStatus": "Xác nhận",
+          "paymentStatus": "Đã thanh toán",
+          "amount": "3,000,000 đ",
+          "note": "Khách VIP"
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "cccd": "456789123456",
+      "name": "Hejie",
+      "gender": "Nữ",
+      "email": "hejie@example.com",
+      "phone": "0912345678",
+      "date_of_birth": "1995-03-17",
+      "nationality": "Trung Quốc",
+      "address": "789 Đường DEF, Quận 7, TP.HCM",
+      "note": "",
       "bookings": []
     },
     {
-      "name": "Thắng 087 Trần",
-      "email": "thangtmph49748@gmail.com",
-      "phone": "0968653830",
-      "address": "Ha noi",
-      "dob": "2025-05-01",
+      "id": "4",
+      "cccd": "789123456789",
+      "name": "Hjsns",
       "gender": "Nam",
-      "country": "Việt Nam",
-      "company": "Cao đẳng FPT",
-      "cccdPassport": "001205022669",
-      "balance": "0 đ",
-      "issueDate": "2025-05-29",
-      "storageCount": "0",
-      "storageStatus": "Hoàn tất",
-      "bookings": [],
-      "id": 2
+      "email": "hjsns@example.com",
+      "phone": "0934567890",
+      "date_of_birth": "1988-07-15",
+      "nationality": "Việt Nam",
+      "address": "101 Đường GHI, Quận 5, TP.HCM",
+      "note": "",
+      "bookings": [
+        {
+          "id": "1",
+          "code": "P0800501",
+          "source": "travelAgency",
+          "bookingDate": "2025-05-15",
+          "checkInDate": "2025-05-16",
+          "checkOutDate": "2025-05-18",
+          "bookingStatus": "Hoàn thành",
+          "paymentStatus": "Đã thanh toán",
+          "amount": "1,200,000 đ",
+          "note": "Khách hàng thân thiết"
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "cccd": "321654987654",
+      "name": "Chí Hạnh",
+      "gender": "Nữ",
+      "email": "chihanh@example.com",
+      "phone": "0945678901",
+      "date_of_birth": "1992-11-30",
+      "nationality": "Việt Nam",
+      "address": "202 Đường JKL, Quận 10, TP.HCM",
+      "note": "",
+      "bookings": [
+        {
+          "id": "1",
+          "code": "P0800502",
+          "source": "direct",
+          "bookingDate": "2025-05-25",
+          "checkInDate": "2025-05-26",
+          "checkOutDate": "2025-05-27",
+          "bookingStatus": "Xác nhận",
+          "paymentStatus": "Chưa thanh toán",
+          "amount": "900,000 đ",
+          "note": "Yêu cầu thêm dịch vụ"
+        }
+      ]
+    },
+    {
+      "id": "a495",
+      "cccd": "123456790124",
+      "name": "Nguyễn Đăng Dương",
+      "gender": "Nữ",
+      "email": "duongndph49460@gmail.com",
+      "phone": "0986690871",
+      "date_of_birth": "2025-05-10",
+      "nationality": "Việt Nam",
+      "address": "123 Đường ABC, Quận 1, TP.HCM",
+      "note": "",
+      "bookings": []
+    },
+    {
+      "id": "bc6a",
+      "name": "ưqưe",
+      "email": "duongndph49460@gmail.com",
+      "phone": "0986690871",
+      "address": "123 Đường ABC, Quận 1, TP.HCM",
+      "date_of_birth": "2025-05-13",
+      "gender": "Nữ",
+      "nationality": "Trung Quốc",
+      "cccd": "123456790123",
+      "note": "dm thắng",
+      "bookings": []
+    },
+    {
+      "id": "1ee7",
+      "name": "Smartphone",
+      "email": "duongndph49460@gmail.com",
+      "phone": "0986690871",
+      "address": "123 Đường ABC, Quận 1, TP.HCM",
+      "date_of_birth": "2025-05-10",
+      "gender": "Nam",
+      "nationality": "Việt Nam",
+      "cccd": "001205422512",
+      "note": "ưerewer",
+      "bookings": []
+    },
+    {
+      "id": "a11e",
+      "name": "Smartphone",
+      "email": "duongndph4094460@gmail.com",
+      "phone": "0986690871",
+      "address": "adasdasda",
+      "date_of_birth": "2025-05-03",
+      "gender": "Nam",
+      "nationality": "Việt Nam",
+      "cccd": "123456790123",
+      "note": "",
+      "bookings": []
     }
   ]
 }
