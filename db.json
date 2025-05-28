@@ -4,7 +4,31 @@
       "name": "Thắng 087 Trần",
       "email": "a@gmail.com",
       "role": "Lễ tân",
-      "id": "1"
+      "id": 1,
+      "MaNV": "QL123",
+      "phone": "0123123123",
+      "address": "Ha Noi",
+      "cccd": "12312313123",
+      "birthday": "123123123",
+      "gender": "Nam",
+      "department_id": "Quản lí",
+      "password": "Thang123"
+    },
+    {
+      "MaNV": "LT2001",
+      "name": "Tran manh Thang",
+      "email": "thangtmph49748@gmail.com",
+      "birthday": "2025-05-28",
+      "phone": "0968653830",
+      "address": "Ha noi",
+      "hire_date": "2025-05-28",
+      "department_id": 1,
+      "status": "active",
+      "password": "Thang123",
+      "role": "Lễ tân",
+      "cccd": "0012312312",
+      "gender": "Nam",
+      "id": 2
     }
   ],
   "clients": [
@@ -188,6 +212,28 @@
       "cccd": "123456790123",
       "note": "",
       "bookings": []
+    }
+  ],
+  "departments": [
+    {
+      "id": 1,
+      "name": "Lễ tân"
+    },
+    {
+      "id": 2,
+      "name": "Buồng phòng"
+    },
+    {
+      "id": 3,
+      "name": "Bếp"
+    },
+    {
+      "id": 4,
+      "name": "Kế toán"
+    },
+    {
+      "id": 5,
+      "name": "Quản lý"
     }
   ]
 }
