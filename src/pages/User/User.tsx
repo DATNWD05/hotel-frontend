@@ -8,21 +8,24 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Button,
   IconButton,
   CircularProgress,
   Typography,
+  Button,
+  Tooltip,
+  Box,
   TextField,
+  Collapse,
   Select,
   MenuItem,
-  FormControl,
   InputLabel,
+  FormControl,
 } from "@mui/material";
-import type { SelectChangeEvent } from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import CheckIcon from "@mui/icons-material/Check";
+import EditIcon from "@mui/icons-material/Edit";
 import axios from "axios";
 
 interface Employee {
@@ -30,478 +33,562 @@ interface Employee {
   name: string;
   email: string;
   role: string;
+  birthday?: string;
+  phone?: string;
+  address?: string;
+  cccd?: string;
+  gender?: string;
+  department_id?: string;
+  hire_date?: string;
+  password?: string;
+  status?: string;
+  user_id?: number;
 }
 
-interface ValidationErrors {
-  name?: string;
-  email?: string;
-  role?: string;
-}
+const api = axios.create({
+  baseURL: "http://localhost:8000/api",
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
+  },
+});
 
 const User: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAddForm, setShowAddForm] = useState<boolean>(false);
-  const [editId, setEditId] = useState<number | null>(null);
-  const [newEmployee, setNewEmployee] = useState<Omit<Employee, "id">>({
-    name: "",
-    email: "",
-    role: "",
-  });
-  const [addErrors, setAddErrors] = useState<ValidationErrors>({});
+  const [viewDetailId, setViewDetailId] = useState<number | null>(null);
+  const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
+  const [editedDetail, setEditedDetail] = useState<Partial<Employee>>({});
+  const [viewCredentialsId, setViewCredentialsId] = useState<number | null>(
+    null
+  );
+  const [editingCredentialsId, setEditingCredentialsId] = useState<
+    number | null
+  >(null);
+  const [editedCredentials, setEditedCredentials] = useState<Partial<Employee>>(
+    {}
+  );
 
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
-        const response = await axios.get("http://localhost:3001/users");
-
-        if (response.status === 200) {
-          const data = response.data;
-
-          let users: Employee[] = [];
-          if (Array.isArray(data)) {
-            users = data;
-          } else if (data && Array.isArray(data.users)) {
-            users = data.users;
-          } else {
-            throw new Error(
-              "Định dạng dữ liệu không đúng: danh sách người dùng không phải là mảng"
-            );
-          }
-
-          users = users.map((user) => ({
-            id: user.id || 0,
-            name: user.name || "Không xác định",
-            email: user.email || "Không xác định",
-            role: user.role || "Không xác định",
-          }));
-
-          setEmployees(users);
-        } else {
-          throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
-        }
+        const res = await api.get("/employees");
+        setEmployees(Array.isArray(res.data.data) ? res.data.data : []);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu";
-        setError(errorMessage);
-        console.error("Lỗi khi tải danh sách nhân viên:", errorMessage);
+        setError(err instanceof Error ? err.message : "Lỗi tải dữ liệu");
       } finally {
         setLoading(false);
       }
     };
-
     fetchEmployees();
   }, []);
 
-  const validateForm = (data: Omit<Employee, "id">): ValidationErrors => {
-    const errors: ValidationErrors = {};
-    if (!data.name.trim()) errors.name = "Họ tên không được để trống";
-    else if (data.name.length > 50)
-      errors.name = "Họ tên không được vượt quá 50 ký tự";
-    if (!data.email.trim()) errors.email = "Email không được để trống";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email))
-      errors.email = "Email không hợp lệ";
-    if (!data.role) errors.role = "Vui lòng chọn vai trò";
-    return errors;
+  const handleEditDetail = (employee: Employee) => {
+    setEditingDetailId(employee.id);
+    setEditedDetail({ ...employee });
   };
 
-  const handleAddNew = () => {
-    setShowAddForm(true);
-    setAddErrors({});
+  const handleChangeDetail = (field: keyof Employee, value: string) => {
+    setEditedDetail((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleCancelAdd = () => {
-    setShowAddForm(false);
-    setNewEmployee({ name: "", email: "", role: "" });
-    setAddErrors({});
-  };
-
-  const handleSaveNew = async () => {
-    const errors = validateForm(newEmployee);
-    if (Object.keys(errors).length > 0) {
-      setAddErrors(errors);
-      return;
-    }
-
-    setLoading(true);
+  const handleSaveDetail = async (id: number) => {
     try {
-      const response = await axios.post(
-        "http://localhost:3001/users",
-        newEmployee
-      );
-      if (response.status === 201) {
-        const updatedResponse = await axios.get("http://localhost:3001/users");
-        if (updatedResponse.status === 200) {
-          const data = updatedResponse.data;
-          let users: Employee[] = [];
-          if (Array.isArray(data)) {
-            users = data;
-          } else if (data && Array.isArray(data.users)) {
-            users = data.users;
-          }
-          users = users.map((user) => ({
-            id: user.id || 0,
-            name: user.name || "Không xác định",
-            email: user.email || "Không xác định",
-            role: user.role || "Không xác định",
-          }));
-          setEmployees(users);
-        }
-        setShowAddForm(false);
-        setNewEmployee({ name: "", email: "", role: "" });
-        setAddErrors({});
-      } else {
-        throw new Error("Không thể thêm nhân viên mới");
+      const currentEmployee = employees.find((e) => e.id === id);
+      if (!currentEmployee || !currentEmployee.user_id) {
+        console.error("Không tìm thấy user_id hoặc thông tin nhân viên.");
+        return;
+      }
+
+      const payload = {
+        name: editedDetail.name || "",
+        birthday: editedDetail.birthday || "",
+        gender: editedDetail.gender || "",
+        phone: editedDetail.phone || "",
+        address: editedDetail.address || "",
+        hire_date: editedDetail.hire_date || "",
+        department_id: editedDetail.department_id || null,
+        status: editedDetail.status || "active",
+        cccd: editedDetail.cccd || "",
+        email: currentEmployee.email,
+        role: currentEmployee.role,
+        user_id: currentEmployee.user_id,
+      };
+
+      const res = await api.put(`/employees/${id}`, payload);
+
+      if (res.status === 200) {
+        setEmployees((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, ...editedDetail } : e))
+        );
+        setEditingDetailId(null);
+        setViewDetailId(null);
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi thêm nhân viên";
-      setError(errorMessage);
-      console.error("Lỗi khi thêm nhân viên:", errorMessage);
-    } finally {
-      setLoading(false);
+      console.error("Lỗi cập nhật nhân viên:", err);
     }
   };
 
-  const handleEdit = (id: number) => {
-    setEditId(id);
+  const handleViewDetail = (id: number) => {
+    setViewDetailId((prev) => (prev === id ? null : id));
+    setEditingDetailId(null);
   };
 
-  const handleCancelEdit = () => {
-    setEditId(null);
+  const handleViewCredentials = (id: number) => {
+    setViewCredentialsId((prev) => (prev === id ? null : id));
+    setEditingCredentialsId(null);
   };
 
-  const handleSaveEdit = async (
-    id: number,
-    updatedEmployee: Omit<Employee, "id">
-  ) => {
-    const errors = validateForm(updatedEmployee);
-    if (Object.keys(errors).length > 0) {
-      return;
-    }
+  const handleEditCredentials = (employee: Employee) => {
+    setEditingCredentialsId(employee.id);
+    setEditedCredentials({ ...employee });
+  };
 
-    setLoading(true);
+  const handleChangeCredentials = (field: keyof Employee, value: string) => {
+    setEditedCredentials((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveCredentials = async (id: number) => {
     try {
-      const response = await axios.put(`http://localhost:3001/users/${id}`, {
-        ...updatedEmployee,
-        id,
+      const res = await api.put(`/users/${id}`, {
+        email: editedCredentials.email,
+        password: editedCredentials.password,
+        role: editedCredentials.role,
       });
-
-      if (response.status === 200) {
-        const updatedResponse = await axios.get("http://localhost:3001/users");
-        if (updatedResponse.status === 200) {
-          const data = updatedResponse.data;
-          let users: Employee[] = [];
-          if (Array.isArray(data)) {
-            users = data;
-          } else if (data && Array.isArray(data.users)) {
-            users = data.users;
-          }
-          users = users.map((user) => ({
-            id: user.id || 0,
-            name: user.name || "Không xác định",
-            email: user.email || "Không xác định",
-            role: user.role || "Không xác định",
-          }));
-          setEmployees(users);
-        }
-        setEditId(null);
-      } else {
-        throw new Error("Không thể cập nhật thông tin nhân viên");
+      if (res.status === 200) {
+        setEmployees((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, ...editedCredentials } : e))
+        );
+        setEditingCredentialsId(null);
+        setViewCredentialsId(null);
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Đã xảy ra lỗi khi cập nhật thông tin nhân viên";
-      setError(errorMessage);
-      console.error("Lỗi khi cập nhật nhân viên:", errorMessage);
-    } finally {
-      setLoading(false);
+      console.error("Lỗi cập nhật tài khoản:", err);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    setLoading(true);
-    try {
-      const response = await axios.delete(`http://localhost:3001/users/${id}`);
-
-      if (response.status === 200) {
-        const updatedResponse = await axios.get("http://localhost:3001/users");
-        if (updatedResponse.status === 200) {
-          const data = updatedResponse.data;
-          let users: Employee[] = [];
-          if (Array.isArray(data)) {
-            users = data;
-          } else if (data && Array.isArray(data.users)) {
-            users = data.users;
-          }
-          users = users.map((user) => ({
-            id: user.id || 0,
-            name: user.name || "Không xác định",
-            email: user.email || "Không xác định",
-            role: user.role || "Không xác định",
-          }));
-          setEmployees(users);
-        }
-      } else {
-        throw new Error("Không thể xóa nhân viên");
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi xóa nhân viên";
-      setError(errorMessage);
-      console.error("Lỗi khi xóa nhân viên:", errorMessage);
-    } finally {
-      setLoading(false);
+  const handleDelete = async (id: number, user_id?: number) => {
+    if (user_id === currentUserId) {
+      alert("Bạn không thể xoá tài khoản của chính mình.");
+      return;
     }
-  };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewEmployee((prev) => ({ ...prev, [name]: value }));
-    const errors = validateForm({ ...newEmployee, [name]: value });
-    setAddErrors(errors);
-  };
-
-  const handleSelectChange = (event: SelectChangeEvent<string>) => {
-    const value = event.target.value;
-    setNewEmployee((prev) => ({ ...prev, role: value }));
-    const errors = validateForm({ ...newEmployee, role: value });
-    setAddErrors(errors);
-  };
-
-  const setEmployeeInEdit = (id: number, updatedEmployee: Employee) => {
-    setEmployees((prev) =>
-      prev.map((emp) => (emp.id === id ? { ...emp, ...updatedEmployee } : emp))
+    const confirmed = window.confirm(
+      "Bạn có chắc chắn muốn xoá nhân viên này?"
     );
+    if (confirmed) {
+      try {
+        await api.delete(`/users/${user_id}`); // ✅ Dùng đúng user_id của bảng users
+        setEmployees((prev) => prev.filter((e) => e.user_id !== user_id));
+      } catch (err) {
+        console.error("Lỗi xoá người dùng:", err);
+      }
+    }
   };
+
+  const userData = localStorage.getItem("user");
+  const currentUserId = userData ? JSON.parse(userData).id : null;
 
   return (
     <div className="table-wrapper">
-      <div className="table-title">
-        <div className="header-content">
-          <h2>
-            Employee <b>Details</b>
-          </h2>
-          <Button
-            component={RouterLink}
-            to="add"
-            variant="contained"
-            className="btn-add-new"
-            startIcon={<AddIcon />}
-            onClick={handleAddNew}
-            disabled={loading || showAddForm}
-          >
-            Thêm mới
-          </Button>
-        </div>
-      </div>
-
+      <Typography variant="h5" mb={2}>
+        Employee <b>Details</b>
+      </Typography>
+      <Button
+        variant="contained"
+        color="primary"
+        startIcon={<AddIcon />}
+        component={RouterLink}
+        to="/user/add"
+        sx={{ mb: 2 }}
+      >
+        Thêm nhân viên mới
+      </Button>
       {loading ? (
-        <div className="loading-container">
+        <Box textAlign="center">
           <CircularProgress />
-          <Typography>Đang tải danh sách nhân viên...</Typography>
-        </div>
+          <Typography>Đang tải dữ liệu...</Typography>
+        </Box>
       ) : error ? (
-        <Typography color="error" className="error-message">
-          {error}
-        </Typography>
-      ) : employees.length === 0 ? (
-        <Typography className="no-data">
-          Không tìm thấy nhân viên nào.
-        </Typography>
+        <Typography color="error">{error}</Typography>
       ) : (
-        <TableContainer component={Paper} className="table-container">
-          <Table className="table">
+        <TableContainer component={Paper}>
+          <Table>
             <TableHead>
               <TableRow>
                 <TableCell>Họ Tên</TableCell>
-                <TableCell>Địa Chỉ Email</TableCell>
+                <TableCell>Email</TableCell>
                 <TableCell>Vai Trò</TableCell>
                 <TableCell align="center">Hành động</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {employees.map((employee) => (
-                <TableRow key={employee.id}>
-                  {editId === employee.id ? (
-                    <>
-                      <TableCell>
-                        <TextField
-                          label="Họ Tên"
-                          name="name"
-                          value={employee.name}
-                          onChange={(e) =>
-                            setEmployeeInEdit(employee.id, {
-                              ...employee,
-                              name: e.target.value,
-                            })
-                          }
-                          fullWidth
-                          variant="outlined"
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          label="Địa Chỉ Email"
-                          name="email"
-                          value={employee.email}
-                          onChange={(e) =>
-                            setEmployeeInEdit(employee.id, {
-                              ...employee,
-                              email: e.target.value,
-                            })
-                          }
-                          fullWidth
-                          variant="outlined"
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <FormControl fullWidth variant="outlined" size="small">
-                          <InputLabel>Vai Trò</InputLabel>
-                          <Select
-                            name="role"
-                            value={employee.role}
-                            onChange={(e) =>
-                              setEmployeeInEdit(employee.id, {
-                                ...employee,
-                                role: e.target.value,
-                              })
-                            }
-                            label="Vai Trò"
+              {employees.map((emp) => {
+                return (
+                  <React.Fragment key={emp.id}>
+                    <TableRow key={`row-${emp.id}`}>
+                      <TableCell>{emp.name}</TableCell>
+                      <TableCell>{emp.email}</TableCell>
+                      <TableCell>{emp.role}</TableCell>
+                      <TableCell align="center">
+                        <Tooltip title="Chi tiết nhân viên">
+                          <IconButton onClick={() => handleViewDetail(emp.id)}>
+                            <VisibilityIcon />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Tài khoản đăng nhập">
+                          <IconButton
+                            onClick={() => handleViewCredentials(emp.id)}
                           >
-                            <MenuItem value="Quản lí">Quản lí</MenuItem>
-                            <MenuItem value="Lễ tân">Lễ tân</MenuItem>
-                          </Select>
-                        </FormControl>
+                            <AccountCircleIcon />
+                          </IconButton>
+                        </Tooltip>
+                        {emp.user_id !== currentUserId && (
+                          <Tooltip title="Xoá">
+                            <IconButton
+                              onClick={() => handleDelete(emp.id, emp.user_id)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                       </TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          className="action save"
-                          title="Lưu"
-                          onClick={() =>
-                            handleSaveEdit(employee.id, {
-                              name: employee.name,
-                              email: employee.email,
-                              role: employee.role,
-                            })
-                          }
-                          disabled={loading}
-                        >
-                          <CheckIcon style={{ color: "green" }} />
-                        </IconButton>
-                        <IconButton
-                          className="action delete"
-                          title="Hủy"
-                          onClick={handleCancelEdit}
-                          disabled={loading}
-                        >
-                          <DeleteIcon style={{ color: "red" }} />
-                        </IconButton>
-                      </TableCell>
-                    </>
-                  ) : (
-                    <>
-                      <TableCell>{employee.name}</TableCell>
-                      <TableCell>{employee.email}</TableCell>
-                      <TableCell>{employee.role}</TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          className="action edit"
-                          title="Chỉnh sửa"
-                          onClick={() => handleEdit(employee.id)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          className="action delete"
-                          title="Xóa"
-                          onClick={() => handleDelete(employee.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </TableCell>
-                    </>
-                  )}
-                </TableRow>
-              ))}
-              {showAddForm && (
-                <TableRow>
-                  <TableCell>
-                    <TextField
-                      name="name"
-                      value={newEmployee.name}
-                      onChange={handleInputChange}
-                      fullWidth
-                      variant="outlined"
-                      size="small"
-                      placeholder="Họ Tên"
-                      error={!!addErrors.name}
-                      helperText={addErrors.name}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      name="email"
-                      value={newEmployee.email}
-                      onChange={handleInputChange}
-                      fullWidth
-                      variant="outlined"
-                      size="small"
-                      placeholder="Địa Chỉ Email"
-                      error={!!addErrors.email}
-                      helperText={addErrors.email}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <FormControl
-                      fullWidth
-                      variant="outlined"
-                      size="small"
-                      error={!!addErrors.role}
-                    >
-                      <InputLabel>Vai Trò</InputLabel>
-                      <Select
-                        name="role"
-                        value={newEmployee.role}
-                        onChange={handleSelectChange}
-                        label="Vai Trò"
-                      >
-                        <MenuItem value="Quản lí">Quản lí</MenuItem>
-                        <MenuItem value="Lễ tân">Lễ tân</MenuItem>
-                      </Select>
-                      {addErrors.role && (
-                        <Typography color="error" variant="caption">
-                          {addErrors.role}
-                        </Typography>
-                      )}
-                    </FormControl>
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      className="action save"
-                      title="Lưu"
-                      onClick={handleSaveNew}
-                    >
-                      <CheckIcon style={{ color: "green" }} />
-                    </IconButton>
-                    <IconButton
-                      className="action delete"
-                      title="Hủy"
-                      onClick={handleCancelAdd}
-                    >
-                      <DeleteIcon style={{ color: "red" }} />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              )}
+                    </TableRow>
+
+                    {(viewDetailId === emp.id ||
+                      viewCredentialsId === emp.id) && (
+                      <TableRow key={`detail-${emp.id}`}>
+                        <TableCell colSpan={4} style={{ padding: 0 }}>
+                          <Collapse in={true}>
+                            <Box p={2}>
+                              {viewDetailId === emp.id && (
+                                <>
+                                  <Typography
+                                    variant="h6"
+                                    fontWeight="bold"
+                                    gutterBottom
+                                  >
+                                    Thông tin nhân viên
+                                  </Typography>
+                                  {editingDetailId === emp.id ? (
+                                    <>
+                                      {[
+                                        "name",
+                                        "phone",
+                                        "address",
+                                        "cccd",
+                                        "gender",
+                                        "birthday",
+                                        "department_id",
+                                        "status",
+                                      ].map((field) => {
+                                        if (field === "status") {
+                                          return (
+                                            <FormControl
+                                              fullWidth
+                                              margin="normal"
+                                              key={field}
+                                            >
+                                              <InputLabel>
+                                                Trạng thái
+                                              </InputLabel>
+                                              <Select
+                                                value={
+                                                  editedDetail.status || ""
+                                                }
+                                                onChange={(e) =>
+                                                  handleChangeDetail(
+                                                    "status",
+                                                    e.target.value
+                                                  )
+                                                }
+                                                label="Trạng thái"
+                                              >
+                                                <MenuItem value="active">
+                                                  Hoạt động
+                                                </MenuItem>
+                                                <MenuItem value="inactive">
+                                                  Nghỉ việc
+                                                </MenuItem>
+                                              </Select>
+                                            </FormControl>
+                                          );
+                                        }
+                                        if (field === "gender") {
+                                          return (
+                                            <FormControl
+                                              fullWidth
+                                              margin="normal"
+                                              key="gender"
+                                            >
+                                              <InputLabel>Giới tính</InputLabel>
+                                              <Select
+                                                value={
+                                                  editedDetail.gender || ""
+                                                }
+                                                onChange={(e) =>
+                                                  handleChangeDetail(
+                                                    "gender",
+                                                    e.target.value
+                                                  )
+                                                }
+                                                label="Giới tính"
+                                              >
+                                                <MenuItem value="Nam">
+                                                  Nam
+                                                </MenuItem>
+                                                <MenuItem value="Nữ">
+                                                  Nữ
+                                                </MenuItem>
+                                                <MenuItem value="khác">
+                                                  Khác
+                                                </MenuItem>
+                                              </Select>
+                                            </FormControl>
+                                          );
+                                        }
+                                        if (field === "birthday") {
+                                          return (
+                                            <TextField
+                                              key={field}
+                                              label="Ngày sinh"
+                                              type="date"
+                                              fullWidth
+                                              margin="normal"
+                                              InputLabelProps={{ shrink: true }}
+                                              value={
+                                                editedDetail.birthday ||
+                                                emp.birthday ||
+                                                ""
+                                              }
+                                              onChange={(e) =>
+                                                handleChangeDetail(
+                                                  "birthday",
+                                                  e.target.value
+                                                )
+                                              }
+                                            />
+                                          );
+                                        }
+                                        return (
+                                          <TextField
+                                            key={field}
+                                            label={field.toUpperCase()}
+                                            fullWidth
+                                            margin="normal"
+                                            value={
+                                              editedDetail[
+                                                field as keyof Employee
+                                              ] || ""
+                                            }
+                                            onChange={(e) =>
+                                              handleChangeDetail(
+                                                field as keyof Employee,
+                                                e.target.value
+                                              )
+                                            }
+                                          />
+                                        );
+                                      })}
+                                      <Box mt={2}>
+                                        <Button
+                                          variant="contained"
+                                          onClick={() =>
+                                            handleSaveDetail(emp.id)
+                                          }
+                                        >
+                                          Lưu
+                                        </Button>
+                                        <Button
+                                          sx={{ ml: 1 }}
+                                          variant="outlined"
+                                          onClick={() => {
+                                            setEditingDetailId(null);
+                                            setViewDetailId(null);
+                                          }}
+                                        >
+                                          Huỷ
+                                        </Button>
+                                      </Box>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Box
+                                        display="flex"
+                                        flexWrap="wrap"
+                                        rowGap={1}
+                                        columnGap={4}
+                                        mt={2}
+                                      >
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>Họ tên:</strong> {emp.name}
+                                          </Typography>
+                                        </Box>
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>SĐT:</strong> {emp.phone}
+                                          </Typography>
+                                        </Box>
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>Địa chỉ:</strong>{" "}
+                                            {emp.address}
+                                          </Typography>
+                                        </Box>
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>CCCD:</strong> {emp.cccd}
+                                          </Typography>
+                                        </Box>
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>Giới tính:</strong>{" "}
+                                            {emp.gender}
+                                          </Typography>
+                                        </Box>
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>Ngày sinh:</strong>{" "}
+                                            {emp.birthday}
+                                          </Typography>
+                                        </Box>
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>Phòng ban:</strong>{" "}
+                                            {emp.department_id}
+                                          </Typography>
+                                        </Box>
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>Trạng thái:</strong>{" "}
+                                            {emp.status}
+                                          </Typography>
+                                        </Box>
+                                      </Box>
+                                      <Box mt={2}>
+                                        <Button
+                                          variant="outlined"
+                                          startIcon={<EditIcon />}
+                                          onClick={() => handleEditDetail(emp)}
+                                          sx={{
+                                            color: "black",
+                                            borderColor: "black",
+                                          }}
+                                        >
+                                          Chỉnh sửa thông tin
+                                        </Button>
+                                      </Box>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                              {viewCredentialsId === emp.id && (
+                                <>
+                                  <Typography
+                                    variant="h6"
+                                    fontWeight="bold"
+                                    gutterBottom
+                                  >
+                                    Tài khoản đăng nhập
+                                  </Typography>
+                                  {editingCredentialsId === emp.id ? (
+                                    <>
+                                      {["email", "password", "role"].map(
+                                        (field) => (
+                                          <TextField
+                                            key={field}
+                                            label={field.toUpperCase()}
+                                            fullWidth
+                                            margin="normal"
+                                            value={
+                                              editedCredentials[
+                                                field as keyof Employee
+                                              ] || ""
+                                            }
+                                            onChange={(e) =>
+                                              handleChangeCredentials(
+                                                field as keyof Employee,
+                                                e.target.value
+                                              )
+                                            }
+                                          />
+                                        )
+                                      )}
+                                      <Box mt={2}>
+                                        <Button
+                                          variant="contained"
+                                          onClick={() =>
+                                            handleSaveCredentials(emp.id)
+                                          }
+                                        >
+                                          Lưu
+                                        </Button>
+                                        <Button
+                                          sx={{ ml: 1 }}
+                                          variant="outlined"
+                                          onClick={() => {
+                                            setEditingCredentialsId(null);
+                                            setViewCredentialsId(null);
+                                          }}
+                                        >
+                                          Huỷ
+                                        </Button>
+                                      </Box>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Box
+                                        display="flex"
+                                        flexWrap="wrap"
+                                        rowGap={1}
+                                        columnGap={4}
+                                        mt={2}
+                                      >
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>Email:</strong> {emp.email}
+                                          </Typography>
+                                        </Box>
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>Mật khẩu:</strong>{" "}
+                                            {emp.password}
+                                          </Typography>
+                                        </Box>
+                                        <Box width="45%">
+                                          <Typography>
+                                            <strong>Vai trò:</strong> {emp.role}
+                                          </Typography>
+                                        </Box>
+                                      </Box>
+                                      <Box mt={2}>
+                                        <Button
+                                          variant="outlined"
+                                          startIcon={<EditIcon />}
+                                          onClick={() =>
+                                            handleEditCredentials(emp)
+                                          }
+                                          sx={{
+                                            color: "black",
+                                            borderColor: "black",
+                                          }}
+                                        >
+                                          Chỉnh sửa thông tin
+                                        </Button>
+                                      </Box>
+                                    </>
+                                  )}
+                                </>
+                              )}
+                            </Box>
+                          </Collapse>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
