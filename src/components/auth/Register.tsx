@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
-import api from "../../api/axios";
+// import api from "../../api/axios";
+import axios from "axios";
 
 type RegisterInputs = {
   name: string;
@@ -16,7 +17,7 @@ const Register = () => {
 
   const onSubmit = async (data: RegisterInputs) => {
     try {
-      await api.post("/register", data);
+      await axios.post("http://localhost:3001/accounts", data);
       alert("Đăng ký thành công! Bạn có thể đăng nhập.");
     } catch (error: unknown) {
       console.error("Register failed:", error);
@@ -39,7 +40,7 @@ const Register = () => {
               message: "Tên phải có ít nhất 2 ký tự",
             },
             pattern: {
-              value: /^[A-Za-zÀ-ỹ\s]+$/u,
+              value: /^[A-Za-zÀ-ỹ\s]+$/,
               message: "Tên chỉ được chứa chữ cái và khoảng trắng",
             },
           })}

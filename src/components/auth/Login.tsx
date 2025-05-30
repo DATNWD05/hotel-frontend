@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import api from "../../api/axios";
+// import api from "../../api/axios";
 import axios from "axios";
 
 type LoginInputs = {
@@ -10,21 +10,30 @@ type LoginInputs = {
 
 const Login = () => {
   const navigate = useNavigate();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginInputs>();
 
-  const {register,handleSubmit,formState: { errors }} = useForm<LoginInputs>();
-
-  const onSubmit = async (data: LoginInputs) => {
+  const onSubmit = async (data: LoginInputs) => { 
     try {
-      const response = await api.post("/login", data);
+      const response = await axios.post("http://localhost:3001/login", data);
 
-      const { user, token } = response.data;
+      // 👉 kiểm tra backend trả token dưới key nào:
+      const token = response.data.token || response.data.access_token;
+      const user = response.data.user;
 
-      // Lưu token và thông tin người dùng
+      if (!token) {
+        throw new Error("Không nhận được token từ server");
+      }
+
+      // ✅ Lưu token và thông tin người dùng
       localStorage.setItem("auth_token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
       alert("Đăng nhập thành công!");
-      navigate("/"); // hoặc điều hướng nơi bạn muốn
+      navigate("/");
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         console.error("Login failed:", error.response?.data || error.message);
