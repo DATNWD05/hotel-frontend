@@ -98,38 +98,41 @@ const User: React.FC = () => {
   const [editedCredentials, setEditedCredentials] = useState<Partial<User>>({});
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [employeeRes, userRes, departmentRes] = await Promise.all([
-          api.get("/employees"),
-          api.get("/users"),
-          api.get("/departments"),
-        ]);
+  const fetchData = async () => {
+    try {
+      const [employeeRes, userRes, departmentRes] = await Promise.all([
+        api.get("/employees"),
+        api.get("/users"),
+        api.get("/departments"),
+      ]);
 
-        const employees = employeeRes.data.data;
-        const users = userRes.data.data;
-        const departments = departmentRes.data.data;
+      // console.log("User API response:", userRes.data.data); // Kiểm tra dữ liệu users
 
-        const merged: Employee[] = employees.map((emp: Employee) => {
-          const user = users.find((u: User) => u.id === emp.user_id);
-          return {
-            ...emp,
-            user: user || undefined,
-          };
-        });
+      const employees = employeeRes.data.data;
+      const users = userRes.data.data;
+      const departments = departmentRes.data.data;
 
-        setEmployees(merged);
-        setDepartments(departments);
-      } catch (err) {
-        setGeneralError("Lỗi khi tải dữ liệu");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      const merged = employees.map((emp: Employee) => {
+        const user = users.find((u: User) => u.id === emp.user_id);
+        // console.log(`Employee ${emp.id} - Matched user:`, user); // Kiểm tra user tương ứng
+        return {
+          ...emp,
+          user: user || undefined,
+        };
+      });
 
-    fetchData();
-  }, []);
+      setEmployees(merged);
+      setDepartments(departments);
+    } catch (err) {
+      setGeneralError("Lỗi khi tải dữ liệu");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, []);
 
   const handleEditDetail = (employee: Employee) => {
     setEditingDetailId(employee.id);
@@ -172,6 +175,8 @@ const User: React.FC = () => {
       return newErrors;
     });
   };
+
+  
 
   const handleSaveDetail = async (id: number) => {
     try {
@@ -356,9 +361,9 @@ const User: React.FC = () => {
         role_id: Number(editedCredentials.role_id),
         status: editedCredentials.status,
       };
-
+      
       const res = await api.put(`/users/${userId}`, payload);
-
+      // console.log("Response from backend:", res.data);
       if (res.status === 200) {
         setEmployees((prev) =>
           prev.map((e) => {
