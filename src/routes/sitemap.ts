@@ -61,6 +61,12 @@ const sitemap: MenuItem[] = [
     icon: 'material-symbols:group', // nhóm người
   },
   {
+  id: 'promotions',
+  subheader: 'Khuyến mãi',
+  path: '/promotions',
+  icon: 'material-symbols:percent'
+  },
+  {
     id: 'calenda',
     subheader: 'Lịch',
     path: '/calenda',

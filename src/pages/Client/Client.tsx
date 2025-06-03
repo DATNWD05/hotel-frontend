@@ -18,6 +18,8 @@ import {
   InputLabel,
   Box,
   Button,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
@@ -27,7 +29,7 @@ import '../../css/Client.css';
 import api from '../../api/axios';
 
 interface Client {
-  id: number; // Đổi thành number
+  id: number;
   cccd: string;
   name: string;
   gender: string;
@@ -37,8 +39,8 @@ interface Client {
   nationality: string;
   address: string;
   note: string;
-  bookings: {
-    id: number; // Đổi thành number
+  bookings?: {
+    id: number;
     code: string;
     source: string;
     bookingDate: string;
@@ -65,6 +67,8 @@ interface ValidationErrors {
 
 const Client: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
@@ -73,6 +77,36 @@ const Client: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+
+  // Ánh xạ gender từ backend sang tiếng Việt để hiển thị
+  const mapGenderToVietnamese = (gender: string): string => {
+    switch (gender.toLowerCase()) {
+      case 'male':
+        return 'Nam';
+      case 'female':
+        return 'Nữ';
+      case 'other':
+        return 'Không xác định';
+      default:
+        return 'Không xác định';
+    }
+  };
+
+  // Ánh xạ gender từ tiếng Việt sang backend để gửi
+  const mapGenderToBackend = (gender: string): string => {
+    switch (gender) {
+      case 'Nam':
+        return 'male';
+      case 'Nữ':
+        return 'female';
+      case 'Không xác định':
+        return 'other';
+      default:
+        return 'other';
+    }
+  };
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -87,26 +121,37 @@ const Client: React.FC = () => {
             ? response.data
             : response.data.clients || [];
 
+          console.log('Dữ liệu từ API:', users); // Log để kiểm tra dữ liệu trả về
+
           users = users.map((user) => ({
-            id: Number(user.id) || 0, // Chuyển id từ string sang number
+            id: Number(user.id) || 0,
             cccd: user.cccd || 'Không xác định',
             name: user.name || 'Không xác định',
             email: user.email || 'Không xác định',
             phone: user.phone || 'Không xác định',
             address: user.address || 'Không xác định',
             date_of_birth: user.date_of_birth || 'Không xác định',
-            gender: user.gender || 'Không xác định',
+            gender: mapGenderToVietnamese(user.gender || 'other'),
             nationality: user.nationality || 'Không xác định',
             note: user.note || '',
             bookings: user.bookings
               ? user.bookings.map((booking) => ({
-                  ...booking,
-                  id: Number(booking.id) || 0, // Chuyển id của booking sang number
+                  id: Number(booking.id) || 0,
+                  code: booking.code || 'Không xác định',
+                  source: booking.source || 'Không xác định',
+                  bookingDate: booking.bookingDate || 'Không xác định',
+                  checkInDate: booking.checkInDate || 'Không xác định',
+                  checkOutDate: booking.checkOutDate || 'Không xác định',
+                  bookingStatus: booking.bookingStatus || 'Không xác định',
+                  paymentStatus: booking.paymentStatus || 'Không xác định',
+                  amount: booking.amount || 'Không xác định',
+                  note: booking.note || '',
                 }))
               : [],
           }));
 
           setClients(users);
+          setFilteredClients(users);
         } else {
           throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
         }
@@ -122,6 +167,19 @@ const Client: React.FC = () => {
 
     fetchClients();
   }, []);
+
+  // Lọc danh sách khách hàng dựa trên tìm kiếm
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredClients(clients);
+    } else {
+      const filtered = clients.filter((client) =>
+        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.phone.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredClients(filtered);
+    }
+  }, [searchQuery, clients]);
 
   const validateForm = (data: Client): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -180,7 +238,17 @@ const Client: React.FC = () => {
 
     setEditLoading(true);
     try {
-      const response = await api.put(`/customers/${editFormData.id}`, editFormData);
+      const clientId = Number(editFormData.id);
+      if (isNaN(clientId)) {
+        throw new Error('ID khách hàng không hợp lệ');
+      }
+
+      const {...dataToSend } = editFormData;
+      dataToSend.gender = mapGenderToBackend(editFormData.gender);
+
+      console.log('Dữ liệu gửi đi:', dataToSend);
+
+      const response = await api.put(`/customers/${clientId}`, dataToSend);
       if (response.status === 200) {
         setClients((prev) =>
           prev.map((client) =>
@@ -189,14 +257,27 @@ const Client: React.FC = () => {
         );
         setEditClientId(null);
         setEditFormData(null);
+        setSnackbarMessage('Cập nhật khách hàng thành công!');
+        setSnackbarOpen(true);
       } else {
         throw new Error('Không thể cập nhật khách hàng');
       }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật khách hàng';
+    } catch (err: unknown) {
+      let errorMessage = 'Đã xảy ra lỗi khi cập nhật khách hàng';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const axiosError = err as { response?: { data?: { message?: string; errors?: { [key: string]: string[] } } } };
+        errorMessage =
+          axiosError.response?.data?.message ||
+          axiosError.response?.data?.errors?.[Object.keys(axiosError.response?.data?.errors || {})[0]]?.[0] ||
+          errorMessage;
+      }
       setEditError(errorMessage);
-      console.error('Lỗi khi cập nhật khách hàng:', errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+      console.error('Lỗi khi cập nhật khách hàng:', err);
     } finally {
       setEditLoading(false);
     }
@@ -221,6 +302,11 @@ const Client: React.FC = () => {
     }
   };
 
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+    setSnackbarMessage('');
+  };
+
   return (
     <div className="client-wrapper">
       <div className="client-title">
@@ -228,9 +314,19 @@ const Client: React.FC = () => {
           <h2>
             Client <b>Details</b>
           </h2>
-          <Link to="/client/add" className="btn-add">
-            Thêm mới
-          </Link>
+          <Box display="flex" gap={2} alignItems="center">
+            <TextField
+              label="Tìm kiếm (Tên hoặc SĐT)"
+              variant="outlined"
+              size="small"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ width: '300px' }}
+            />
+            <Link to="/client/add" className="btn-add">
+              Thêm mới
+            </Link>
+          </Box>
         </div>
       </div>
 
@@ -243,8 +339,10 @@ const Client: React.FC = () => {
         <Typography color="error" className="error-message">
           {error}
         </Typography>
-      ) : clients.length === 0 ? (
-        <Typography className="no-data">Không tìm thấy khách hàng nào.</Typography>
+      ) : filteredClients.length === 0 ? (
+        <Typography className="no-data">
+          {searchQuery ? 'Không tìm thấy khách hàng phù hợp.' : 'Không tìm thấy khách hàng nào.'}
+        </Typography>
       ) : (
         <TableContainer component={Paper} className="client-table-container">
           <Table className="client-table">
@@ -257,7 +355,7 @@ const Client: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {clients.map((client) => (
+              {filteredClients.map((client) => (
                 <React.Fragment key={client.id}>
                   <TableRow>
                     <TableCell>{client.name}</TableCell>
@@ -463,7 +561,7 @@ const Client: React.FC = () => {
                           )}
 
                           <h3>Đặt phòng</h3>
-                          {client.bookings.length > 0 ? (
+                          {client.bookings && client.bookings.length > 0 ? (
                             <Table className="detail-table">
                               <TableHead>
                                 <TableRow>
@@ -481,15 +579,15 @@ const Client: React.FC = () => {
                               <TableBody>
                                 {client.bookings.map((booking) => (
                                   <TableRow key={booking.id}>
-                                    <TableCell>{booking.code}</TableCell>
-                                    <TableCell>{booking.source}</TableCell>
-                                    <TableCell>{booking.bookingDate}</TableCell>
-                                    <TableCell>{booking.checkInDate}</TableCell>
-                                    <TableCell>{booking.checkOutDate}</TableCell>
-                                    <TableCell>{booking.bookingStatus}</TableCell>
-                                    <TableCell>{booking.paymentStatus}</TableCell>
-                                    <TableCell>{booking.amount}</TableCell>
-                                    <TableCell>{booking.note}</TableCell>
+                                    <TableCell>{booking.code || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.source || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.bookingDate || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.checkInDate || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.checkOutDate || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.bookingStatus || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.paymentStatus || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.amount || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.note || ''}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -507,6 +605,21 @@ const Client: React.FC = () => {
           </Table>
         </TableContainer>
       )}
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
