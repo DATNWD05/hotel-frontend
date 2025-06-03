@@ -8,6 +8,8 @@ import AddUser from './pages/User/AddUser';
 import Client from './pages/Client/Client';
 import AddClient from './pages/Client/AddClient';
 import Dashboard from './pages/Dashboard';
+import AddPromotion from './pages/Promotion/AddPromotion';
+import Promotions from './pages/Promotion/Promotions';
 
 function App() {
   return (
@@ -20,6 +22,11 @@ function App() {
 
       <Route path="client" element={<Client/>} />
       <Route path="client/add" element={<AddClient/>} />
+
+
+      <Route path="/promotions" element={<Promotions/>} />
+      <Route path="promotions/add" element={<AddPromotion/>} />
+
 
       </Route>
 

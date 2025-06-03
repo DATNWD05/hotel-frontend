@@ -12,23 +12,19 @@ import {
   Box,
   SelectChangeEvent,
 } from "@mui/material";
-import axios from "axios";
 import "../../css/Client.css";
+import api from "../../api/axios";
 
 interface FormData {
   name: string;
   email: string;
   phone: string;
   address: string;
-  dob: string;
+  date_of_birth: string;
   gender: string;
-  country: string;
-  company: string;
-  cccdPassport: string;
-  balance: string;
-  issueDate: string;
-  storageCount: string;
-  storageStatus: string;
+  nationality: string;
+  cccd: string;
+  note: string;
 }
 
 interface ValidationErrors {
@@ -36,14 +32,11 @@ interface ValidationErrors {
   email?: string;
   phone?: string;
   address?: string;
-  dob?: string;
+  date_of_birth?: string;
   gender?: string;
-  country?: string;
-  cccdPassport?: string;
-  issueDate?: string;
-  storageCount?: string;
-  balance?: string;
-  storageStatus?: string;
+  nationality?: string;
+  cccd?: string;
+  note?: string;
 }
 
 const AddClient: React.FC = () => {
@@ -53,15 +46,11 @@ const AddClient: React.FC = () => {
     email: "",
     phone: "",
     address: "",
-    dob: "",
+    date_of_birth: "",
     gender: "",
-    country: "",
-    company: "",
-    cccdPassport: "",
-    balance: "0 đ",
-    issueDate: "",
-    storageCount: "0",
-    storageStatus: "",
+    nationality: "",
+    cccd: "",
+    note: "",
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,22 +70,13 @@ const AddClient: React.FC = () => {
     else if (!/^\d{10,11}$/.test(data.phone))
       errors.phone = "Số điện thoại không hợp lệ";
     if (!data.address.trim()) errors.address = "Địa chỉ không được để trống";
-    if (!data.dob.trim()) errors.dob = "Ngày sinh không được để trống";
+    if (!data.date_of_birth.trim()) errors.date_of_birth = "Ngày sinh không được để trống";
     if (!data.gender) errors.gender = "Vui lòng chọn giới tính";
-    if (!data.country.trim()) errors.country = "Quốc gia không được để trống";
-    if (!data.cccdPassport.trim())
-      errors.cccdPassport = "CCCD/Passport không được để trống";
-    if (!data.issueDate.trim())
-      errors.issueDate = "Ngày phát hành không được để trống";
-    if (!data.storageStatus)
-      errors.storageStatus = "Vui lòng chọn tình trạng lưu trữ";
-    if (data.storageCount && parseInt(data.storageCount) < 0)
-      errors.storageCount = "Số lần lưu trữ không được nhỏ hơn 0";
-    if (data.balance) {
-      const balanceValue = parseFloat(data.balance.replace(/[^0-9.-]+/g, ""));
-      if (isNaN(balanceValue) || balanceValue < 0)
-        errors.balance = "Số dư hiện tại không hợp lệ";
-    }
+    if (!data.nationality.trim()) errors.nationality = "Quốc gia không được để trống";
+    if (!data.cccd.trim()) errors.cccd = "CCCD không được để trống";
+    else if (!/^\d{12}$/.test(data.cccd))
+      errors.cccd = "CCCD phải là dãy số gồm 12 chữ số";
+    if (data.note && data.note.length > 200) errors.note = "Ghi chú không được vượt quá 200 ký tự";
     return errors;
   };
 
@@ -118,6 +98,19 @@ const AddClient: React.FC = () => {
     }
   };
 
+  const mapGenderToBackend = (gender: string): string => {
+    switch (gender) {
+      case "Nam":
+        return "male";
+      case "Nữ":
+        return "female";
+      case "Không xác định":
+        return "other";
+      default:
+        return "other";
+    }
+  };
+
   const handleSave = async () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
@@ -127,22 +120,31 @@ const AddClient: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:3001/clients", {
+      const dataToSend = {
         ...formData,
-        bookings: [],
-      });
+        gender: mapGenderToBackend(formData.gender), // Ánh xạ gender trước khi gửi
+      };
+      console.log('Dữ liệu gửi đi:', dataToSend); // Log để kiểm tra dữ liệu
+      const response = await api.post("/customers", dataToSend);
       if (response.status === 201) {
         navigate("/client");
       } else {
         throw new Error("Không thể thêm khách hàng mới");
       }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Đã xảy ra lỗi khi thêm khách hàng";
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi thêm khách hàng";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const axiosError = err as { response?: { data?: { message?: string; errors?: { [key: string]: string[] } } } };
+        errorMessage =
+          axiosError.response?.data?.message ||
+          JSON.stringify(axiosError.response?.data?.errors) ||
+          errorMessage;
+      }
       setError(errorMessage);
-      console.error("Lỗi khi thêm khách hàng:", errorMessage);
+      console.error("Lỗi khi thêm khách hàng:", err);
     } finally {
       setLoading(false);
     }
@@ -247,16 +249,16 @@ const AddClient: React.FC = () => {
             <Box display="flex" gap={2}>
               <TextField
                 label="Ngày sinh"
-                name="dob"
+                name="date_of_birth"
                 type="date"
-                value={formData.dob}
+                value={formData.date_of_birth}
                 onChange={handleChange}
                 fullWidth
                 variant="outlined"
                 size="small"
                 InputLabelProps={{ shrink: true }}
-                error={!!validationErrors.dob}
-                helperText={validationErrors.dob}
+                error={!!validationErrors.date_of_birth}
+                helperText={validationErrors.date_of_birth}
               />
               <FormControl
                 fullWidth
@@ -286,106 +288,39 @@ const AddClient: React.FC = () => {
             <Box display="flex" gap={2}>
               <TextField
                 label="Quốc gia"
-                name="country"
-                value={formData.country}
+                name="nationality"
+                value={formData.nationality}
                 onChange={handleChange}
                 fullWidth
                 variant="outlined"
                 size="small"
-                error={!!validationErrors.country}
-                helperText={validationErrors.country}
+                error={!!validationErrors.nationality}
+                helperText={validationErrors.nationality}
               />
               <TextField
-                label="Công ty"
-                name="company"
-                value={formData.company}
+                label="CCCD"
+                name="cccd"
+                value={formData.cccd}
                 onChange={handleChange}
                 fullWidth
                 variant="outlined"
                 size="small"
-              />
-            </Box>
-          </Box>
-
-          <h3>Thông tin lưu trữ</h3>
-          <Box display="flex" flexDirection="column" gap={2}>
-            <Box display="flex" gap={2}>
-              <TextField
-                label="CCCD/Passport"
-                name="cccdPassport"
-                value={formData.cccdPassport}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.cccdPassport}
-                helperText={validationErrors.cccdPassport}
-              />
-              <TextField
-                label="Số dư hiện tại"
-                name="balance"
-                value={formData.balance}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.balance}
-                helperText={validationErrors.balance || "Ví dụ: 1,500,000 đ"}
+                error={!!validationErrors.cccd}
+                helperText={validationErrors.cccd || "Ví dụ: 123456789012"}
               />
             </Box>
             <Box display="flex" gap={2}>
               <TextField
-                label="Ngày phát hành"
-                name="issueDate"
-                type="date"
-                value={formData.issueDate}
+                label="Ghi chú"
+                name="note"
+                value={formData.note}
                 onChange={handleChange}
                 fullWidth
                 variant="outlined"
                 size="small"
-                InputLabelProps={{ shrink: true }}
-                error={!!validationErrors.issueDate}
-                helperText={validationErrors.issueDate}
+                error={!!validationErrors.note}
+                helperText={validationErrors.note || "Tối đa 200 ký tự"}
               />
-              <TextField
-                label="Số lần lưu trữ"
-                name="storageCount"
-                type="number"
-                value={formData.storageCount}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.storageCount}
-                helperText={validationErrors.storageCount}
-                inputProps={{ min: 0 }}
-              />
-            </Box>
-            <Box display="flex" gap={2}>
-              <FormControl
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.storageStatus}
-              >
-                <InputLabel>Tình trạng lưu trữ</InputLabel>
-                <Select
-                  name="storageStatus"
-                  value={formData.storageStatus}
-                  onChange={handleSelectChange}
-                  label="Tình trạng lưu trữ"
-                >
-                  <MenuItem value="">Chọn tình trạng</MenuItem>
-                  <MenuItem value="Hoàn tất">Hoàn tất</MenuItem>
-                  <MenuItem value="Đang xử lý">Đang xử lý</MenuItem>
-                  <MenuItem value="Chưa xử lý">Chưa xử lý</MenuItem>
-                </Select>
-                {validationErrors.storageStatus && (
-                  <Typography color="error" variant="caption">
-                    {validationErrors.storageStatus}
-                  </Typography>
-                )}
-              </FormControl>
             </Box>
           </Box>
         </div>

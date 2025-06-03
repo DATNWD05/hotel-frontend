@@ -19,7 +19,7 @@ const Login = () => {
 
   const onSubmit = async (data: LoginInputs) => { 
     try {
-      const response = await api.post("login", data);
+      const response = await api.post("/login", data);
 
       // 👉 kiểm tra backend trả token dưới key nào:
       const token = response.data.token || response.data.access_token;

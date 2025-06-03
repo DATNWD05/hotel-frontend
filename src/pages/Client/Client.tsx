@@ -18,30 +18,28 @@ import {
   InputLabel,
   Box,
   Button,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-import { SelectChangeEvent } from '@mui/material/Select'; // ✅ Import đúng
+import { SelectChangeEvent } from '@mui/material/Select';
 import '../../css/Client.css';
+import api from '../../api/axios';
 
 interface Client {
   id: number;
+  cccd: string;
   name: string;
+  gender: string;
   email: string;
   phone: string;
+  date_of_birth: string;
+  nationality: string;
   address: string;
-  dob: string;
-  gender: string;
-  country: string;
-  company: string;
-  cccdPassport: string;
-  balance: string;
-  issueDate: string;
-  storageCount: string;
-  storageStatus: string;
-  bookings: {
+  note: string;
+  bookings?: {
     id: number;
     code: string;
     source: string;
@@ -60,18 +58,17 @@ interface ValidationErrors {
   email?: string;
   phone?: string;
   address?: string;
-  dob?: string;
+  date_of_birth?: string;
   gender?: string;
-  country?: string;
-  cccdPassport?: string;
-  issueDate?: string;
-  storageStatus?: string;
-  storageCount?: string;
-  balance?: string;
+  nationality?: string;
+  cccd?: string;
+  note?: string;
 }
 
 const Client: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
+  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
@@ -80,6 +77,36 @@ const Client: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+
+  // Ánh xạ gender từ backend sang tiếng Việt để hiển thị
+  const mapGenderToVietnamese = (gender: string): string => {
+    switch (gender.toLowerCase()) {
+      case 'male':
+        return 'Nam';
+      case 'female':
+        return 'Nữ';
+      case 'other':
+        return 'Không xác định';
+      default:
+        return 'Không xác định';
+    }
+  };
+
+  // Ánh xạ gender từ tiếng Việt sang backend để gửi
+  const mapGenderToBackend = (gender: string): string => {
+    switch (gender) {
+      case 'Nam':
+        return 'male';
+      case 'Nữ':
+        return 'female';
+      case 'Không xác định':
+        return 'other';
+      default:
+        return 'other';
+    }
+  };
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -87,32 +114,44 @@ const Client: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        const response = await axios.get('http://localhost:3001/clients');
+        const response = await api.get('/customers');
 
         if (response.status === 200) {
           let users: Client[] = Array.isArray(response.data)
             ? response.data
             : response.data.clients || [];
 
+          console.log('Dữ liệu từ API:', users); // Log để kiểm tra dữ liệu trả về
+
           users = users.map((user) => ({
-            id: user.id || 0,
+            id: Number(user.id) || 0,
+            cccd: user.cccd || 'Không xác định',
             name: user.name || 'Không xác định',
             email: user.email || 'Không xác định',
             phone: user.phone || 'Không xác định',
             address: user.address || 'Không xác định',
-            dob: user.dob || 'Không xác định',
-            gender: user.gender || 'Không xác định',
-            country: user.country || 'Không xác định',
-            company: user.company || 'Không xác định',
-            cccdPassport: user.cccdPassport || 'Không xác định',
-            balance: user.balance || '0 đ',
-            issueDate: user.issueDate || 'Không xác định',
-            storageCount: user.storageCount || '0',
-            storageStatus: user.storageStatus || 'Không xác định',
-            bookings: user.bookings || [],
+            date_of_birth: user.date_of_birth || 'Không xác định',
+            gender: mapGenderToVietnamese(user.gender || 'other'),
+            nationality: user.nationality || 'Không xác định',
+            note: user.note || '',
+            bookings: user.bookings
+              ? user.bookings.map((booking) => ({
+                  id: Number(booking.id) || 0,
+                  code: booking.code || 'Không xác định',
+                  source: booking.source || 'Không xác định',
+                  bookingDate: booking.bookingDate || 'Không xác định',
+                  checkInDate: booking.checkInDate || 'Không xác định',
+                  checkOutDate: booking.checkOutDate || 'Không xác định',
+                  bookingStatus: booking.bookingStatus || 'Không xác định',
+                  paymentStatus: booking.paymentStatus || 'Không xác định',
+                  amount: booking.amount || 'Không xác định',
+                  note: booking.note || '',
+                }))
+              : [],
           }));
 
           setClients(users);
+          setFilteredClients(users);
         } else {
           throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
         }
@@ -129,6 +168,19 @@ const Client: React.FC = () => {
     fetchClients();
   }, []);
 
+  // Lọc danh sách khách hàng dựa trên tìm kiếm
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredClients(clients);
+    } else {
+      const filtered = clients.filter((client) =>
+        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        client.phone.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredClients(filtered);
+    }
+  }, [searchQuery, clients]);
+
   const validateForm = (data: Client): ValidationErrors => {
     const errors: ValidationErrors = {};
     if (!data.name.trim()) errors.name = 'Họ tên không được để trống';
@@ -138,19 +190,12 @@ const Client: React.FC = () => {
     if (!data.phone.trim()) errors.phone = 'Số điện thoại không được để trống';
     else if (!/^\d{10,11}$/.test(data.phone)) errors.phone = 'Số điện thoại không hợp lệ';
     if (!data.address.trim()) errors.address = 'Địa chỉ không được để trống';
-    if (!data.dob.trim()) errors.dob = 'Ngày sinh không được để trống';
+    if (!data.date_of_birth.trim()) errors.date_of_birth = 'Ngày sinh không được để trống';
     if (!data.gender) errors.gender = 'Vui lòng chọn giới tính';
-    if (!data.country.trim()) errors.country = 'Quốc gia không được để trống';
-    if (!data.cccdPassport.trim()) errors.cccdPassport = 'CCCD/Passport không được để trống';
-    if (!data.issueDate.trim()) errors.issueDate = 'Ngày phát hành không được để trống';
-    if (!data.storageStatus) errors.storageStatus = 'Vui lòng chọn tình trạng lưu trữ';
-    if (data.storageCount && parseInt(data.storageCount) < 0)
-      errors.storageCount = 'Số lần lưu trữ không được nhỏ hơn 0';
-    if (data.balance) {
-      const balanceValue = parseFloat(data.balance.replace(/[^0-9.-]+/g, ''));
-      if (isNaN(balanceValue) || balanceValue < 0)
-        errors.balance = 'Số dư hiện tại không hợp lệ';
-    }
+    if (!data.nationality.trim()) errors.nationality = 'Quốc gia không được để trống';
+    if (!data.cccd.trim()) errors.cccd = 'CCCD không được để trống';
+    else if (!/^\d{12}$/.test(data.cccd)) errors.cccd = 'CCCD phải là dãy số gồm 12 chữ số';
+    if (data.note && data.note.length > 200) errors.note = 'Ghi chú không được vượt quá 200 ký tự';
     return errors;
   };
 
@@ -164,7 +209,6 @@ const Client: React.FC = () => {
     }
   };
 
-  // ✅ Sửa kiểu tham số từ React.ChangeEvent => SelectChangeEvent
   const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     if (name && editFormData) {
@@ -194,7 +238,17 @@ const Client: React.FC = () => {
 
     setEditLoading(true);
     try {
-      const response = await axios.put(`http://localhost:3001/clients/${editFormData.id}`, editFormData);
+      const clientId = Number(editFormData.id);
+      if (isNaN(clientId)) {
+        throw new Error('ID khách hàng không hợp lệ');
+      }
+
+      const {...dataToSend } = editFormData;
+      dataToSend.gender = mapGenderToBackend(editFormData.gender);
+
+      console.log('Dữ liệu gửi đi:', dataToSend);
+
+      const response = await api.put(`/customers/${clientId}`, dataToSend);
       if (response.status === 200) {
         setClients((prev) =>
           prev.map((client) =>
@@ -203,14 +257,27 @@ const Client: React.FC = () => {
         );
         setEditClientId(null);
         setEditFormData(null);
+        setSnackbarMessage('Cập nhật khách hàng thành công!');
+        setSnackbarOpen(true);
       } else {
         throw new Error('Không thể cập nhật khách hàng');
       }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật khách hàng';
+    } catch (err: unknown) {
+      let errorMessage = 'Đã xảy ra lỗi khi cập nhật khách hàng';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const axiosError = err as { response?: { data?: { message?: string; errors?: { [key: string]: string[] } } } };
+        errorMessage =
+          axiosError.response?.data?.message ||
+          axiosError.response?.data?.errors?.[Object.keys(axiosError.response?.data?.errors || {})[0]]?.[0] ||
+          errorMessage;
+      }
       setEditError(errorMessage);
-      console.error('Lỗi khi cập nhật khách hàng:', errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+      console.error('Lỗi khi cập nhật khách hàng:', err);
     } finally {
       setEditLoading(false);
     }
@@ -235,6 +302,11 @@ const Client: React.FC = () => {
     }
   };
 
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+    setSnackbarMessage('');
+  };
+
   return (
     <div className="client-wrapper">
       <div className="client-title">
@@ -242,9 +314,19 @@ const Client: React.FC = () => {
           <h2>
             Client <b>Details</b>
           </h2>
-          <Link to="/client/add" className="btn-add">
-            Thêm mới
-          </Link>
+          <Box display="flex" gap={2} alignItems="center">
+            <TextField
+              label="Tìm kiếm (Tên hoặc SĐT)"
+              variant="outlined"
+              size="small"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{ width: '300px' }}
+            />
+            <Link to="/client/add" className="btn-add">
+              Thêm mới
+            </Link>
+          </Box>
         </div>
       </div>
 
@@ -257,8 +339,10 @@ const Client: React.FC = () => {
         <Typography color="error" className="error-message">
           {error}
         </Typography>
-      ) : clients.length === 0 ? (
-        <Typography className="no-data">Không tìm thấy khách hàng nào.</Typography>
+      ) : filteredClients.length === 0 ? (
+        <Typography className="no-data">
+          {searchQuery ? 'Không tìm thấy khách hàng phù hợp.' : 'Không tìm thấy khách hàng nào.'}
+        </Typography>
       ) : (
         <TableContainer component={Paper} className="client-table-container">
           <Table className="client-table">
@@ -271,7 +355,7 @@ const Client: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {clients.map((client) => (
+              {filteredClients.map((client) => (
                 <React.Fragment key={client.id}>
                   <TableRow>
                     <TableCell>{client.name}</TableCell>
@@ -353,16 +437,16 @@ const Client: React.FC = () => {
                                 <Box display="flex" gap={2}>
                                   <TextField
                                     label="Ngày sinh"
-                                    name="dob"
+                                    name="date_of_birth"
                                     type="date"
-                                    value={editFormData.dob}
+                                    value={editFormData.date_of_birth}
                                     onChange={handleChange}
                                     fullWidth
                                     variant="outlined"
                                     size="small"
                                     InputLabelProps={{ shrink: true }}
-                                    error={!!validationErrors.dob}
-                                    helperText={validationErrors.dob}
+                                    error={!!validationErrors.date_of_birth}
+                                    helperText={validationErrors.date_of_birth}
                                   />
                                   <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.gender}>
                                     <InputLabel>Giới tính</InputLabel>
@@ -387,101 +471,39 @@ const Client: React.FC = () => {
                                 <Box display="flex" gap={2}>
                                   <TextField
                                     label="Quốc gia"
-                                    name="country"
-                                    value={editFormData.country}
+                                    name="nationality"
+                                    value={editFormData.nationality}
                                     onChange={handleChange}
                                     fullWidth
                                     variant="outlined"
                                     size="small"
-                                    error={!!validationErrors.country}
-                                    helperText={validationErrors.country}
+                                    error={!!validationErrors.nationality}
+                                    helperText={validationErrors.nationality}
                                   />
                                   <TextField
-                                    label="Công ty"
-                                    name="company"
-                                    value={editFormData.company}
+                                    label="CCCD"
+                                    name="cccd"
+                                    value={editFormData.cccd}
                                     onChange={handleChange}
                                     fullWidth
                                     variant="outlined"
                                     size="small"
-                                  />
-                                </Box>
-                              </Box>
-
-                              <h3>Thông tin lưu trữ</h3>
-                              <Box display="flex" flexDirection="column" gap={2}>
-                                <Box display="flex" gap={2}>
-                                  <TextField
-                                    label="CCCD/Passport"
-                                    name="cccdPassport"
-                                    value={editFormData.cccdPassport}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    variant="outlined"
-                                    size="small"
-                                    error={!!validationErrors.cccdPassport}
-                                    helperText={validationErrors.cccdPassport}
-                                  />
-                                  <TextField
-                                    label="Số dư hiện tại"
-                                    name="balance"
-                                    value={editFormData.balance}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    variant="outlined"
-                                    size="small"
-                                    error={!!validationErrors.balance}
-                                    helperText={validationErrors.balance || 'Ví dụ: 1,500,000 đ'}
+                                    error={!!validationErrors.cccd}
+                                    helperText={validationErrors.cccd || "Ví dụ: 123456789012"}
                                   />
                                 </Box>
                                 <Box display="flex" gap={2}>
                                   <TextField
-                                    label="Ngày phát hành"
-                                    name="issueDate"
-                                    type="date"
-                                    value={editFormData.issueDate}
+                                    label="Ghi chú"
+                                    name="note"
+                                    value={editFormData.note}
                                     onChange={handleChange}
                                     fullWidth
                                     variant="outlined"
                                     size="small"
-                                    InputLabelProps={{ shrink: true }}
-                                    error={!!validationErrors.issueDate}
-                                    helperText={validationErrors.issueDate}
+                                    error={!!validationErrors.note}
+                                    helperText={validationErrors.note || "Tối đa 200 ký tự"}
                                   />
-                                  <TextField
-                                    label="Số lần lưu trữ"
-                                    name="storageCount"
-                                    type="number"
-                                    value={editFormData.storageCount}
-                                    onChange={handleChange}
-                                    fullWidth
-                                    variant="outlined"
-                                    size="small"
-                                    error={!!validationErrors.storageCount}
-                                    helperText={validationErrors.storageCount}
-                                    inputProps={{ min: 0 }}
-                                  />
-                                </Box>
-                                <Box display="flex" gap={2}>
-                                  <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.storageStatus}>
-                                    <InputLabel>Tình trạng lưu trữ</InputLabel>
-                                    <Select
-                                      name="storageStatus"
-                                      value={editFormData.storageStatus}
-                                      onChange={handleSelectChange}
-                                      label="Tình trạng lưu trữ"
-                                    >
-                                      <MenuItem value="">Chọn tình trạng</MenuItem>
-                                      <MenuItem value="Hoàn tất">Hoàn tất</MenuItem>
-                                      <MenuItem value="Đang xử lý">Đang xử lý</MenuItem>
-                                      <MenuItem value="Chưa xử lý">Chưa xử lý</MenuItem>
-                                    </Select>
-                                    {validationErrors.storageStatus && (
-                                      <Typography color="error" variant="caption">
-                                        {validationErrors.storageStatus}
-                                      </Typography>
-                                    )}
-                                  </FormControl>
                                 </Box>
                               </Box>
 
@@ -523,30 +545,15 @@ const Client: React.FC = () => {
                                     <TableCell><strong>Địa chỉ:</strong> {client.address}</TableCell>
                                   </TableRow>
                                   <TableRow>
-                                    <TableCell><strong>Ngày sinh:</strong> {client.dob}</TableCell>
+                                    <TableCell><strong>Ngày sinh:</strong> {client.date_of_birth}</TableCell>
                                     <TableCell><strong>Giới tính:</strong> {client.gender}</TableCell>
                                   </TableRow>
                                   <TableRow>
-                                    <TableCell><strong>Quốc gia:</strong> {client.country}</TableCell>
-                                    <TableCell><strong>Công ty:</strong> {client.company}</TableCell>
-                                  </TableRow>
-                                </TableBody>
-                              </Table>
-
-                              <h3>Thông tin lưu trữ</h3>
-                              <Table className="detail-table">
-                                <TableBody>
-                                  <TableRow>
-                                    <TableCell><strong>CCCD/Passport:</strong> {client.cccdPassport}</TableCell>
-                                    <TableCell><strong>Số dư hiện tại:</strong> {client.balance}</TableCell>
+                                    <TableCell><strong>Quốc gia:</strong> {client.nationality}</TableCell>
+                                    <TableCell><strong>CCCD:</strong> {client.cccd}</TableCell>
                                   </TableRow>
                                   <TableRow>
-                                    <TableCell><strong>Ngày phát hành:</strong> {client.issueDate}</TableCell>
-                                    <TableCell><strong>Số lần lưu trữ:</strong> {client.storageCount}</TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell><strong>Tình trạng lưu trữ:</strong> {client.storageStatus}</TableCell>
-                                    <TableCell></TableCell>
+                                    <TableCell colSpan={2}><strong>Ghi chú:</strong> {client.note}</TableCell>
                                   </TableRow>
                                 </TableBody>
                               </Table>
@@ -554,7 +561,7 @@ const Client: React.FC = () => {
                           )}
 
                           <h3>Đặt phòng</h3>
-                          {client.bookings.length > 0 ? (
+                          {client.bookings && client.bookings.length > 0 ? (
                             <Table className="detail-table">
                               <TableHead>
                                 <TableRow>
@@ -572,15 +579,15 @@ const Client: React.FC = () => {
                               <TableBody>
                                 {client.bookings.map((booking) => (
                                   <TableRow key={booking.id}>
-                                    <TableCell>{booking.code}</TableCell>
-                                    <TableCell>{booking.source}</TableCell>
-                                    <TableCell>{booking.bookingDate}</TableCell>
-                                    <TableCell>{booking.checkInDate}</TableCell>
-                                    <TableCell>{booking.checkOutDate}</TableCell>
-                                    <TableCell>{booking.bookingStatus}</TableCell>
-                                    <TableCell>{booking.paymentStatus}</TableCell>
-                                    <TableCell>{booking.amount}</TableCell>
-                                    <TableCell>{booking.note}</TableCell>
+                                    <TableCell>{booking.code || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.source || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.bookingDate || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.checkInDate || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.checkOutDate || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.bookingStatus || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.paymentStatus || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.amount || 'Không xác định'}</TableCell>
+                                    <TableCell>{booking.note || ''}</TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
@@ -598,6 +605,21 @@ const Client: React.FC = () => {
           </Table>
         </TableContainer>
       )}
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };
