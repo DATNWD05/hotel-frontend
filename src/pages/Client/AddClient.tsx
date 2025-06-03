@@ -12,19 +12,19 @@ import {
   Box,
   SelectChangeEvent,
 } from "@mui/material";
-import axios from "axios";
 import "../../css/Client.css";
+import api from "../../api/axios";
 
 interface FormData {
   name: string;
   email: string;
   phone: string;
   address: string;
-  date_of_birth: string; // Thay đổi từ dob thành date_of_birth
+  date_of_birth: string;
   gender: string;
-  nationality: string; // Thay đổi từ country thành nationality
+  nationality: string;
   cccd: string;
-  note: string; // Thêm trường note
+  note: string;
 }
 
 interface ValidationErrors {
@@ -36,7 +36,7 @@ interface ValidationErrors {
   gender?: string;
   nationality?: string;
   cccd?: string;
-  note?: string; // Thêm validation cho note
+  note?: string;
 }
 
 const AddClient: React.FC = () => {
@@ -50,7 +50,7 @@ const AddClient: React.FC = () => {
     gender: "",
     nationality: "",
     cccd: "",
-    note: "", // Thêm giá trị mặc định cho note
+    note: "",
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,13 +70,13 @@ const AddClient: React.FC = () => {
     else if (!/^\d{10,11}$/.test(data.phone))
       errors.phone = "Số điện thoại không hợp lệ";
     if (!data.address.trim()) errors.address = "Địa chỉ không được để trống";
-    if (!data.date_of_birth.trim()) errors.date_of_birth = "Ngày sinh không được để trống"; // Sử dụng date_of_birth
+    if (!data.date_of_birth.trim()) errors.date_of_birth = "Ngày sinh không được để trống";
     if (!data.gender) errors.gender = "Vui lòng chọn giới tính";
-    if (!data.nationality.trim()) errors.nationality = "Quốc gia không được để trống"; // Sử dụng nationality
+    if (!data.nationality.trim()) errors.nationality = "Quốc gia không được để trống";
     if (!data.cccd.trim()) errors.cccd = "CCCD không được để trống";
     else if (!/^\d{12}$/.test(data.cccd))
       errors.cccd = "CCCD phải là dãy số gồm 12 chữ số";
-    if (data.note && data.note.length > 200) errors.note = "Ghi chú không được vượt quá 200 ký tự"; // Validation cho note
+    if (data.note && data.note.length > 200) errors.note = "Ghi chú không được vượt quá 200 ký tự";
     return errors;
   };
 
@@ -98,6 +98,19 @@ const AddClient: React.FC = () => {
     }
   };
 
+  const mapGenderToBackend = (gender: string): string => {
+    switch (gender) {
+      case "Nam":
+        return "male";
+      case "Nữ":
+        return "female";
+      case "Không xác định":
+        return "other";
+      default:
+        return "other";
+    }
+  };
+
   const handleSave = async () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
@@ -107,22 +120,31 @@ const AddClient: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:3001/clients", {
+      const dataToSend = {
         ...formData,
-        bookings: [],
-      });
+        gender: mapGenderToBackend(formData.gender), // Ánh xạ gender trước khi gửi
+      };
+      console.log('Dữ liệu gửi đi:', dataToSend); // Log để kiểm tra dữ liệu
+      const response = await api.post("/customers", dataToSend);
       if (response.status === 201) {
         navigate("/client");
       } else {
         throw new Error("Không thể thêm khách hàng mới");
       }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Đã xảy ra lỗi khi thêm khách hàng";
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi thêm khách hàng";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      if (typeof err === 'object' && err !== null && 'response' in err) {
+        const axiosError = err as { response?: { data?: { message?: string; errors?: { [key: string]: string[] } } } };
+        errorMessage =
+          axiosError.response?.data?.message ||
+          JSON.stringify(axiosError.response?.data?.errors) ||
+          errorMessage;
+      }
       setError(errorMessage);
-      console.error("Lỗi khi thêm khách hàng:", errorMessage);
+      console.error("Lỗi khi thêm khách hàng:", err);
     } finally {
       setLoading(false);
     }
