@@ -12,7 +12,7 @@ const RoleBasedRoute = ({ children, allowedRoleIds }: Props) => {
   const userJson = localStorage.getItem("user");
 
   if (!token || !userJson) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/auth/login" replace />;
   }
 
   try {
