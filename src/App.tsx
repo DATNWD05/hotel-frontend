@@ -12,6 +12,7 @@ import AddPromotion from "./pages/Promotion/AddPromotion";
 import Promotions from "./pages/Promotion/Promotions";
 import RoleBasedRoute from "./routes/helpers/RoleBasedRoute";
 import Unauthorized from "./pages/Unauthorized";
+import ProtectedRoute from "./routes/helpers/ProtectedRoute";
 
 function App() {
   return (
@@ -20,7 +21,7 @@ function App() {
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Dashboard />} />
         
-        <Route path="user" element={<RoleBasedRoute allowedRoleIds={[1]}><User /></RoleBasedRoute>}/>
+        <Route path="user" element={<ProtectedRoute><RoleBasedRoute allowedRoleIds={[1]}><User /></RoleBasedRoute></ProtectedRoute>}/>
 
         <Route path="user/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddUser /></RoleBasedRoute>} />
 

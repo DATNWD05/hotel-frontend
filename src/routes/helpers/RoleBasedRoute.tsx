@@ -8,7 +8,7 @@ interface Props {
 }
 
 const RoleBasedRoute = ({ children, allowedRoleIds }: Props) => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("auth_token");
   const userJson = localStorage.getItem("user");
 
   if (!token || !userJson) {
