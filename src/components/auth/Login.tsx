@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 // import api from "../../api/axios";
 import axios from "axios";
+import api from "../../api/axios";
 
 type LoginInputs = {
   email: string;
@@ -18,7 +19,7 @@ const Login = () => {
 
   const onSubmit = async (data: LoginInputs) => { 
     try {
-      const response = await axios.post("http://localhost:3001/login", data);
+      const response = await api.post("login", data);
 
       // 👉 kiểm tra backend trả token dưới key nào:
       const token = response.data.token || response.data.access_token;
