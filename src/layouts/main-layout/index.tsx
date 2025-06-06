@@ -3,7 +3,7 @@ import type { PropsWithChildren } from "react";
 import Stack from "@mui/material/Stack";
 import Sidebar from "./sidebar";
 import Topbar from "./topbar";
-import Footer from "./footer";
+// import Footer from "./footer";
 import { Box } from "@mui/material";
 import { Outlet } from "react-router-dom";
 
@@ -35,7 +35,7 @@ const MainLayout = ({ children }: PropsWithChildren) => {
       />
       <Outlet />
       {children}
-      <Footer />
+      {/* <Footer /> */}
     </Stack>
   </Box>
   );
