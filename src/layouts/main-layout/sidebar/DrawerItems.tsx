@@ -91,7 +91,7 @@ const DrawerItems = () => {
     onClick={() => {
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      navigate("/auth/login");
+      navigate("/login");
     }}
   >
     Log Out

@@ -104,21 +104,10 @@ const sitemap: MenuItem[] = [
   },
   {
     id: 'authentication',
-    subheader: 'Xác thực người dùng',
+    subheader: 'Đăng nhập',
     icon: 'material-symbols:security', // bảo mật
-    active: true,
-    items: [
-      {
-        name: 'Đăng nhập',
-        pathName: 'signin',
-        path: '/auth/login',
-      },
-      {
-        name: 'Đăng ký',
-        pathName: 'signup',
-        path: '/auth/register',
-      },
-    ],
+    // active: true,
+    path: '/login',
   }
 ];
 
