@@ -900,7 +900,7 @@ const User: React.FC = () => {
                                           borderColor: "black",
                                         }}
                                       >
-                                        Chỉnh sửa thông tin
+                                        Chỉnh sửa thông tin người dùng
                                       </Button>
                                     </Box>
                                   </>
