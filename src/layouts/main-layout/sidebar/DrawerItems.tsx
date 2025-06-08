@@ -12,10 +12,26 @@ import Image from "../../../components/base/Image";
 import IconifyIcon from '../../../components/base/IconifyIcon';
 import LogoImg from "../../../assets/images/logo.png";
 import sitemap from "../../../routes/sitemap";
-
-
+import { useNavigate } from "react-router-dom";
 
 const DrawerItems = () => {
+  const navigate = useNavigate();
+  // 👇 Lọc menu theo role_id
+  const getFilteredMenu = () => {
+    const userJson = localStorage.getItem("user");
+    if (!userJson) return [];
+
+    const roleId = JSON.parse(userJson).role_id;
+
+    if (roleId === 2) {
+      return sitemap.filter((item) => item.id === "oderRoom" || item.id === "authentication");
+    }
+
+    return sitemap;
+  };
+
+  const filteredMenu = getFilteredMenu();
+
   return (
     <>
       <Stack
@@ -59,20 +75,29 @@ const DrawerItems = () => {
       </Stack>
 
       <List component="nav" sx={{ mt: 2.5, mb: 10, px: 4.5 }}>
-        {sitemap.map((route) =>
+        {filteredMenu.map((route) =>
           route.items ? (
             <CollapseListItem key={route.id} {...route} />
           ) : (
             <ListItem key={route.id} {...route} />
-          ),
+          )
         )}
       </List>
 
       <Box mt="auto" px={3} pb={6}>
-        <Button variant="text" startIcon={<IconifyIcon icon="ic:baseline-logout" />}>
-          Log Out
-        </Button>
-      </Box>
+  <Button
+    variant="text"
+    startIcon={<IconifyIcon icon="ic:baseline-logout" />}
+    onClick={() => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+    }}
+  >
+    Log Out
+  </Button>
+</Box>
+
     </>
   );
 };

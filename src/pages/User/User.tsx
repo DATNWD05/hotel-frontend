@@ -20,6 +20,7 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  Pagination,
   Snackbar,
   Alert,
 } from "@mui/material";
@@ -73,6 +74,8 @@ const api = axios.create({
 });
 
 const User: React.FC = () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [errors, setErrors] = useState<Partial<Record<keyof Employee, string>>>( {});
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -100,12 +103,15 @@ const User: React.FC = () => {
           api.get("/departments"),
         ]);
 
+        // console.log("User API response:", userRes.data.data); // Kiểm tra dữ liệu users
+
         const employees = employeeRes.data.data;
         const users = userRes.data.data;
         const departments = departmentRes.data.data;
 
         const merged = employees.map((emp: Employee) => {
           const user = users.find((u: User) => u.id === emp.user_id);
+          // console.log(`Employee ${emp.id} - Matched user:`, user); // Kiểm tra user tương ứng
           return {
             ...emp,
             user: user || undefined,
@@ -124,18 +130,6 @@ const User: React.FC = () => {
 
     fetchData();
   }, []);
-
-  // Lọc danh sách nhân viên theo tên
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setEmployees(employees); // Nếu không có từ khóa, hiển thị tất cả
-    } else {
-      const filtered = employees.filter((emp) =>
-        emp.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setEmployees(filtered);
-    }
-  }, [searchQuery, employees]);
 
   const handleEditDetail = (employee: Employee) => {
     setEditingDetailId(employee.id);
@@ -358,7 +352,7 @@ const User: React.FC = () => {
         role_id: Number(editedCredentials.role_id),
         status: editedCredentials.status,
       };
-      
+
       const res = await api.put(`/users/${userId}`, payload);
       if (res.status === 200) {
         setEmployees((prev) =>
@@ -473,6 +467,13 @@ const User: React.FC = () => {
   const currentUserId = userData ? JSON.parse(userData).id : null;
   const currentUserRoleId = userData ? JSON.parse(userData).role_id : null;
 
+  const paginatedEmployees = employees.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+  const totalPages = Math.ceil(employees.length / rowsPerPage);
+
   return (
     <div className="table-wrapper">
       <Typography variant="h5" mb={2}>
@@ -515,7 +516,7 @@ const User: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {employees.map((emp) => (
+              {paginatedEmployees.map((emp) => (
                 <React.Fragment key={emp.id}>
                   <TableRow key={`row-${emp.id}`}>
                     <TableCell>{emp.name}</TableCell>
@@ -907,7 +908,7 @@ const User: React.FC = () => {
                                           borderColor: "black",
                                         }}
                                       >
-                                        Chỉnh sửa thông tin
+                                        Chỉnh sửa thông tin người dùng
                                       </Button>
                                     </Box>
                                   </>
@@ -1003,7 +1004,9 @@ const User: React.FC = () => {
                                         onClick={() => {
                                           const userId = emp.user?.id;
                                           if (!userId) {
-                                            setGeneralCredentialError("Không tìm thấy ID người dùng.");
+                                            setGeneralCredentialError(
+                                              "Không tìm thấy ID người dùng."
+                                            );
                                             return;
                                           }
                                           handleSaveCredentials(userId);
@@ -1106,6 +1109,17 @@ const User: React.FC = () => {
               ))}
             </TableBody>
           </Table>
+          <Box display="flex" justifyContent="flex-end" mt={2}>
+            <Pagination
+              count={totalPages} // tổng số trang
+              page={currentPage} // trang hiện tại
+              onChange={(event, value) => setCurrentPage(value)}
+              color="primary" // màu xanh như ảnh
+              shape="rounded" // bo góc
+              showFirstButton
+              showLastButton
+            />
+          </Box>
         </TableContainer>
       )}
       <Snackbar
