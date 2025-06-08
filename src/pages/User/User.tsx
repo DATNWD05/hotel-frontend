@@ -21,6 +21,8 @@ import {
   InputLabel,
   FormControl,
   Pagination,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
@@ -75,30 +77,22 @@ const User: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [errors, setErrors] = useState<Partial<Record<keyof Employee, string>>>(
-    {}
-  );
+  const [errors, setErrors] = useState<Partial<Record<keyof Employee, string>>>( {});
   const [generalError, setGeneralError] = useState<string | null>(null);
-
-  const [credentialErrors, setCredentialErrors] = useState<
-    Partial<Record<keyof User, string>>
-  >({});
+  const [credentialErrors, setCredentialErrors] = useState<Partial<Record<keyof User, string>>>({});
+  const [generalCredentialError, setGeneralCredentialError] = useState<string | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [generalCredentialError, setGeneralCredentialError] = useState<
-    string | null
-  >(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Employee>>({});
-  const [viewCredentialsId, setViewCredentialsId] = useState<number | null>(
-    null
-  );
-  const [editingCredentialsId, setEditingCredentialsId] = useState<
-    number | null
-  >(null);
+  const [viewCredentialsId, setViewCredentialsId] = useState<number | null>(null);
+  const [editingCredentialsId, setEditingCredentialsId] = useState<number | null>(null);
   const [editedCredentials, setEditedCredentials] = useState<Partial<User>>({});
+  const [searchQuery, setSearchQuery] = useState<string>(""); // Thêm state tìm kiếm
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false); // Thêm state cho thông báo
+  const [snackbarMessage, setSnackbarMessage] = useState<string>(""); // Thêm thông điệp thông báo
 
   useEffect(() => {
     const fetchData = async () => {
@@ -155,10 +149,7 @@ const User: React.FC = () => {
     setErrors({});
   };
 
-  const handleChangeDetail = (
-    field: keyof Employee,
-    value: string | number
-  ) => {
+  const handleChangeDetail = (field: keyof Employee, value: string | number) => {
     setEditedDetail((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => {
       const newErrors = { ...prev };
@@ -167,10 +158,7 @@ const User: React.FC = () => {
     });
   };
 
-  const handleChangeCredentials = (
-    field: keyof User,
-    value: string | number
-  ) => {
+  const handleChangeCredentials = (field: keyof User, value: string | number) => {
     setEditedCredentials((prev) => ({ ...prev, [field]: value }));
     setCredentialErrors((prev) => {
       const newErrors = { ...prev };
@@ -308,6 +296,8 @@ const User: React.FC = () => {
         setEditingDetailId(null);
         setViewDetailId(null);
         setErrors({});
+        setSnackbarMessage("Thông tin nhân viên đã được cập nhật thành công!");
+        setSnackbarOpen(true);
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
@@ -364,7 +354,6 @@ const User: React.FC = () => {
       };
 
       const res = await api.put(`/users/${userId}`, payload);
-      // console.log("Response from backend:", res.data);
       if (res.status === 200) {
         setEmployees((prev) =>
           prev.map((e) => {
@@ -385,6 +374,8 @@ const User: React.FC = () => {
         setEditingCredentialsId(null);
         setViewCredentialsId(null);
         setCredentialErrors({});
+        setSnackbarMessage("Thông tin tài khoản đã được cập nhật thành công!");
+        setSnackbarOpen(true);
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
@@ -447,6 +438,8 @@ const User: React.FC = () => {
         await api.delete(`/users/${user_id}`);
         setEmployees((prev) => prev.filter((e) => e.user_id !== user_id));
         setErrors({});
+        setSnackbarMessage("Nhân viên đã được xóa thành công!");
+        setSnackbarOpen(true);
       } catch (err: unknown) {
         let errorMessage = "Lỗi khi xoá người dùng.";
         if (axios.isAxiosError(err)) {
@@ -465,6 +458,11 @@ const User: React.FC = () => {
     setCredentialErrors({});
   };
 
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+    setSnackbarMessage("");
+  };
+
   const userData = localStorage.getItem("user");
   const currentUserId = userData ? JSON.parse(userData).id : null;
   const currentUserRoleId = userData ? JSON.parse(userData).role_id : null;
@@ -481,16 +479,26 @@ const User: React.FC = () => {
       <Typography variant="h5" mb={2}>
         Employee <b>Details</b>
       </Typography>
-      <Button
-        variant="contained"
-        color="primary"
-        startIcon={<AddIcon />}
-        component={RouterLink}
-        to="/user/add"
-        sx={{ mb: 2 }}
-      >
-        Thêm nhân viên mới
-      </Button>
+      <Box display="flex" gap={2} alignItems="center" mb={2}>
+        <TextField
+          label="Tìm kiếm theo tên nhân viên"
+          variant="outlined"
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ width: "300px" }}
+        />
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          component={RouterLink}
+          to="/user/add"
+          sx={{ mb: 2 }}
+        >
+          Thêm nhân viên mới
+        </Button>
+      </Box>
       {loading ? (
         <Box textAlign="center">
           <CircularProgress />
@@ -1114,6 +1122,16 @@ const User: React.FC = () => {
           </Box>
         </TableContainer>
       )}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: "100%" }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

@@ -1,5 +1,10 @@
 .promotion-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
   padding: 20px;
+  background: #f0f2f5;
+  
 }
 
 .promotion-title {
@@ -7,8 +12,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  
 }
-
 .promotion-title .header-content h2 {
   margin: 0;
   font-size: 24px;
@@ -53,7 +58,56 @@
   width: 100%;
   margin-bottom: 16px;
 }
+.promotion-wrapper {
+  padding: 20px;
+}
 
+.promotion-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.promotion-table-container {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.promotion-table-header {
+  background-color: #f5f5f5;
+}
+
+.detail-container {
+  padding: 16px;
+  background-color: #fafafa;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.no-data {
+  text-align: center;
+  margin-top: 20px;
+  color: #757575;
+}
+
+.error-message {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.btn-add {
+  background-color: #1976d2;
+}
+
+.btn-add:hover {
+  background-color: #1565c0;
+}
 .detail-table td {
   padding: 8px;
   border-bottom: 1px solid #ddd;
