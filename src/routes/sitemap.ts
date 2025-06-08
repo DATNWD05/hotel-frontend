@@ -50,7 +50,7 @@ const sitemap: MenuItem[] = [
   },
   {
     id: 'user',
-    subheader: 'User',
+    subheader: 'Người Dùng',
     path: '/user',
     icon: 'material-symbols:person', // biểu tượng người
   },

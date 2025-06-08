@@ -20,6 +20,8 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
@@ -72,67 +74,68 @@ const api = axios.create({
 
 const User: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [errors, setErrors] = useState<Partial<Record<keyof Employee, string>>>(
-    {}
-  );
+  const [errors, setErrors] = useState<Partial<Record<keyof Employee, string>>>( {});
   const [generalError, setGeneralError] = useState<string | null>(null);
-
-  const [credentialErrors, setCredentialErrors] = useState<
-    Partial<Record<keyof User, string>>
-  >({});
+  const [credentialErrors, setCredentialErrors] = useState<Partial<Record<keyof User, string>>>({});
+  const [generalCredentialError, setGeneralCredentialError] = useState<string | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [generalCredentialError, setGeneralCredentialError] = useState<
-    string | null
-  >(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Employee>>({});
-  const [viewCredentialsId, setViewCredentialsId] = useState<number | null>(
-    null
-  );
-  const [editingCredentialsId, setEditingCredentialsId] = useState<
-    number | null
-  >(null);
+  const [viewCredentialsId, setViewCredentialsId] = useState<number | null>(null);
+  const [editingCredentialsId, setEditingCredentialsId] = useState<number | null>(null);
   const [editedCredentials, setEditedCredentials] = useState<Partial<User>>({});
+  const [searchQuery, setSearchQuery] = useState<string>(""); // Thêm state tìm kiếm
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false); // Thêm state cho thông báo
+  const [snackbarMessage, setSnackbarMessage] = useState<string>(""); // Thêm thông điệp thông báo
 
   useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const [employeeRes, userRes, departmentRes] = await Promise.all([
-        api.get("/employees"),
-        api.get("/users"),
-        api.get("/departments"),
-      ]);
+    const fetchData = async () => {
+      try {
+        const [employeeRes, userRes, departmentRes] = await Promise.all([
+          api.get("/employees"),
+          api.get("/users"),
+          api.get("/departments"),
+        ]);
 
-      // console.log("User API response:", userRes.data.data); // Kiểm tra dữ liệu users
+        const employees = employeeRes.data.data;
+        const users = userRes.data.data;
+        const departments = departmentRes.data.data;
 
-      const employees = employeeRes.data.data;
-      const users = userRes.data.data;
-      const departments = departmentRes.data.data;
+        const merged = employees.map((emp: Employee) => {
+          const user = users.find((u: User) => u.id === emp.user_id);
+          return {
+            ...emp,
+            user: user || undefined,
+          };
+        });
 
-      const merged = employees.map((emp: Employee) => {
-        const user = users.find((u: User) => u.id === emp.user_id);
-        // console.log(`Employee ${emp.id} - Matched user:`, user); // Kiểm tra user tương ứng
-        return {
-          ...emp,
-          user: user || undefined,
-        };
-      });
+        setEmployees(merged);
+        setDepartments(departments);
+      } catch (err) {
+        setGeneralError("Lỗi khi tải dữ liệu");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setEmployees(merged);
-      setDepartments(departments);
-    } catch (err) {
-      setGeneralError("Lỗi khi tải dữ liệu");
-      console.error(err);
-    } finally {
-      setLoading(false);
+    fetchData();
+  }, []);
+
+  // Lọc danh sách nhân viên theo tên
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setEmployees(employees); // Nếu không có từ khóa, hiển thị tất cả
+    } else {
+      const filtered = employees.filter((emp) =>
+        emp.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setEmployees(filtered);
     }
-  };
-
-  fetchData();
-}, []);
+  }, [searchQuery, employees]);
 
   const handleEditDetail = (employee: Employee) => {
     setEditingDetailId(employee.id);
@@ -152,10 +155,7 @@ const User: React.FC = () => {
     setErrors({});
   };
 
-  const handleChangeDetail = (
-    field: keyof Employee,
-    value: string | number
-  ) => {
+  const handleChangeDetail = (field: keyof Employee, value: string | number) => {
     setEditedDetail((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => {
       const newErrors = { ...prev };
@@ -164,10 +164,7 @@ const User: React.FC = () => {
     });
   };
 
-  const handleChangeCredentials = (
-    field: keyof User,
-    value: string | number
-  ) => {
+  const handleChangeCredentials = (field: keyof User, value: string | number) => {
     setEditedCredentials((prev) => ({ ...prev, [field]: value }));
     setCredentialErrors((prev) => {
       const newErrors = { ...prev };
@@ -175,8 +172,6 @@ const User: React.FC = () => {
       return newErrors;
     });
   };
-
-  
 
   const handleSaveDetail = async (id: number) => {
     try {
@@ -307,6 +302,8 @@ const User: React.FC = () => {
         setEditingDetailId(null);
         setViewDetailId(null);
         setErrors({});
+        setSnackbarMessage("Thông tin nhân viên đã được cập nhật thành công!");
+        setSnackbarOpen(true);
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
@@ -363,7 +360,6 @@ const User: React.FC = () => {
       };
       
       const res = await api.put(`/users/${userId}`, payload);
-      // console.log("Response from backend:", res.data);
       if (res.status === 200) {
         setEmployees((prev) =>
           prev.map((e) => {
@@ -384,6 +380,8 @@ const User: React.FC = () => {
         setEditingCredentialsId(null);
         setViewCredentialsId(null);
         setCredentialErrors({});
+        setSnackbarMessage("Thông tin tài khoản đã được cập nhật thành công!");
+        setSnackbarOpen(true);
       }
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
@@ -446,6 +444,8 @@ const User: React.FC = () => {
         await api.delete(`/users/${user_id}`);
         setEmployees((prev) => prev.filter((e) => e.user_id !== user_id));
         setErrors({});
+        setSnackbarMessage("Nhân viên đã được xóa thành công!");
+        setSnackbarOpen(true);
       } catch (err: unknown) {
         let errorMessage = "Lỗi khi xoá người dùng.";
         if (axios.isAxiosError(err)) {
@@ -464,6 +464,11 @@ const User: React.FC = () => {
     setCredentialErrors({});
   };
 
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+    setSnackbarMessage("");
+  };
+
   const userData = localStorage.getItem("user");
   const currentUserId = userData ? JSON.parse(userData).id : null;
   const currentUserRoleId = userData ? JSON.parse(userData).role_id : null;
@@ -473,16 +478,26 @@ const User: React.FC = () => {
       <Typography variant="h5" mb={2}>
         Employee <b>Details</b>
       </Typography>
-      <Button
-        variant="contained"
-        color="primary"
-        startIcon={<AddIcon />}
-        component={RouterLink}
-        to="/user/add"
-        sx={{ mb: 2 }}
-      >
-        Thêm nhân viên mới
-      </Button>
+      <Box display="flex" gap={2} alignItems="center" mb={2}>
+        <TextField
+          label="Tìm kiếm theo tên nhân viên"
+          variant="outlined"
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ width: "300px" }}
+        />
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          component={RouterLink}
+          to="/user/add"
+          sx={{ mb: 2 }}
+        >
+          Thêm nhân viên mới
+        </Button>
+      </Box>
       {loading ? (
         <Box textAlign="center">
           <CircularProgress />
@@ -988,7 +1003,7 @@ const User: React.FC = () => {
                                         onClick={() => {
                                           const userId = emp.user?.id;
                                           if (!userId) {
-                                           setGeneralCredentialError("Không tìm thấy ID người dùng.");
+                                            setGeneralCredentialError("Không tìm thấy ID người dùng.");
                                             return;
                                           }
                                           handleSaveCredentials(userId);
@@ -1093,6 +1108,16 @@ const User: React.FC = () => {
           </Table>
         </TableContainer>
       )}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: "100%" }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

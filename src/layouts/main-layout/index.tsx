@@ -22,7 +22,7 @@ const MainLayout = ({ children }: PropsWithChildren) => {
     />
 
     <Stack
-      component="main"
+      component="main"                                      
       direction="column"
       flexGrow={1}
       width="100%"
