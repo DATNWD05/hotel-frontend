@@ -338,6 +338,7 @@ const Client: React.FC = () => {
           <Box display="flex" gap={2} alignItems="center">
             <TextField
               label="Tìm kiếm (Tên hoặc SĐT)"
+                            className = "search-input"
               variant="outlined"
               size="small"
               value={searchQuery}
