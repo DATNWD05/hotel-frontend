@@ -1,9 +1,9 @@
-import { MenuItem } from 'routes/sitemap';
 import Link from '@mui/material/Link';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
-import IconifyIcon from 'components/base/IconifyIcon';
+import IconifyIcon from '../../../../components/base/IconifyIcon';
+import { MenuItem } from '../../../../routes/sitemap';
 
 const ListItem = ({ subheader, icon, path, active }: MenuItem) => {
   return (

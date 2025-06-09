@@ -1,116 +1,119 @@
-.promotion-wrapper {
+.client-wrapper {
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
   padding: 20px;
   background: #f0f2f5;
-  
 }
 
-.promotion-title {
+.client-title .header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  
 }
-.promotion-title .header-content h2 {
+
+.client-title h2 {
   margin: 0;
   font-size: 24px;
+  color: #1a73e8;
 }
 
-.btn-add {
-  padding: 8px 16px;
-  background-color: #1da1f2;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 14px;
+.client-title h2 b {
+  color: #d93025;
 }
 
-.btn-add:hover {
-  background-color: #1a91da;
+.client-title .btn-add {
+  background: #1a73e8; /* Màu xanh chính */
+  color: #fff; /* Chữ trắng */
+  border: none;
+  border-radius: 4px; /* Viền bo tròn */
+  padding: 8px 16px; /* Kích thước padding */
+  text-decoration: none; /* Loại bỏ gạch chân của Link */
+  font-size: 14px; /* Kích thước chữ */
+  font-weight: 500; /* Độ đậm chữ */
+  cursor: pointer; /* Con trỏ tay khi hover */
+  transition: background 0.3s ease, transform 0.2s ease; /* Hiệu ứng mượt mà */
+  display: inline-flex; /* Đảm bảo căn giữa nội dung */
+  align-items: center; /* Căn giữa theo chiều dọc */
 }
 
-.promotion-table-container {
+.client-title .btn-add:hover {
+  background: #1557b0; /* Màu xanh đậm hơn khi hover */
+  transform: translateY(-1px); /* Nhẹ nhàng nâng nút lên */
+}
+
+.client-title .btn-add:active {
+  background: #104a9b; /* Màu khi click */
+  transform: translateY(0); /* Trở về vị trí ban đầu */
+}
+
+.client-table-container {
+  border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.promotion-table {
-  min-width: 650px;
-  
+.client-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
 }
-.promotion-table-header{
-  background-color: #f0f0f0;
+
+.client-table th,
+.client-table td {
+  padding: 12px 15px;
+  font-size: 14px;
+  border-bottom: 1px solid #e0e0e0;
 }
-.promotion-table th,
-.promotion-table td {
-  padding: 8px;
-  text-align: left;
-  
+
+.client-table th {
+  background: #f5f5f5;
+  color: #333;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.client-table td {
+  color: #333;
+}
+
+.action-view {
+  color: #1a73e8;
+}
+
+.action-view:hover {
+  opacity: 0.8;
 }
 
 .detail-container {
-  padding: 16px;
+  padding: 15px;
+}
+
+.detail-container h3 {
+  margin: 10px 0;
+  color: #1a73e8;
+  font-size: 18px;
 }
 
 .detail-table {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin: 10px 0;
   width: 100%;
-  margin-bottom: 16px;
-}
-.promotion-wrapper {
-  padding: 20px;
 }
 
-.promotion-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.promotion-table-container {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.promotion-table-header {
-  background-color: #f5f5f5;
-}
-
-.detail-container {
-  padding: 16px;
-  background-color: #fafafa;
-}
-
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.no-data {
-  text-align: center;
-  margin-top: 20px;
-  color: #757575;
-}
-
-.error-message {
-  text-align: center;
-  margin-top: 20px;
-}
-
-.btn-add {
-  background-color: #1976d2;
-}
-
-.btn-add:hover {
-  background-color: #1565c0;
-}
 .detail-table td {
-  padding: 8px;
-  border-bottom: 1px solid #ddd;
+  padding: 8px 15px;
+  border: none;
+  color: #555;
+}
+
+.detail-table th {
+  background: #f5f5f5;
+  color: #333;
+  font-weight: 600;
 }
 
 .loading-container {
@@ -118,51 +121,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 200px;
+  padding: 20px;
 }
 
 .error-message {
-  color: #d32f2f;
   text-align: center;
-  margin-top: 20px;
+  padding: 10px;
+  color: #d32f2f;
+  font-size: 16px;
+  background: #ffebee;
+  border-radius: 5px;
+  margin-bottom: 20px;
 }
 
 .no-data {
   text-align: center;
-  margin-top: 20px;
-}
-
-.action-view,
-.action-edit {
-  margin: 0 4px;
-}
-
-.action-view:hover,
-.action-edit:hover {
-  background-color: #e0e0e0;
-}
-.btn-nav {
-  display: inline-block;
-  padding: 8px 16px;
-  background-color: #f0f0f0;
-  color: #333;
-  text-decoration: none;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-}
-
-.btn-nav:hover {
-  background-color: #e0e0e0;
-}
-.status-not-activated {
-  color: #757575;
-  font-weight: bold;
-}
-.status-active {
-  color: #388E3C;
-  font-weight: bold;
-}
-.status-expired {
-  color: #D32F2F;
-  font-weight: bold;
+  padding: 20px;
+  color: #666;
+  font-size: 16px;
 }

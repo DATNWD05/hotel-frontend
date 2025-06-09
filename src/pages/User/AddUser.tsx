@@ -16,6 +16,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import axios from "axios";
+import "../../css/User.css";
 
 interface FormData {
   name: string;
@@ -62,8 +63,8 @@ const AddUser: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false); // Thêm state cho thông báo
-  const [snackbarMessage, setSnackbarMessage] = useState<string>(""); // Thêm thông điệp thông báo
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
 
   useEffect(() => {
     api.get("/departments")
@@ -143,7 +144,7 @@ const AddUser: React.FC = () => {
       if (response.status === 201) {
         setSnackbarMessage("Thêm nhân viên thành công!");
         setSnackbarOpen(true);
-        setTimeout(() => navigate("/user"), 2000); // Chuyển hướng sau 2 giây
+        setTimeout(() => navigate("/user"), 2000);
       } else {
         throw new Error("Thêm nhân viên thất bại");
       }
@@ -184,22 +185,29 @@ const AddUser: React.FC = () => {
   ];
 
   return (
-    <div className="user-form-wrapper">
-      <Typography variant="h5" mb={2}>Thêm Nhân Viên Mới</Typography>
+    <div className="add-user-wrapper">
+      <Typography variant="h4" className="add-user-title" gutterBottom>
+        Thêm Nhân Viên Mới
+      </Typography>
 
       {loading ? (
-        <Box display="flex" justifyContent="center"><CircularProgress /></Box>
+        <Box className="loading-container">
+          <CircularProgress />
+          <Typography>Đang xử lý...</Typography>
+        </Box>
       ) : (
-        <Box display="flex" flexDirection="column" gap={3}>
-          <Box display="flex" gap={2}>
+        <Box component="form" className="add-user-form" noValidate autoComplete="off">
+          <Box className="form-row">
             <TextField
               label="Họ tên"
               name="name"
               value={formData.name}
               onChange={handleChange}
               fullWidth
+              variant="outlined"
               error={!!errors.name}
               helperText={errors.name}
+              className="form-input"
             />
             <TextField
               label="Email"
@@ -207,19 +215,23 @@ const AddUser: React.FC = () => {
               value={formData.email}
               onChange={handleChange}
               fullWidth
+              variant="outlined"
               error={!!errors.email}
               helperText={errors.email}
+              className="form-input"
             />
           </Box>
-          <Box display="flex" gap={2}>
+          <Box className="form-row">
             <TextField
               label="Số điện thoại"
               name="phone"
               value={formData.phone}
               onChange={handleChange}
               fullWidth
+              variant="outlined"
               error={!!errors.phone}
               helperText={errors.phone}
+              className="form-input"
             />
             <TextField
               label="Ngày sinh"
@@ -229,12 +241,14 @@ const AddUser: React.FC = () => {
               onChange={handleChange}
               InputLabelProps={{ shrink: true }}
               fullWidth
+              variant="outlined"
               error={!!errors.birthday}
               helperText={errors.birthday}
+              className="form-input"
             />
           </Box>
-          <Box display="flex" gap={2}>
-            <FormControl fullWidth error={!!errors.gender}>
+          <Box className="form-row">
+            <FormControl fullWidth variant="outlined" error={!!errors.gender} className="form-input">
               <InputLabel>Giới tính</InputLabel>
               <Select
                 name="gender"
@@ -258,8 +272,10 @@ const AddUser: React.FC = () => {
               value={formData.cccd}
               onChange={handleChange}
               fullWidth
+              variant="outlined"
               error={!!errors.cccd}
               helperText={errors.cccd}
+              className="form-input"
             />
           </Box>
           <TextField
@@ -268,11 +284,14 @@ const AddUser: React.FC = () => {
             value={formData.address}
             onChange={handleChange}
             fullWidth
+            variant="outlined"
             error={!!errors.address}
             helperText={errors.address}
+            className="form-input"
+            multiline
+            rows={2}
           />
-
-          <Box display="flex" gap={2}>
+          <Box className="form-row">
             <TextField
               label="Ngày vào làm"
               name="hire_date"
@@ -281,10 +300,12 @@ const AddUser: React.FC = () => {
               onChange={handleChange}
               InputLabelProps={{ shrink: true }}
               fullWidth
+              variant="outlined"
               error={!!errors.hire_date}
               helperText={errors.hire_date}
+              className="form-input"
             />
-            <FormControl fullWidth error={!!errors.department_id}>
+            <FormControl fullWidth variant="outlined" error={!!errors.department_id} className="form-input">
               <InputLabel>Phòng ban</InputLabel>
               <Select
                 name="department_id"
@@ -306,9 +327,8 @@ const AddUser: React.FC = () => {
               )}
             </FormControl>
           </Box>
-
-          <Box display="flex" gap={2}>
-            <FormControl fullWidth error={!!errors.status}>
+          <Box className="form-row">
+            <FormControl fullWidth variant="outlined" error={!!errors.status} className="form-input">
               <InputLabel>Trạng thái</InputLabel>
               <Select
                 name="status"
@@ -328,7 +348,7 @@ const AddUser: React.FC = () => {
                 </Typography>
               )}
             </FormControl>
-            <FormControl fullWidth error={!!errors.role_id}>
+            <FormControl fullWidth variant="outlined" error={!!errors.role_id} className="form-input">
               <InputLabel>Vai trò</InputLabel>
               <Select
                 name="role_id"
@@ -349,7 +369,6 @@ const AddUser: React.FC = () => {
               )}
             </FormControl>
           </Box>
-
           <TextField
             label="Mật khẩu"
             name="password"
@@ -357,22 +376,39 @@ const AddUser: React.FC = () => {
             value={formData.password}
             onChange={handleChange}
             fullWidth
+            variant="outlined"
             error={!!errors.password}
             helperText={errors.password}
+            className="form-input"
           />
-
-          <Box display="flex" justifyContent="flex-end" gap={2}>
-            <Button variant="contained" color="primary" onClick={handleSave} disabled={loading}>
+          <Box className="form-actions">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSave}
+              disabled={loading}
+              size="large"
+            >
               {loading ? <CircularProgress size={24} /> : "Lưu"}
             </Button>
-            <Button variant="contained" color="error" onClick={handleCancel} disabled={loading}>
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={handleCancel}
+              disabled={loading}
+              size="large"
+            >
               Hủy
             </Button>
           </Box>
+          {error && (
+            <Typography color="error" className="error-message" mt={2}>
+              {error}
+            </Typography>
+          )}
         </Box>
       )}
 
-      {error && <Typography color="error" mt={3}>{error}</Typography>}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}
