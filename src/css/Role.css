@@ -1,0 +1,24 @@
+.role-wrapper {
+  padding: 20px;
+  background-color: #f0f4f8;
+  min-height: 100vh;
+}
+
+.header-content {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.role-title {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+}

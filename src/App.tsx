@@ -11,6 +11,8 @@ import Promotions from "./pages/Promotion/Promotions";
 import RoleBasedRoute from "./routes/helpers/RoleBasedRoute";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/helpers/ProtectedRoute";
+import Role from "./pages/Role/Role";
+import AddRole from "./pages/Role/AddRole";
 
 function App() {
   return (
@@ -28,6 +30,9 @@ function App() {
 
         <Route path="/promotions" element={<RoleBasedRoute allowedRoleIds={[1]}><Promotions /></RoleBasedRoute>} />
         <Route path="promotions/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddPromotion /></RoleBasedRoute>} />
+
+        <Route path="/role" element={<RoleBasedRoute allowedRoleIds={[1]}><Role /></RoleBasedRoute>} />
+        <Route path="role/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRole /></RoleBasedRoute>} />
       </Route>
 
       {/* Auth */}
