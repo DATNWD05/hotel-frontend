@@ -1,7 +1,4 @@
-
-/* Wrapper chung cho cả User và AddUser */
-.client-wrapper,
-.add-user-wrapper {
+.user-wrapper {
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
@@ -9,43 +6,27 @@
   background: #f0f2f5;
 }
 
-.add-user-wrapper {
-  max-width: 900px;
-  margin: 20px auto;
-  padding: 30px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Tiêu đề */
-.client-wrapper .client-title .header-content,
-.add-user-wrapper .add-user-title {
+.user-title .user-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-.client-wrapper .client-title h2,
-.add-user-wrapper .add-user-title {
+.user-title h2 {
   margin: 0;
   font-size: 24px;
   color: #1a73e8;
-  font-weight: 600;
-  text-align: center;
 }
 
-.client-wrapper .client-title h2 b {
+.user-title h2 b {
   color: #d93025;
 }
 
-/* Nút thêm mới */
-.client-wrapper .client-title .btn-add {
-  background: #1a73e8;
-  background-color: #1a73e8;
-  color: #4318FF;
-  border: 1px solid #4318FF;
+.user-title .user-btn-add {
+  background: #4318FF;
+  color: #fff;
+  border: none;
   border-radius: 4px;
   padding: 8px 16px;
   text-decoration: none;
@@ -57,36 +38,35 @@
   align-items: center;
 }
 
-.client-wrapper .client-title .btn-add:hover {
-  background: #1557b0;
+.user-title .user-btn-add:hover {
+  background: #4318FF;
   transform: translateY(-1px);
 }
 
-.client-wrapper .client-title .btn-add:active {
+.user-title .user-btn-add:active {
   background: #104a9b;
   transform: translateY(0);
 }
 
-/* Bảng dữ liệu */
-.client-wrapper .client-table-container {
+.user-table-container {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.client-wrapper .client-table {
+.user-table {
   background: #fff;
   border-collapse: separate;
   border-spacing: 0;
 }
 
-.client-wrapper .client-table th,
-.client-wrapper .client-table td {
+.user-table th,
+.user-table td {
   padding: 12px 15px;
   font-size: 14px;
   border-bottom: 1px solid #e0e0e0;
 }
 
-.client-wrapper .client-table th {
+.user-table th {
   background: #f5f5f5;
   color: #333;
   text-transform: uppercase;
@@ -94,54 +74,45 @@
   border-bottom: 2px solid #e0e0e0;
 }
 
-.client-wrapper .client-table td {
+.user-table td {
   color: #333;
 }
 
-/* Icon hành động */
-.client-wrapper .action-view {
-  color: #1a73e8; /* Màu xanh cho icon mắt */
+.user-wrapper .user-action-view {
+  color: #1261c9;
 }
 
-.client-wrapper .action-view:hover {
+.user-action-view:hover {
   opacity: 0.8;
 }
 
-.client-wrapper .action-edit {
-  color: #ffca28; /* Màu vàng cho icon bút */
+.user-wrapper .user-action-edit {
+  color: #4318FF;
 }
 
-.client-wrapper .action-edit:hover {
+.user-action-edit:hover {
   opacity: 0.8;
 }
 
-.client-wrapper .action-delete {
-  color: #d93025; /* Màu đỏ cho icon thùng rác */
+.user-wrapper .user-action-delete {
+  color: #d93025;
 }
 
-.client-wrapper .action-delete:hover {
+.user-wrapper .user-action-delete:hover {
   opacity: 0.8;
 }
 
-.client-wrapper .action-employee {
-  color: #4318FF; /* Màu đỏ cho icon thùng rác */
-}
-
-.client-wrapper .action-employee:hover {
-  opacity: 0.8;
-}
-/* Chi tiết */
-.client-wrapper .detail-container {
+.user-detail-container {
   padding: 15px;
 }
 
-.client-wrapper .detail-container h3 {
+.user-detail-container h3 {
   margin: 10px 0;
   color: #1a73e8;
   font-size: 18px;
 }
 
-.client-wrapper .detail-table {
+.user-detail-table {
   background: #f9f9f9;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
@@ -149,148 +120,47 @@
   width: 100%;
 }
 
-.client-wrapper .detail-table td {
+.user-detail-table td {
   padding: 8px 15px;
   border: none;
   color: #555;
 }
 
-.client-wrapper .detail-table th {
+.user-detail-table th {
   background: #f5f5f5;
   color: #333;
   font-weight: 600;
 }
 
-/* Form AddUser */
-.add-user-wrapper .add-user-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.add-user-wrapper .form-row {
-  display: flex;
-  gap: 20px;
-}
-
-.add-user-wrapper .form-input {
-  flex: 1;
-  margin-bottom: 10px;
-}
-
-.add-user-wrapper .form-input .MuiOutlinedInput-root {
-  border-radius: 8px;
-}
-
-.add-user-wrapper .form-input .MuiInputLabel-root {
-  transform: translate(14px, 12px) scale(1);
-}
-
-.add-user-wrapper .form-input .MuiInputLabel-shrink {
-  transform: translate(14px, -6px) scale(0.75);
-}
-
-.add-user-wrapper .form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 15px;
-  margin-top: 20px;
-}
-
-/* Loading và lỗi */
-.client-wrapper .loading-container,
-.add-user-wrapper .loading-container {
+.user-loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px;
-  color: #555;
+  padding: 20px;
 }
 
-.client-wrapper .error-message,
-.add-user-wrapper .error-message {
+.user-error-message {
   text-align: center;
   padding: 10px;
-  background: #ffebee;
-  border-radius: 8px;
   color: #d32f2f;
+  font-size: 16px;
+  background: #ffebee;
+  border-radius: 5px;
+  margin-bottom: 20px;
 }
 
-.client-wrapper .no-data,
-.add-user-wrapper .no-data {
+.user-no-data {
   text-align: center;
   padding: 20px;
   color: #666;
   font-size: 16px;
 }
 
-/* Kiểu cho nút và input (giới hạn trong wrapper) */
-.client-wrapper .MuiButton-root,
-.add-user-wrapper .MuiButton-root {
-  padding: 10px 20px;
-  border-radius: 8px;
-  text-transform: none;
-  font-weight: 500;
+.user-search-input {
+  padding: 10px;
 }
 
-.client-wrapper .MuiButton-containedPrimary,
-.add-user-wrapper .MuiButton-containedPrimary {
-  background-color: #1a73e8;
-}
-
-.client-wrapper .MuiButton-containedPrimary:hover,
-.add-user-wrapper .MuiButton-containedPrimary:hover {
-  background-color: #1557b0;
-}
-
-.client-wrapper .MuiButton-containedError,
-.add-user-wrapper .MuiButton-containedError {
-  background-color: #d32f2f;
-}
-
-.client-wrapper .MuiButton-containedError:hover,
-.add-user-wrapper .MuiButton-containedError:hover {
-  background-color: #b71c1c;
-}
-
-.client-wrapper .MuiButton-outlinedSecondary,
-.add-user-wrapper .MuiButton-outlinedSecondary {
-  border-color: #d32f2f;
-  color: #d32f2f;
-}
-
-.client-wrapper .MuiButton-outlinedSecondary:hover,
-.add-user-wrapper .MuiButton-outlinedSecondary:hover {
-  border-color: #b71c1c;
-  background-color: rgba(211, 47, 47, 0.1);
-}
-
-.client-wrapper .MuiSelect-root,
-.add-user-wrapper .MuiSelect-root {
-  border-radius: 8px;
-}
-
-.client-wrapper .MuiOutlinedInput-notchedOutline,
-.add-user-wrapper .MuiOutlinedInput-notchedOutline {
-  border-color: #ccc;
-}
-
-.client-wrapper .Mui-focused .MuiOutlinedInput-notchedOutline,
-.add-user-wrapper .Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: #1a73e8;
-}
-
-.client-wrapper .Mui-error .MuiOutlinedInput-notchedOutline,
-.add-user-wrapper .Mui-error .MuiOutlinedInput-notchedOutline {
-  border-color: #d32f2f;
-}
-.client-wrapper .btn-addpromotion{
-  background-color: #104a9b;
-}
-.client-wrapper .search-input{
-    padding: 10px 10px;
-}
-.client-wrapper .search-input label{
-    padding: 8px
+.user-search-input label {
+  padding: 8px;
 }

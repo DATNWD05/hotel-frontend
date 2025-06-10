@@ -12,10 +12,10 @@ import {
   Box,
   SelectChangeEvent,
 } from "@mui/material";
-import "../../css/Client.css";
+import "../../css/Customer.css";
 import api from "../../api/axios";
 
-interface FormData {
+interface CustomerFormData {
   name: string;
   email: string;
   phone: string;
@@ -39,9 +39,9 @@ interface ValidationErrors {
   note?: string;
 }
 
-const AddClient: React.FC = () => {
+const AddCustomer: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<CustomerFormData>({
     name: "",
     email: "",
     phone: "",
@@ -54,11 +54,9 @@ const AddClient: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
-  const validateForm = (data: FormData): ValidationErrors => {
+  const validateForm = (data: CustomerFormData): ValidationErrors => {
     const errors: ValidationErrors = {};
     if (!data.name.trim()) errors.name = "Họ tên không được để trống";
     else if (data.name.length > 50)
@@ -122,12 +120,11 @@ const AddClient: React.FC = () => {
     try {
       const dataToSend = {
         ...formData,
-        gender: mapGenderToBackend(formData.gender), // Ánh xạ gender trước khi gửi
+        gender: mapGenderToBackend(formData.gender),
       };
-      console.log('Dữ liệu gửi đi:', dataToSend); // Log để kiểm tra dữ liệu
       const response = await api.post("/customers", dataToSend);
       if (response.status === 201) {
-        navigate("/client");
+        navigate("/customer");
       } else {
         throw new Error("Không thể thêm khách hàng mới");
       }
@@ -151,15 +148,15 @@ const AddClient: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate("/client");
+    navigate("/customer");
   };
 
   return (
-    <div className="client-wrapper">
-      <div className="client-title">
-        <div className="header-content">
+    <div className="customer-wrapper">
+      <div className="customer-title">
+        <div className="customer-header-content">
           <h2>
-            Add New <b>Client</b>
+            Add New <b>Customer</b>
           </h2>
           <Box>
             <Button
@@ -173,11 +170,12 @@ const AddClient: React.FC = () => {
             </Button>
             <Button
               variant="outlined"
+              className='customer-btn-cancel'
               color="secondary"
               onClick={handleCancel}
               disabled={loading}
               component={Link}
-              to="/client"
+              to="/customer"
             >
               Hủy
             </Button>
@@ -186,16 +184,16 @@ const AddClient: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="loading-container">
+        <div className="customer-loading-container">
           <CircularProgress />
           <Typography>Đang xử lý...</Typography>
         </div>
       ) : error ? (
-        <Typography color="error" className="error-message">
+        <Typography color="error" className="customer-error-message">
           {error}
         </Typography>
       ) : (
-        <div className="detail-container">
+        <div className="customer-detail-container">
           <h3>Thông tin khách hàng</h3>
           <Box display="flex" flexDirection="column" gap={2}>
             <Box display="flex" gap={2}>
@@ -329,4 +327,4 @@ const AddClient: React.FC = () => {
   );
 };
 
-export default AddClient;
+export default AddCustomer;

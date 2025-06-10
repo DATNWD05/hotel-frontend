@@ -1,4 +1,4 @@
-.client-wrapper {
+.customer-wrapper {
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
@@ -6,67 +6,67 @@
   background: #f0f2f5;
 }
 
-.client-title .header-content {
+.customer-title .customer-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-.client-title h2 {
+.customer-title h2 {
   margin: 0;
   font-size: 24px;
   color: #1a73e8;
 }
 
-.client-title h2 b {
+.customer-title h2 b {
   color: #d93025;
 }
 
-.client-title .btn-add {
-  background: #1a73e8; /* Màu xanh chính */
-  color: #fff; /* Chữ trắng */
+.customer-title .customer-btn-add {
+  background: #4318FF;
+  color: #fff;
   border: none;
-  border-radius: 4px; /* Viền bo tròn */
-  padding: 8px 16px; /* Kích thước padding */
-  text-decoration: none; /* Loại bỏ gạch chân của Link */
-  font-size: 14px; /* Kích thước chữ */
-  font-weight: 500; /* Độ đậm chữ */
-  cursor: pointer; /* Con trỏ tay khi hover */
-  transition: background 0.3s ease, transform 0.2s ease; /* Hiệu ứng mượt mà */
-  display: inline-flex; /* Đảm bảo căn giữa nội dung */
-  align-items: center; /* Căn giữa theo chiều dọc */
+  border-radius: 4px;
+  padding: 8px 16px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+  display: inline-flex;
+  align-items: center;
 }
 
-.client-title .btn-add:hover {
-  background: #1557b0; /* Màu xanh đậm hơn khi hover */
-  transform: translateY(-1px); /* Nhẹ nhàng nâng nút lên */
+.customer-title .customer-btn-add:hover {
+  background: #4318FF;
+  transform: translateY(-1px);
 }
 
-.client-title .btn-add:active {
-  background: #104a9b; /* Màu khi click */
-  transform: translateY(0); /* Trở về vị trí ban đầu */
+.customer-title .customer-btn-add:active {
+  background: #104a9b;
+  transform: translateY(0);
 }
 
-.client-table-container {
+.customer-table-container {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.client-table {
+.customer-table {
   background: #fff;
   border-collapse: separate;
   border-spacing: 0;
 }
 
-.client-table th,
-.client-table td {
+.customer-table th,
+.customer-table td {
   padding: 12px 15px;
   font-size: 14px;
   border-bottom: 1px solid #e0e0e0;
 }
 
-.client-table th {
+.customer-table th {
   background: #f5f5f5;
   color: #333;
   text-transform: uppercase;
@@ -74,29 +74,40 @@
   border-bottom: 2px solid #e0e0e0;
 }
 
-.client-table td {
+.customer-table td {
   color: #333;
 }
 
-.action-view {
+.customer-wrapper .customer-action-view {
   color: #1a73e8;
 }
 
-.action-view:hover {
+.customer-wrapper .customer-action-view:hover {
   opacity: 0.8;
 }
 
-.detail-container {
+.customer-wrapper .customer-action-edit {
+  color: #FACC15;
+}
+
+.customer-wrapper .customer-btn-cancel{
+  color: #d32f2f;
+}
+.customer-wrapper .customer-action-edit:hover {
+  opacity: 0.8;
+}
+
+.customer-detail-container {
   padding: 15px;
 }
 
-.detail-container h3 {
+.customer-detail-container h3 {
   margin: 10px 0;
   color: #1a73e8;
   font-size: 18px;
 }
 
-.detail-table {
+.customer-detail-table {
   background: #f9f9f9;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
@@ -104,19 +115,19 @@
   width: 100%;
 }
 
-.detail-table td {
+.customer-detail-table td {
   padding: 8px 15px;
   border: none;
   color: #555;
 }
 
-.detail-table th {
+.customer-detail-table th {
   background: #f5f5f5;
   color: #333;
   font-weight: 600;
 }
 
-.loading-container {
+.customer-loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -124,7 +135,7 @@
   padding: 20px;
 }
 
-.error-message {
+.customer-error-message {
   text-align: center;
   padding: 10px;
   color: #d32f2f;
@@ -134,7 +145,7 @@
   margin-bottom: 20px;
 }
 
-.no-data {
+.customer-no-data {
   text-align: center;
   padding: 20px;
   color: #666;

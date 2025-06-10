@@ -34,7 +34,7 @@ const sitemap: MenuItem[] = [
       {
         name: 'Loại Phòng',
         pathName: 'roomtype',
-        path: '/room/type',
+        path: '/rooms',
       },
       {
         name: 'Tầng',
@@ -55,9 +55,9 @@ const sitemap: MenuItem[] = [
     icon: 'material-symbols:person', // biểu tượng người
   },
   {
-    id: 'client',
+    id: 'customer',
     subheader: 'Khách hàng',
-    path: '/client',
+    path: '/customer',
     icon: 'material-symbols:group', // nhóm người
   },
   {
