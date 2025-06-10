@@ -103,6 +103,12 @@ const sitemap: MenuItem[] = [
     icon: 'material-symbols:settings', // bánh răng
   },
   {
+    id: 'role',
+    subheader: 'Vai trò',
+    path: '/role',
+    icon: 'material-symbols:settings', // bánh răng
+  },
+  {
     id: 'authentication',
     subheader: 'Đăng nhập',
     icon: 'material-symbols:security', // bảo mật
