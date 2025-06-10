@@ -81,8 +81,19 @@ const sitemap: MenuItem[] = [
   {
     id: 'service',
     subheader: 'Dịch vụ',
-    path: '#!',
     icon: 'material-symbols:room-service-outline', // dịch vụ phòng
+    items:[
+      {
+        name: 'Dịch vụ',
+        pathName: 'dichvu',
+        path: '/service'
+      },
+      {
+        name: 'Danh mục dịch vụ',
+        pathName: 'dichvu_danhmuc',
+        path: '/service-categories'
+      }
+    ]
   },
   {
     id: 'report',

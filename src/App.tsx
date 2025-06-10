@@ -13,6 +13,11 @@ import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/helpers/ProtectedRoute";
 import Role from "./pages/Role/Role";
 import AddRole from "./pages/Role/AddRole";
+import Service from "./pages/Services/service";
+import CreateService from "./pages/Services/CreateService";
+import EditService from "./pages/Services/EditService";
+import ServiceCategoryList from "./pages/Services/Service_category";
+import AddServiceCategory from "./pages/Services/AddServiceCategory";
 
 function App() {
   return (
@@ -33,6 +38,12 @@ function App() {
 
         <Route path="/role" element={<RoleBasedRoute allowedRoleIds={[1]}><Role /></RoleBasedRoute>} />
         <Route path="role/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRole /></RoleBasedRoute>} />
+
+        <Route path="/service" element={<RoleBasedRoute allowedRoleIds={[1]}><Service /></RoleBasedRoute>} />
+        <Route path="service/add" element={<RoleBasedRoute allowedRoleIds={[1]}><CreateService /></RoleBasedRoute>} />
+        <Route path="/service/edit/:serviceId" element={<RoleBasedRoute allowedRoleIds={[1]}><EditService /></RoleBasedRoute>} />
+        <Route path="service-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><ServiceCategoryList /></RoleBasedRoute>} />
+        <Route path="/service-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddServiceCategory /></RoleBasedRoute>} />
       </Route>
 
       {/* Auth */}

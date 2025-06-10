@@ -1,0 +1,187 @@
+/* CreateService.css */
+
+/* Container for the entire component */
+.create-service-container {
+  min-height: 100vh; /* Full viewport height */
+  width: 1100px; /* Full viewport width */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* Stretch children to full width */
+  /* padding: 2rem; */
+  background-color: #f9fafb;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box; /* Ensure padding doesn't cause overflow */
+}
+
+/* Header styling (if added) */
+.app-header {
+  /* width: 100%; */
+  padding: 1rem;
+  background-color: #1f2937;
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.app-header h1 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.app-header nav a {
+  color: #93c5fd;
+  text-decoration: none;
+  margin: 0 1rem;
+  font-size: 0.9rem;
+}
+
+.app-header nav a:hover {
+  text-decoration: underline;
+}
+
+/* Title styling */
+.create-service-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Message styling (success, error, loading) */
+.message {
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+  text-align: center;
+  width: 100%; /* Full width of container */
+}
+
+/* Form styling */
+.create-service-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: calc(100% - 250px); /* Adjust based on sidebar width (e.g., 250px) */
+  min-width: 300px; /* Minimum width to avoid cramped look */
+  max-width: 800px; /* Maximum width for readability */
+  margin-left: auto; /* Push to the right, assuming sidebar is on the left */
+  margin-right: auto; /* Center if no sidebar context */
+}
+
+/* Label styling */
+.form-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+/* Input and select styling */
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #1f2937;
+  background-color: #ffffff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #ec4899; /* Pink border on focus */
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2); /* Pink glow */
+}
+
+/* Textarea specific styling */
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Error message styling */
+.form-error {
+  color: #ef4444;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+/* Button styling */
+.form-button {
+  padding: 0.75rem 1.5rem;
+  background-color: #3b82f6;
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  align-self: center;
+  margin-top: 1rem;
+}
+
+.form-button:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.form-button:active {
+  transform: translateY(0);
+}
+
+.form-button:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .create-service-container {
+    padding: 1.5rem;
+  }
+
+  .create-service-title {
+    font-size: 1.5rem;
+  }
+
+  .app-header h1 {
+    font-size: 1.3rem;
+  }
+
+  .create-service-form {
+    width: 100%; /* Full width on mobile */
+    min-width: 0; /* Remove min-width on mobile */
+  }
+
+  .form-button {
+    width: 100%;
+  }
+}
+
+/* Accessibility improvements */
+.form-input[aria-invalid="true"],
+.form-select[aria-invalid="true"],
+.form-textarea[aria-invalid="true"] {
+  border-color: #ef4444;
+}
+
+.form-label::after {
+  content: '*';
+  color: #ef4444;
+  margin-left: 0.25rem;
+  display: inline-block;
+}
+
+.form-textarea + .form-label::after {
+  content: none; /* Description is optional */
+}
