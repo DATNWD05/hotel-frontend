@@ -1,0 +1,254 @@
+/* General container */
+.service-container {
+  padding: 24px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f9f9f9;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #555;
+}
+.breadcrumb a {
+  color: #007bff;
+  text-decoration: none;
+}
+.breadcrumb span::before {
+  content: '›';
+  margin: 0 8px;
+  color: #999;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.header h1 {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+}
+.btn-add {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.btn-add:hover {
+  background-color: #218838;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  list-style: none;
+  padding: 0;
+}
+.tabs li {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background-color: #e0e0e0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+.tabs li.active {
+  background-color: #007bff;
+  color: white;
+  font-weight: 500;
+}
+.tabs li:hover {
+  background-color: #d4d4d8;
+}
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+thead {
+  background-color: #f2f2f2;
+}
+th, td {
+  padding: 12px 20px;
+  text-align: center;
+  font-size: 14px;
+}
+th {
+  font-weight: 600;
+  color: #444;
+}
+tr:nth-child(even) {
+  background-color: #fafafa;
+}
+.group-header {
+  background-color: #e8f0fe;
+  font-weight: bold;
+  cursor: pointer;
+}
+.group-header td {
+  color: #333;
+}
+.arrow {
+  display: inline-block;
+  margin-right: 8px;
+  transform: rotate(-90deg);
+  transition: transform 0.3s ease;
+}
+.arrow.open {
+  transform: rotate(0deg);
+}
+.service-row td {
+  border-top: 1px solid #eee;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+.edit-btn, .delete-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.edit-btn:hover, .delete-btn:hover {
+  transform: scale(1.1);
+}
+.edit-icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  color: #ffc107; /* Yellow for pencil icon */
+  fill: #ffc107;
+}
+.delete-icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  color: #dc3545; /* Red for trash icon */
+  fill: #dc3545
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 24px;
+  gap: 12px;
+}
+.pagination button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.pagination button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+.pagination span {
+  font-size: 14px;
+  color: #444;
+}
+
+/* Edit Form */
+.edit-form-container {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.edit-form-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #333;
+}
+.edit-form {
+  display: grid;
+  gap: 8px;
+}
+.form-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #444;
+  margin-bottom: 4px;
+}
+.form-input input,
+.form-select select,
+.form-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+.form-input input:focus,
+.form-select select:focus,
+.form-textarea:focus {
+  border-color: #007bff;
+  outline: none;
+}
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+.form-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 8px;
+}
+.form-button:hover {
+  background-color: #0056b3;
+}
+.cancel-button {
+  background-color: #6c757d;
+  margin-left: 8px;
+}
+.cancel-button:hover {
+  background-color: #5a6268;
+}
+
+/* Loading & Error */
+.loading, .error {
+  margin-top: 16px;
+  font-size: 14px;
+  text-align: center;
+}
+.loading {
+  color: #888;
+}
+.error {
+  color: #dc3545;
+}

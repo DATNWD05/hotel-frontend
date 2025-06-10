@@ -4,133 +4,113 @@
   margin: 0 auto;
   padding: 20px;
   background: #f0f2f5;
+  
 }
 
-.promotion-title .promotion-header-content {
+.promotion-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  
+}
+.promotion-title .header-content h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.btn-add {
+  padding: 8px 16px;
+  background-color: #1da1f2;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.btn-add:hover {
+  background-color: #1a91da;
+}
+
+.promotion-table-container {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.promotion-table {
+  min-width: 650px;
+  
+}
+.promotion-table-header{
+  background-color: #f0f0f0;
+}
+.promotion-table th,
+.promotion-table td {
+  padding: 8px;
+  text-align: left;
+  
+}
+
+.detail-container {
+  padding: 16px;
+}
+
+.detail-table {
+  width: 100%;
+  margin-bottom: 16px;
+}
+.promotion-wrapper {
+  padding: 20px;
+}
+
+.promotion-title {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-.promotion-title h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #1a73e8;
-}
-
-.promotion-title h2 b {
-  color: #d93025;
-}
-
-.promotion-title .promotion-btn-add {
-  background:#4318FF;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-}
-
-.promotion-title .promotion-btn-add:hover {
-  background: #4318FF;
-  transform: translateY(-1px);
-}
-
-.promotion-title .promotion-btn-add:active {
-  background: #104a9b;
-  transform: translateY(0);
-}
-
 .promotion-table-container {
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.promotion-table {
-  background: #fff;
-  border-collapse: separate;
-  border-spacing: 0;
+.promotion-table-header {
+  background-color: #f5f5f5;
 }
 
-.promotion-table th,
-.promotion-table td {
-  padding: 12px 15px;
-  font-size: 14px;
-  border-bottom: 1px solid #e0e0e0;
+.detail-container {
+  padding: 16px;
+  background-color: #fafafa;
 }
 
-.promotion-table th {
-  background: #f5f5f5;
-  color: #333;
-  text-transform: uppercase;
-  font-weight: 600;
-  border-bottom: 2px solid #e0e0e0;
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
 }
 
-.promotion-table td {
-  color: #333;
+.no-data {
+  text-align: center;
+  margin-top: 20px;
+  color: #757575;
 }
 
-.promotion-wrapper .promotion-action-view {
-  color: #1a73e8;
+.error-message {
+  text-align: center;
+  margin-top: 20px;
 }
 
-.promotion-wrapper .promotion-action-view:hover {
-  opacity: 0.8;
+.btn-add {
+  background-color: #1976d2;
 }
 
-.promotion-detail-container {
-  padding: 15px;
+.btn-add:hover {
+  background-color: #1565c0;
 }
-
-.promotion-wrapper .promotion-action-edit {
-  color: #FACC15;
-}
-
-.promotion-wrapper .promotion-action-edit:hover {
-  opacity: 0.8;
-}
-.promotion-wrapper .promotion-action-delete {
-  color: #d93025;
-}
-
-.promotion-wrapper .promotion-action-delete:hover {
-  opacity: 0.8;
-}
-.promotion-wrapper .promotion-btn-cancel{
-  color: #d32f2f;
-}
-.promotion-detail-container h3 {
-  margin: 10px 0;
-  color: #1a73e8;
-  font-size: 18px;
-}
-
-.promotion-detail-table {
-  background: #f9f9f9;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  margin: 10px 0;
-  width: 100%;
-}
-
-.promotion-detail-table td {
-  padding: 8px 15px;
-  border: none;
-  color: #555;
-}
-
-.promotion-detail-table th {
-  background: #f5f5f5;
-  color: #333;
-  font-weight: 600;
+.detail-table td {
+  padding: 8px;
+  border-bottom: 1px solid #ddd;
 }
 
 .promotion-loading-container {
@@ -138,22 +118,51 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  height: 200px;
 }
 
-.promotion-error-message {
-  text-align: center;
-  padding: 10px;
+.error-message {
   color: #d32f2f;
-  font-size: 16px;
-  background: #ffebee;
-  border-radius: 5px;
-  margin-bottom: 20px;
+  text-align: center;
+  margin-top: 20px;
 }
 
 .promotion-no-data {
   text-align: center;
-  padding: 20px;
-  color: #666;
-  font-size: 16px;
+  margin-top: 20px;
+}
+
+.action-view,
+.action-edit {
+  margin: 0 4px;
+}
+
+.action-view:hover,
+.action-edit:hover {
+  background-color: #e0e0e0;
+}
+.btn-nav {
+  display: inline-block;
+  padding: 8px 16px;
+  background-color: #f0f0f0;
+  color: #333;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.btn-nav:hover {
+  background-color: #e0e0e0;
+}
+.status-not-activated {
+  color: #757575;
+  font-weight: bold;
+}
+.status-active {
+  color: #388E3C;
+  font-weight: bold;
+}
+.status-expired {
+  color: #D32F2F;
+  font-weight: bold;
 }
