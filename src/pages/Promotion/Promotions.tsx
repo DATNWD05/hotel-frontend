@@ -36,7 +36,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { format, parseISO } from 'date-fns';
 import numeral from 'numeral';
 import api from '../../api/axios';
-import '../../css/Promotion.css'; // Đổi sang Promotion.css
+import '../../css/Promotion.css';
 import { JSX } from 'react/jsx-runtime';
 import { Link } from 'react-router-dom';
 
@@ -53,18 +53,6 @@ interface Promotion {
   usage_limit: number | null;
   used_count: number;
   is_active: boolean;
-  bookings?: {
-    id: number;
-    promotion_id: number;
-    created_by: string;
-    check_in_date: string;
-    check_out_date: string;
-    status: string;
-    deposit_amount: string;
-    raw_total: string;
-    discount_amount: string;
-    total_amount: string;
-  }[];
 }
 
 interface ValidationErrors {
@@ -140,20 +128,6 @@ const Promotions: React.FC = () => {
             is_active: !!item.is_active,
             usage_limit: item.usage_limit === null ? null : Number(item.usage_limit),
             used_count: Number(item.used_count),
-            bookings: item.bookings
-              ? item.bookings.map((booking) => ({
-                  id: Number(booking.id) || 0,
-                  promotion_id: Number(booking.promotion_id) || 0,
-                  created_by: booking.created_by || 'Không xác định',
-                  check_in_date: booking.check_in_date || 'Không xác định',
-                  check_out_date: booking.check_out_date || 'Không xác định',
-                  status: booking.status || 'Không xác định',
-                  deposit_amount: booking.deposit_amount || '0',
-                  raw_total: booking.raw_total || '0',
-                  discount_amount: booking.discount_amount || '0',
-                  total_amount: booking.total_amount || '0',
-                }))
-              : [],
           }));
           allData = [...allData, ...sanitizedData];
 
@@ -235,8 +209,8 @@ const Promotions: React.FC = () => {
     if (!data.code?.trim()) errors.code = 'Mã CTKM không được để trống';
     else if (data.code && data.code.length > 20) errors.code = 'Mã CTKM không được vượt quá 20 ký tự';
     if (!data.description?.trim()) errors.description = 'Mô tả không được để trống';
-    else if (data.description && data.description.length > 200) errors.description = 'Mô tả không được vượt quá 200 ký tự';
-    if (!data.discount_type) errors.discount_type = 'Vui lòng chọn loại giảm';
+    else if (data.description && data.description.length > 255) errors.description = 'Mô tả không được vượt quá 255 ký tự';
+    if (!data.discount_type) errors.discount_type = 'Vui lòng chọn loại giảm giá';
     if (data.discount_value === undefined || data.discount_value <= 0) errors.discount_value = 'Giá trị giảm phải lớn hơn 0';
     else if (data.discount_type === 'percent' && data.discount_value > 100) {
       errors.discount_value = 'Giá trị giảm không được vượt quá 100%';
@@ -280,7 +254,7 @@ const Promotions: React.FC = () => {
     setValidationErrors({});
   };
 
-  const handleChangeDetail = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditedDetail((prev) => ({ ...prev, [name]: value } as Partial<Promotion>));
     setValidationErrors((prev) => {
@@ -303,7 +277,7 @@ const Promotions: React.FC = () => {
   };
 
   const handleSaveDetail = async () => {
-    if (!editedDetail || !editedDetail.id) return;
+    if (!editedDetail || !editingDetailId) return;
 
     const errors = validateForm(editedDetail);
     if (Object.keys(errors).length > 0) {
@@ -325,7 +299,7 @@ const Promotions: React.FC = () => {
         is_active: !!editedDetail.is_active,
       };
 
-      const response = await api.put(`/promotions/${editedDetail.id}`, payload);
+      const response = await api.put(`/promotions/${editingDetailId}`, payload);
       if (response.status === 200) {
         await fetchAllPromotions();
         setEditingDetailId(null);
@@ -442,10 +416,7 @@ const Promotions: React.FC = () => {
                 <MenuItem value="Bị tắt">Bị tắt</MenuItem>
               </Select>
             </FormControl>
-            <Link
-              className="promotion-btn-add"
-              to="/promotions/add"
-            >
+            <Link className="promotion-btn-add" to="/promotions/add">
               Thêm mới
             </Link>
           </Box>
@@ -535,7 +506,7 @@ const Promotions: React.FC = () => {
                                         label="Mã khuyến mãi"
                                         name="code"
                                         value={editedDetail.code || ''}
-                                        onChange={handleChangeDetail}
+                                        onChange={handleChange}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -546,7 +517,7 @@ const Promotions: React.FC = () => {
                                         label="Mô tả"
                                         name="description"
                                         value={editedDetail.description || ''}
-                                        onChange={handleChangeDetail}
+                                        onChange={handleChange}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -577,7 +548,7 @@ const Promotions: React.FC = () => {
                                         name="discount_value"
                                         type="number"
                                         value={editedDetail.discount_value ?? ''}
-                                        onChange={handleChangeDetail}
+                                        onChange={handleChange}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -591,7 +562,7 @@ const Promotions: React.FC = () => {
                                         name="start_date"
                                         type="date"
                                         value={editedDetail.start_date || ''}
-                                        onChange={handleChangeDetail}
+                                        onChange={handleChange}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -604,7 +575,7 @@ const Promotions: React.FC = () => {
                                         name="end_date"
                                         type="date"
                                         value={editedDetail.end_date || ''}
-                                        onChange={handleChangeDetail}
+                                        onChange={handleChange}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -619,7 +590,7 @@ const Promotions: React.FC = () => {
                                         name="usage_limit"
                                         type="number"
                                         value={editedDetail.usage_limit ?? ''}
-                                        onChange={handleChangeDetail}
+                                        onChange={handleChange}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -631,7 +602,7 @@ const Promotions: React.FC = () => {
                                         name="used_count"
                                         type="number"
                                         value={editedDetail.used_count ?? ''}
-                                        onChange={handleChangeDetail}
+                                        onChange={handleChange}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -643,10 +614,10 @@ const Promotions: React.FC = () => {
                                       <FormControlLabel
                                         control={
                                           <Switch
-                                            checked={!!editedDetail.is_active}
-                                            onChange={(e) => handleChangeDetail({ target: { name: 'is_active', value: e.target.checked } } as never)}
-                                            color="default"
-                                          />
+                                          checked={!!editedDetail.is_active}
+                                          onChange={(e) => handleChange(e)}
+                                          color="default"
+                                        />
                                         }
                                         label="Kích hoạt"
                                       />
@@ -677,69 +648,32 @@ const Promotions: React.FC = () => {
                                   )}
                                 </>
                               ) : (
-                                <>
-                                  <Table className="promotion-detail-table">
-                                    <TableBody>
-                                      <TableRow>
-                                        <TableCell><strong>Mã CTKM:</strong> {promotion.code}</TableCell>
-                                        <TableCell><strong>Mô tả:</strong> {promotion.description}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell><strong>Loại giảm:</strong> {promotion.discount_type === 'percent' ? 'Phần trăm' : 'Số tiền'}</TableCell>
-                                        <TableCell><strong>Giá trị giảm:</strong> {formatCurrency(promotion.discount_value, promotion.discount_type)}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell><strong>Ngày bắt đầu:</strong> {formatDate(promotion.start_date)}</TableCell>
-                                        <TableCell><strong>Ngày kết thúc:</strong> {formatDate(promotion.end_date)}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell><strong>Giới hạn số lần:</strong> {promotion.usage_limit ?? 'Không giới hạn'}</TableCell>
-                                        <TableCell><strong>Số lần sử dụng:</strong> {promotion.used_count}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell colSpan={2}>
-                                          <strong>Trạng thái:</strong>{' '}
-                                          <span style={{ color, fontWeight: 'bold' }}>{status}</span>
-                                        </TableCell>
-                                      </TableRow>
-                                    </TableBody>
-                                  </Table>
-                                </>
-                              )}
-                              <h3>Đặt phòng</h3>
-                              {promotion.bookings && promotion.bookings.length > 0 ? (
                                 <Table className="promotion-detail-table">
-                                  <TableHead>
-                                    <TableRow>
-                                      <TableCell>Mã Đặt Phòng</TableCell>
-                                      <TableCell>Người Tạo</TableCell>
-                                      <TableCell>Ngày Nhận Phòng</TableCell>
-                                      <TableCell>Ngày Trả Phòng</TableCell>
-                                      <TableCell>Trạng Thái</TableCell>
-                                      <TableCell>Đặt Cọc</TableCell>
-                                      <TableCell>Tổng Gốc</TableCell>
-                                      <TableCell>Tổng Giảm Giá</TableCell>
-                                      <TableCell>Tổng Cuối</TableCell>
-                                    </TableRow>
-                                  </TableHead>
                                   <TableBody>
-                                    {promotion.bookings.map((booking) => (
-                                      <TableRow key={booking.id}>
-                                        <TableCell>{booking.id || 'Không xác định'}</TableCell>
-                                        <TableCell>{booking.created_by || 'Không xác định'}</TableCell>
-                                        <TableCell>{booking.check_in_date || 'Không xác định'}</TableCell>
-                                        <TableCell>{booking.check_out_date || 'Không xác định'}</TableCell>
-                                        <TableCell>{booking.status || 'Không xác định'}</TableCell>
-                                        <TableCell>{booking.deposit_amount || '0'}</TableCell>
-                                        <TableCell>{booking.raw_total || '0'}</TableCell>
-                                        <TableCell>{booking.discount_amount || '0'}</TableCell>
-                                        <TableCell>{booking.total_amount || '0'}</TableCell>
-                                      </TableRow>
-                                    ))}
+                                    <TableRow>
+                                      <TableCell><strong>Mã CTKM:</strong> {promotion.code}</TableCell>
+                                      <TableCell><strong>Mô tả:</strong> {promotion.description}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell><strong>Loại giảm:</strong> {promotion.discount_type === 'percent' ? 'Phần trăm' : 'Số tiền'}</TableCell>
+                                      <TableCell><strong>Giá trị giảm:</strong> {formatCurrency(promotion.discount_value, promotion.discount_type)}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell><strong>Ngày bắt đầu:</strong> {formatDate(promotion.start_date)}</TableCell>
+                                      <TableCell><strong>Ngày kết thúc:</strong> {formatDate(promotion.end_date)}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell><strong>Giới hạn số lần:</strong> {promotion.usage_limit ?? 'Không giới hạn'}</TableCell>
+                                      <TableCell><strong>Số lần sử dụng:</strong> {promotion.used_count}</TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                      <TableCell colSpan={2}>
+                                        <strong>Trạng thái:</strong>{' '}
+                                        <span style={{ color, fontWeight: 'bold' }}>{status}</span>
+                                      </TableCell>
+                                    </TableRow>
                                   </TableBody>
                                 </Table>
-                              ) : (
-                                <Typography>Không có thông tin đặt phòng.</Typography>
                               )}
                             </div>
                           </Collapse>
@@ -777,9 +711,7 @@ const Promotions: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
-            Hủy
-          </Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Hủy</Button>
           <Button onClick={confirmDelete} variant="contained" color="error">
             Xác nhận
           </Button>
