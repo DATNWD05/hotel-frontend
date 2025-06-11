@@ -26,10 +26,10 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import { Link } from 'react-router-dom';
 import { SelectChangeEvent } from '@mui/material/Select';
-import '../../css/Client.css';
+import '../../css/Customer.css';
 import api from '../../api/axios';
 
-interface Client {
+interface Customer {
   id: number;
   cccd: string;
   name: string;
@@ -42,15 +42,15 @@ interface Client {
   note: string;
   bookings?: {
     id: number;
-    code: string;
-    source: string;
-    bookingDate: string;
-    checkInDate: string;
-    checkOutDate: string;
-    bookingStatus: string;
-    paymentStatus: string;
-    amount: string;
-    note: string;
+    customer_id: number;
+    created_by: string;
+    check_in_date: string;
+    check_out_date: string;
+    status: string;
+    deposit_amount: string;
+    raw_total: string;
+    discount_amount: string;
+    total_amount: string;
   }[];
 }
 
@@ -74,20 +74,20 @@ interface Meta {
 }
 
 interface ApiResponse {
-  data: Client[];
+  data: Customer[];
   meta: Meta;
 }
 
-const Client: React.FC = () => {
-  const [clients, setClients] = useState<Client[]>([]);
-  const [allClients, setAllClients] = useState<Client[]>([]);
-  const [filteredClients, setFilteredClients] = useState<Client[]>([]);
+const Customer: React.FC = () => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
-  const [editClientId, setEditClientId] = useState<number | null>(null);
-  const [editFormData, setEditFormData] = useState<Client | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [editCustomerId, setEditCustomerId] = useState<number | null>(null);
+  const [editFormData, setEditFormData] = useState<Customer | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -122,11 +122,11 @@ const Client: React.FC = () => {
     }
   };
 
-  const fetchClients = async () => {
+  const fetchCustomers = async () => {
     try {
       setLoading(true);
       setError(null);
-      let allData: Client[] = [];
+      let allData: Customer[] = [];
       let page = 1;
 
       while (true) {
@@ -148,20 +148,20 @@ const Client: React.FC = () => {
             bookings: item.bookings
               ? item.bookings.map((booking) => ({
                   id: Number(booking.id) || 0,
-                  code: booking.code || 'Không xác định',
-                  source: booking.source || 'Không xác định',
-                  bookingDate: booking.bookingDate || 'Không xác định',
-                  checkInDate: booking.checkInDate || 'Không xác định',
-                  checkOutDate: booking.checkOutDate || 'Không xác định',
-                  bookingStatus: booking.bookingStatus || 'Không xác định',
-                  paymentStatus: booking.paymentStatus || 'Không xác định',
-                  amount: booking.amount || 'Không xác định',
-                  note: booking.note || '',
+                  customer_id: Number(booking.customer_id) || 0,
+                  created_by: booking.created_by || 'Không xác định',
+                  check_in_date: booking.check_in_date || 'Không xác định',
+                  check_out_date: booking.check_out_date || 'Không xác định',
+                  status: booking.status || 'Không xác định',
+                  deposit_amount: booking.deposit_amount || '0',
+                  raw_total: booking.raw_total || '0',
+                  discount_amount: booking.discount_amount || '0',
+                  total_amount: booking.total_amount || '0',
                 }))
               : [],
           }));
           allData = [...allData, ...sanitizedData];
-
+          
           if (page >= data.meta.last_page) break;
           page++;
         } else {
@@ -169,8 +169,8 @@ const Client: React.FC = () => {
         }
       }
 
-      setAllClients(allData);
-      setClients(allData.slice(0, 10));
+      setAllCustomers(allData);
+      setCustomers(allData.slice(0, 10));
       setLastPage(Math.ceil(allData.length / 10));
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
@@ -182,26 +182,25 @@ const Client: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchClients();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchCustomers();
   }, []);
 
   useEffect(() => {
-    let filtered = [...allClients];
+    let filtered = [...allCustomers];
 
     if (searchQuery.trim() !== '') {
-      filtered = filtered.filter((client) =>
-        client.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        client.phone.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter((customer) =>
+        customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        customer.phone.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    setFilteredClients(filtered);
+    setFilteredCustomers(filtered);
     setLastPage(Math.ceil(filtered.length / 10));
-    setClients(filtered.slice((currentPage - 1) * 10, currentPage * 10));
-  }, [searchQuery, allClients, currentPage]);
+    setCustomers(filtered.slice((currentPage - 1) * 10, currentPage * 10));
+  }, [searchQuery, allCustomers, currentPage]);
 
-  const validateForm = (data: Client): ValidationErrors => {
+  const validateForm = (data: Customer): ValidationErrors => {
     const errors: ValidationErrors = {};
     if (!data.name.trim()) errors.name = 'Họ tên không được để trống';
     else if (data.name.length > 50) errors.name = 'Họ tên không được vượt quá 50 ký tự';
@@ -239,10 +238,10 @@ const Client: React.FC = () => {
     }
   };
 
-  const handleEdit = (client: Client) => {
-    setSelectedClientId(client.id);
-    setEditClientId(client.id);
-    setEditFormData({ ...client });
+  const handleEdit = (customer: Customer) => {
+    setSelectedCustomerId(customer.id);
+    setEditCustomerId(customer.id);
+    setEditFormData({ ...customer });
     setValidationErrors({});
     setEditError(null);
   };
@@ -258,20 +257,18 @@ const Client: React.FC = () => {
 
     setEditLoading(true);
     try {
-      const clientId = Number(editFormData.id);
-      if (isNaN(clientId)) {
+      const customerId = Number(editFormData.id);
+      if (isNaN(customerId)) {
         throw new Error('ID khách hàng không hợp lệ');
       }
 
       const { ...dataToSend } = editFormData;
       dataToSend.gender = mapGenderToBackend(editFormData.gender);
 
-      console.log('Dữ liệu gửi đi:', dataToSend);
-
-      const response = await api.put(`/customers/${clientId}`, dataToSend);
+      const response = await api.put(`/customers/${customerId}`, dataToSend);
       if (response.status === 200) {
-        await fetchClients();
-        setEditClientId(null);
+        await fetchCustomers();
+        setEditCustomerId(null);
         setEditFormData(null);
         setSnackbarMessage('Cập nhật khách hàng thành công!');
         setSnackbarOpen(true);
@@ -300,18 +297,18 @@ const Client: React.FC = () => {
   };
 
   const handleCancel = () => {
-    setEditClientId(null);
+    setEditCustomerId(null);
     setEditFormData(null);
     setValidationErrors({});
     setEditError(null);
   };
 
   const handleViewDetails = (id: number) => {
-    if (selectedClientId === id && editClientId !== id) {
-      setSelectedClientId(null);
+    if (selectedCustomerId === id && editCustomerId !== id) {
+      setSelectedCustomerId(null);
     } else {
-      setSelectedClientId(id);
-      setEditClientId(null);
+      setSelectedCustomerId(id);
+      setEditCustomerId(null);
       setEditFormData(null);
       setValidationErrors({});
       setEditError(null);
@@ -325,27 +322,27 @@ const Client: React.FC = () => {
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
     setCurrentPage(page);
-    setClients(filteredClients.slice((page - 1) * 10, page * 10));
+    setCustomers(filteredCustomers.slice((page - 1) * 10, page * 10));
   };
 
   return (
-    <div className="client-wrapper">
-      <div className="client-title">
-        <div className="header-content">
+    <div className="customer-wrapper">
+      <div className="customer-title">
+        <div className="customer-header-content">
           <h2>
-            Client <b>Details</b>
+            Customer <b>Details</b>
           </h2>
           <Box display="flex" gap={2} alignItems="center">
             <TextField
               label="Tìm kiếm (Tên hoặc SĐT)"
-                            className = "search-input"
+              className="customer-search-input"
               variant="outlined"
               size="small"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{ width: '300px' }}
             />
-            <Link to="/client/add" className="btn-add">
+            <Link to="/customer/add" className="customer-btn-add">
               Thêm mới
             </Link>
           </Box>
@@ -353,22 +350,22 @@ const Client: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="loading-container">
+        <div className="customer-loading-container">
           <CircularProgress />
           <Typography>Đang tải danh sách khách hàng...</Typography>
         </div>
       ) : error ? (
-        <Typography color="error" className="error-message">
+        <Typography color="error" className="customer-error-message">
           {error}
         </Typography>
-      ) : filteredClients.length === 0 ? (
-        <Typography className="no-data">
+      ) : filteredCustomers.length === 0 ? (
+        <Typography className="customer-no-data">
           {searchQuery ? 'Không tìm thấy khách hàng phù hợp.' : 'Không tìm thấy khách hàng nào.'}
         </Typography>
       ) : (
         <>
-          <TableContainer component={Paper} className="client-table-container">
-            <Table className="client-table">
+          <TableContainer component={Paper} className="customer-table-container">
+            <Table className="customer-table">
               <TableHead>
                 <TableRow>
                   <TableCell>Họ Tên</TableCell>
@@ -378,24 +375,24 @@ const Client: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {clients.map((client) => (
-                  <React.Fragment key={client.id}>
+                {customers.map((customer) => (
+                  <React.Fragment key={customer.id}>
                     <TableRow>
-                      <TableCell>{client.name}</TableCell>
-                      <TableCell>{client.email}</TableCell>
-                      <TableCell>{client.phone}</TableCell>
+                      <TableCell>{customer.name}</TableCell>
+                      <TableCell>{customer.email}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
                       <TableCell align="center">
                         <IconButton
-                          className="action-view"
+                          className="customer-action-view"
                           title="Xem chi tiết"
-                          onClick={() => handleViewDetails(client.id)}
+                          onClick={() => handleViewDetails(customer.id)}
                         >
                           <VisibilityIcon />
                         </IconButton>
                         <IconButton
-                          className="action-edit"
+                          className="customer-action-edit"
                           title="Sửa"
-                          onClick={() => handleEdit(client)}
+                          onClick={() => handleEdit(customer)}
                         >
                           <EditIcon />
                         </IconButton>
@@ -403,9 +400,9 @@ const Client: React.FC = () => {
                     </TableRow>
                     <TableRow>
                       <TableCell colSpan={4} style={{ padding: 0 }}>
-                        <Collapse in={selectedClientId === client.id}>
-                          <div className="detail-container">
-                            {editClientId === client.id && editFormData ? (
+                        <Collapse in={selectedCustomerId === customer.id}>
+                          <div className="customer-detail-container">
+                            {editCustomerId === customer.id && editFormData ? (
                               <>
                                 <h3>Thông tin khách hàng</h3>
                                 <Box display="flex" flexDirection="column" gap={2}>
@@ -541,6 +538,7 @@ const Client: React.FC = () => {
                                   </Button>
                                   <Button
                                     variant="outlined"
+                                    className='customer-btn-cancel'
                                     color="secondary"
                                     onClick={handleCancel}
                                     disabled={editLoading}
@@ -557,26 +555,26 @@ const Client: React.FC = () => {
                             ) : (
                               <>
                                 <h3>Thông tin khách hàng</h3>
-                                <Table className="detail-table">
+                                <Table className="customer-detail-table">
                                   <TableBody>
                                     <TableRow>
-                                      <TableCell><strong>Họ Tên:</strong> {client.name}</TableCell>
-                                      <TableCell><strong>Email:</strong> {client.email}</TableCell>
+                                      <TableCell><strong>Họ Tên:</strong> {customer.name}</TableCell>
+                                      <TableCell><strong>Email:</strong> {customer.email}</TableCell>
                                     </TableRow>
                                     <TableRow>
-                                      <TableCell><strong>Số Điện Thoại:</strong> {client.phone}</TableCell>
-                                      <TableCell><strong>Địa chỉ:</strong> {client.address}</TableCell>
+                                      <TableCell><strong>Số Điện Thoại:</strong> {customer.phone}</TableCell>
+                                      <TableCell><strong>Địa chỉ:</strong> {customer.address}</TableCell>
                                     </TableRow>
                                     <TableRow>
-                                      <TableCell><strong>Ngày sinh:</strong> {client.date_of_birth}</TableCell>
-                                      <TableCell><strong>Giới tính:</strong> {client.gender}</TableCell>
+                                      <TableCell><strong>Ngày sinh:</strong> {customer.date_of_birth}</TableCell>
+                                      <TableCell><strong>Giới tính:</strong> {customer.gender}</TableCell>
                                     </TableRow>
                                     <TableRow>
-                                      <TableCell><strong>Quốc gia:</strong> {client.nationality}</TableCell>
-                                      <TableCell><strong>CCCD:</strong> {client.cccd}</TableCell>
+                                      <TableCell><strong>Quốc gia:</strong> {customer.nationality}</TableCell>
+                                      <TableCell><strong>CCCD:</strong> {customer.cccd}</TableCell>
                                     </TableRow>
                                     <TableRow>
-                                      <TableCell colSpan={2}><strong>Ghi chú:</strong> {client.note}</TableCell>
+                                      <TableCell colSpan={2}><strong>Ghi chú:</strong> {customer.note}</TableCell>
                                     </TableRow>
                                   </TableBody>
                                 </Table>
@@ -584,33 +582,33 @@ const Client: React.FC = () => {
                             )}
 
                             <h3>Đặt phòng</h3>
-                            {client.bookings && client.bookings.length > 0 ? (
-                              <Table className="detail-table">
+                            {customer.bookings && customer.bookings.length > 0 ? (
+                              <Table className="customer-detail-table">
                                 <TableHead>
                                   <TableRow>
-                                    <TableCell>Mã đặt phòng</TableCell>
-                                    <TableCell>Nguồn</TableCell>
-                                    <TableCell>Ngày đặt</TableCell>
-                                    <TableCell>Ngày nhận phòng</TableCell>
-                                    <TableCell>Ngày trả phòng</TableCell>
-                                    <TableCell>Tình trạng đặt phòng</TableCell>
-                                    <TableCell>Tình trạng thanh toán</TableCell>
-                                    <TableCell>Số tiền</TableCell>
-                                    <TableCell>Ghi chú hóa đơn</TableCell>
+                                    <TableCell>Mã Đặt Phòng</TableCell>
+                                    <TableCell>Người Tạo</TableCell>
+                                    <TableCell>Ngày Nhận Phòng</TableCell>
+                                    <TableCell>Ngày Trả Phòng</TableCell>
+                                    <TableCell>Trạng Thái</TableCell>
+                                    <TableCell>Đặt Cọc</TableCell>
+                                    <TableCell>Tổng Gốc</TableCell>
+                                    <TableCell>Tổng Giảm Giá</TableCell>
+                                    <TableCell>Tổng Cuối</TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                  {client.bookings.map((booking) => (
+                                  {customer.bookings.map((booking) => (
                                     <TableRow key={booking.id}>
-                                      <TableCell>{booking.code || 'Không xác định'}</TableCell>
-                                      <TableCell>{booking.source || 'Không xác định'}</TableCell>
-                                      <TableCell>{booking.bookingDate || 'Không xác định'}</TableCell>
-                                      <TableCell>{booking.checkInDate || 'Không xác định'}</TableCell>
-                                      <TableCell>{booking.checkOutDate || 'Không xác định'}</TableCell>
-                                      <TableCell>{booking.bookingStatus || 'Không xác định'}</TableCell>
-                                      <TableCell>{booking.paymentStatus || 'Không xác định'}</TableCell>
-                                      <TableCell>{booking.amount || 'Không xác định'}</TableCell>
-                                      <TableCell>{booking.note || ''}</TableCell>
+                                      <TableCell>{booking.id || 'Không xác định'}</TableCell>
+                                      <TableCell>{booking.created_by || 'Không xác định'}</TableCell>
+                                      <TableCell>{booking.check_in_date || 'Không xác định'}</TableCell>
+                                      <TableCell>{booking.check_out_date || 'Không xác định'}</TableCell>
+                                      <TableCell>{booking.status || 'Không xác định'}</TableCell>
+                                      <TableCell>{booking.deposit_amount || '0'}</TableCell>
+                                      <TableCell>{booking.raw_total || '0'}</TableCell>
+                                      <TableCell>{booking.discount_amount || '0'}</TableCell>
+                                      <TableCell>{booking.total_amount || '0'}</TableCell>
                                     </TableRow>
                                   ))}
                                 </TableBody>
@@ -659,4 +657,4 @@ const Client: React.FC = () => {
   );
 };
 
-export default Client;
+export default Customer;

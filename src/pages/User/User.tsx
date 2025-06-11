@@ -475,6 +475,8 @@ const User: React.FC = () => {
   };
 
   const handleDelete = async (id: number, user_id?: number) => {
+    const userData = localStorage.getItem("user");
+    const currentUserId = userData ? JSON.parse(userData).id : null;
     if (user_id === currentUserId) {
       setGeneralError("Bạn không thể xóa tài khoản của chính mình.");
       setSnackbarMessage("Bạn không thể xóa tài khoản của chính mình.");
@@ -568,9 +570,9 @@ const User: React.FC = () => {
   const totalPages = Math.ceil(filteredEmployees.length / rowsPerPage);
 
   return (
-    <div className="client-wrapper">
-      <div className="client-title">
-        <div className="header-content">
+    <div className="user-wrapper">
+      <div className="user-title">
+        <div className="user-header-content">
           <h2>
             Employee <b>Details</b>
           </h2>
@@ -584,7 +586,7 @@ const User: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{ width: "300px" }}
             />
-            <RouterLink to="/user/add" className="btn-add">
+            <RouterLink to="/user/add" className="user-btn-add">
               Thêm mới
             </RouterLink>
           </Box>
@@ -592,12 +594,12 @@ const User: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="loading-container">
+        <div className="user-loading-container">
           <CircularProgress />
           <Typography>Đang tải danh sách nhân viên...</Typography>
         </div>
       ) : generalError ? (
-        <Typography color="error" className="error-message">
+        <Typography color="error" className="user-error-message">
           {generalError}
         </Typography>
       ) : filteredEmployees.length === 0 ? (
@@ -608,8 +610,8 @@ const User: React.FC = () => {
         </Typography>
       ) : (
         <>
-          <TableContainer component={Paper} className="client-table-container">
-            <Table className="client-table">
+          <TableContainer component={Paper} className="user-table-container">
+            <Table className="user-table">
               <TableHead>
                 <TableRow>
                   <TableCell>Họ Tên</TableCell>
@@ -634,7 +636,7 @@ const User: React.FC = () => {
                       <TableCell align="center">
                         <Tooltip title="Xem chi tiết">
                           <IconButton
-                            className="action-view"
+                            className="user-action-view"
                             onClick={() => handleViewDetail(emp.id)}
                           >
                             <VisibilityIcon />
@@ -642,7 +644,7 @@ const User: React.FC = () => {
                         </Tooltip>
                         <Tooltip title="Xem tài khoản đăng nhập">
                           <IconButton
-                            className="action-view"
+                            className="user-action-view"
                             onClick={() => handleViewCredentials(emp.id)}
                           >
                             <AccountCircleIcon />
@@ -651,7 +653,7 @@ const User: React.FC = () => {
                         {emp.user_id !== currentUserId && (
                           <Tooltip title="Xóa">
                             <IconButton
-                              className="action-delete"
+                              className="user-action-delete"
                               onClick={() => handleDelete(emp.id, emp.user_id)}
                             >
                               <DeleteIcon />
@@ -961,7 +963,7 @@ const User: React.FC = () => {
                                     )}
                                   </>
                                 ) : (
-                                  <Table className="detail-table">
+                                  <Table className="user-detail-table">
                                     <TableBody>
                                       <TableRow>
                                         <TableCell>
@@ -1031,7 +1033,7 @@ const User: React.FC = () => {
                                         variant="outlined"
                                         startIcon={<EditIcon />}
                                         onClick={() => handleEditDetail(emp)}
-                                        className="action-employee"
+                                        className="action-edit"
                                       >
                                         Chỉnh sửa thông tin nhân viên
                                       </Button>
@@ -1166,7 +1168,7 @@ const User: React.FC = () => {
                                     )}
                                   </>
                                 ) : (
-                                  <Table className="detail-table">
+                                  <Table className="user-detail-table">
                                     <TableBody>
                                       <TableRow>
                                         <TableCell>

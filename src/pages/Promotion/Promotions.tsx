@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -24,12 +23,24 @@ import {
   Snackbar,
   Alert,
   Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Checkbox,
+  Chip,
+  Tooltip,
 } from '@mui/material';
+import { SelectChangeEvent } from '@mui/material/Select';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { format, parseISO } from 'date-fns';
+import numeral from 'numeral';
 import api from '../../api/axios';
-import '../../css/Client.css';
+import '../../css/Promotion.css';
+import { JSX } from 'react/jsx-runtime';
+import { Link } from 'react-router-dom';
 
 type DiscountType = 'percent' | 'amount';
 
@@ -64,12 +75,31 @@ interface Meta {
   total: number;
 }
 
+const formatCurrency = (value: number | null, discountType: DiscountType): string => {
+  if (value === null || value === undefined) return 'N/A';
+  if (discountType === 'percent') return `${value}%`;
+  return numeral(value).format('0,0') + ' VNĐ';
+};
+
+const formatDate = (date: string): JSX.Element => {
+  try {
+    const parsedDate = parseISO(date);
+    return (
+      <Tooltip title={format(parsedDate, 'dd/MM/yyyy HH:mm:ss')}>
+        <span>{format(parsedDate, 'dd/MM/yyyy')}</span>
+      </Tooltip>
+    );
+  } catch {
+    return <span>N/A</span>;
+  }
+};
+
 const Promotions: React.FC = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [allPromotions, setAllPromotions] = useState<Promotion[]>([]);
   const [filteredPromotions, setFilteredPromotions] = useState<Promotion[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('Tất cả');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]); // Array to hold multiple selected statuses
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
@@ -80,6 +110,8 @@ const Promotions: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [promotionToDelete, setPromotionToDelete] = useState<number | null>(null);
 
   const fetchAllPromotions = async () => {
     try {
@@ -128,28 +160,28 @@ const Promotions: React.FC = () => {
     let filtered = [...allPromotions];
 
     if (searchQuery.trim() !== '') {
-      filtered = filtered.filter((promotion) =>
-        promotion.code.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter((prev) =>
+        prev.code.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    if (statusFilter !== 'Tất cả') {
-      filtered = filtered.filter((promotion) => {
+    if (statusFilters.length > 0) {
+      filtered = filtered.filter((prev) => {
         const { status } = getPromotionStatus(
-          promotion.is_active,
-          promotion.start_date,
-          promotion.end_date,
-          promotion.used_count,
-          promotion.usage_limit
+          prev.is_active,
+          prev.start_date,
+          prev.end_date,
+          prev.used_count,
+          prev.usage_limit
         );
-        return status === statusFilter;
+        return statusFilters.includes(status);
       });
     }
 
     setFilteredPromotions(filtered);
     setLastPage(Math.ceil(filtered.length / 10));
     setPromotions(filtered.slice((currentPage - 1) * 10, currentPage * 10));
-  }, [searchQuery, statusFilter, allPromotions, currentPage]);
+  }, [searchQuery, statusFilters, allPromotions, currentPage]);
 
   const getPromotionStatus = (
     isActive: boolean,
@@ -158,7 +190,7 @@ const Promotions: React.FC = () => {
     usedCount: number,
     usageLimit: number | null
   ): { status: string; color: string } => {
-    const today = new Date().toISOString().split('T')[0]; 
+    const today = new Date().toISOString().split('T')[0];
     const start = new Date(startDate).toISOString().split('T')[0];
     const end = new Date(endDate).toISOString().split('T')[0];
 
@@ -199,7 +231,7 @@ const Promotions: React.FC = () => {
     setViewDetailId((prev) => {
       const newValue = prev === id ? null : id;
       if (prev !== id) {
-        setEditingDetailId(null); // Đặt lại editing khi mở view mới
+        setEditingDetailId(null);
         setValidationErrors({});
       }
       return newValue;
@@ -207,9 +239,10 @@ const Promotions: React.FC = () => {
   };
 
   const handleEditDetail = (promotion: Promotion) => {
-    setViewDetailId(promotion.id); // Mở chi tiết khi nhấp "Sửa"
+    setViewDetailId(promotion.id);
     setEditingDetailId(promotion.id);
     setEditedDetail({
+      id: promotion.id,
       code: promotion.code,
       description: promotion.description,
       discount_type: promotion.discount_type,
@@ -223,27 +256,39 @@ const Promotions: React.FC = () => {
     setValidationErrors({});
   };
 
-  const handleChangeDetail = (field: keyof Promotion, value: string | number | boolean | null) => {
-    setEditedDetail((prev) => ({ ...prev, [field]: value }));
+  const handleChangeDetail = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditedDetail((prev) => ({ ...prev, [name]: value } as Partial<Promotion>));
     setValidationErrors((prev) => {
       const newErrors = { ...prev };
-      delete newErrors[field as keyof typeof prev];
+      delete newErrors[name as keyof typeof prev];
       return newErrors;
     });
   };
 
-  const handleSaveDetail = async (id: number) => {
+  const handleSelectChange = (e: SelectChangeEvent<DiscountType>) => {
+    const { name, value } = e.target;
+    if (name && editedDetail) {
+      setEditedDetail((prev) => ({ ...prev, [name]: value } as Partial<Promotion>));
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name as keyof typeof prev];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleSaveDetail = async () => {
+    if (!editedDetail || !editedDetail.id) return;
+
+    const errors = validateForm(editedDetail);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
     try {
       setLoading(true);
-      setValidationErrors({});
-
-      const errors = validateForm(editedDetail);
-      if (Object.keys(errors).length > 0) {
-        setValidationErrors(errors);
-        setLoading(false);
-        return;
-      }
-
       const payload = {
         code: editedDetail.code?.trim() ?? '',
         description: editedDetail.description?.trim() ?? '',
@@ -256,7 +301,7 @@ const Promotions: React.FC = () => {
         is_active: !!editedDetail.is_active,
       };
 
-      const response = await api.put(`/promotions/${id}`, payload);
+      const response = await api.put(`/promotions/${editedDetail.id}`, payload);
       if (response.status === 200) {
         await fetchAllPromotions();
         setEditingDetailId(null);
@@ -284,25 +329,32 @@ const Promotions: React.FC = () => {
     setValidationErrors({});
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
+    setPromotionToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (promotionToDelete === null) return;
+
     try {
       setLoading(true);
       setError(null);
 
-      const promotionToDelete = promotions.find((p) => p.id === id);
-      if (!promotionToDelete) {
+      const promotion = promotions.find((p) => p.id === promotionToDelete);
+      if (!promotion) {
         throw new Error('Không tìm thấy mã khuyến mãi để xóa');
       }
 
-      if (promotionToDelete.usage_limit !== null && promotionToDelete.used_count > 0) {
-        const updatedPromotion = { ...promotionToDelete, is_active: false };
-        const updateResponse = await api.put(`/promotions/${id}`, updatedPromotion);
+      if (promotion.usage_limit !== null && promotion.used_count > 0) {
+        const updatedPromotion = { ...promotion, is_active: false };
+        const updateResponse = await api.put(`/promotions/${promotionToDelete}`, updatedPromotion);
         if (updateResponse.status !== 200) {
           throw new Error('Không thể ẩn mã giảm giá do lỗi từ phía server');
         }
         setSnackbarMessage('Mã giảm giá đã được tắt vì đã được sử dụng ít nhất 1 lần!');
       } else {
-        const deleteResponse = await api.delete(`/promotions/${id}`);
+        const deleteResponse = await api.delete(`/promotions/${promotionToDelete}`);
         if (deleteResponse.status !== 200 && deleteResponse.status !== 204) {
           throw new Error('Không thể xóa mã giảm giá do lỗi từ phía server');
         }
@@ -319,6 +371,8 @@ const Promotions: React.FC = () => {
       console.error('Lỗi khi xóa khuyến mãi:', errorMessage);
     } finally {
       setLoading(false);
+      setDeleteDialogOpen(false);
+      setPromotionToDelete(null);
     }
   };
 
@@ -332,17 +386,28 @@ const Promotions: React.FC = () => {
     setPromotions(filteredPromotions.slice((page - 1) * 10, page * 10));
   };
 
+  const handleStatusChange = (event: SelectChangeEvent<string[]>) => {
+    const {
+      target: { value },
+    } = event;
+    setStatusFilters(typeof value === 'string' ? value.split(',') : value);
+  };
+
+  const handleDeleteStatus = (statusToDelete: string) => () => {
+    setStatusFilters((prev) => prev.filter((status) => status !== statusToDelete));
+  };
+
   return (
-    <div className="client-wrapper">
-      <div className="client-title">
-        <div className="header-content">
+    <div className="promotion-wrapper">
+      <div className="promotion-title">
+        <div className="promotion-header-content">
           <h2>
-            Promotion <b>Details</b>
+            Danh Sách <b>Khuyến Mãi</b>
           </h2>
           <Box display="flex" gap={2} alignItems="center">
             <TextField
               label="Tìm kiếm mã khuyến mãi"
-              className = "search-input"
+              className="promotion-search-input"
               variant="outlined"
               size="small"
               value={searchQuery}
@@ -352,48 +417,82 @@ const Promotions: React.FC = () => {
             <FormControl sx={{ width: '200px' }} variant="outlined" size="small">
               <InputLabel>Lọc theo trạng thái</InputLabel>
               <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
+                multiple
+                value={statusFilters}
+                onChange={handleStatusChange}
                 label="Lọc theo trạng thái"
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip
+                        key={value}
+                        label={value}
+                        onDelete={handleDeleteStatus(value)}
+                        sx={{ backgroundColor: '#e0e0e0', color: '#000', fontSize: '12px' }}
+                      />
+                    ))}
+                  </Box>
+                )}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 200,
+                      width: 250,
+                    },
+                  },
+                }}
               >
-                <MenuItem value="Tất cả">Tất cả</MenuItem>
-                <MenuItem value="Chưa bắt đầu">Chưa bắt đầu</MenuItem>
-                <MenuItem value="Đang hoạt động">Đang hoạt động</MenuItem>
-                <MenuItem value="Hết lượt">Hết lượt</MenuItem>
-                <MenuItem value="Hết hạn">Hết hạn</MenuItem>
-                <MenuItem value="Bị tắt">Bị tắt</MenuItem>
+                <MenuItem value="Chưa bắt đầu">
+                  <Checkbox checked={statusFilters.includes('Chưa bắt đầu')} />
+                  <span>Chưa bắt đầu</span>
+                </MenuItem>
+                <MenuItem value="Đang hoạt động">
+                  <Checkbox checked={statusFilters.includes('Đang hoạt động')} />
+                  <span>Đang hoạt động</span>
+                </MenuItem>
+                <MenuItem value="Hết lượt">
+                  <Checkbox checked={statusFilters.includes('Hết lượt')} />
+                  <span>Hết lượt</span>
+                </MenuItem>
+                <MenuItem value="Hết hạn">
+                  <Checkbox checked={statusFilters.includes('Hết hạn')} />
+                  <span>Hết hạn</span>
+                </MenuItem>
+                <MenuItem value="Bị tắt">
+                  <Checkbox checked={statusFilters.includes('Bị tắt')} />
+                  <span>Bị tắt</span>
+                </MenuItem>
               </Select>
             </FormControl>
-            <Button
-              className="btn-add"
-              component={RouterLink}
+            <Link
+              className="promotion-btn-add"
               to="/promotions/add"
             >
               Thêm mới
-            </Button>
+            </Link>
           </Box>
         </div>
       </div>
 
       {loading ? (
-        <div className="loading-container">
+        <div className="promotion-loading-container">
           <CircularProgress />
           <Typography>Đang tải danh sách khuyến mãi...</Typography>
         </div>
       ) : error ? (
-        <Typography color="error" className="error-message">
+        <Typography color="error" className="promotion-error-message">
           {error}
         </Typography>
       ) : filteredPromotions.length === 0 ? (
-        <Typography className="no-data">
-          {searchQuery || statusFilter !== 'Tất cả'
+        <Typography className="promotion-no-data">
+          {searchQuery || statusFilters.length > 0
             ? 'Không tìm thấy mã khuyến mãi phù hợp.'
             : 'Không tìm thấy khuyến mãi nào.'}
         </Typography>
       ) : (
         <>
-          <TableContainer component={Paper} className="client-table-container">
-            <Table className="client-table">
+          <TableContainer component={Paper} className="promotion-table-container">
+            <Table className="promotion-table">
               <TableHead>
                 <TableRow>
                   <TableCell>Mã Khuyến Mãi</TableCell>
@@ -417,29 +516,27 @@ const Promotions: React.FC = () => {
                       <TableRow sx={{ opacity: promotion.is_active ? 1 : 0.5 }}>
                         <TableCell>{promotion.code}</TableCell>
                         <TableCell>{promotion.description}</TableCell>
-                        <TableCell>
-                          {promotion.discount_value} {promotion.discount_type === 'percent' ? '%' : 'VNĐ'}
-                        </TableCell>
+                        <TableCell>{formatCurrency(promotion.discount_value, promotion.discount_type)}</TableCell>
                         <TableCell sx={{ color, fontWeight: 'bold' }}>
                           {status}
                         </TableCell>
                         <TableCell align="center">
                           <IconButton
-                            className="action-view"
+                            className="promotion-action-view"
                             title="Xem chi tiết"
                             onClick={() => handleViewDetail(promotion.id)}
                           >
                             <VisibilityIcon />
                           </IconButton>
                           <IconButton
-                            className="action-edit"
+                            className="promotion-action-edit"
                             title="Sửa"
                             onClick={() => handleEditDetail(promotion)}
                           >
                             <EditIcon />
                           </IconButton>
                           <IconButton
-                            className="action-delete"
+                            className="promotion-action-delete"
                             title="Xóa"
                             onClick={() => handleDelete(promotion.id)}
                           >
@@ -450,9 +547,9 @@ const Promotions: React.FC = () => {
                       <TableRow>
                         <TableCell colSpan={5} style={{ padding: 0 }}>
                           <Collapse in={viewDetailId === promotion.id}>
-                            <div className="detail-container">
+                            <div className="promotion-detail-container">
                               <h3>Thông tin khuyến mãi</h3>
-                              {editingDetailId === promotion.id ? (
+                              {editingDetailId === promotion.id && editedDetail ? (
                                 <>
                                   <Box display="flex" flexDirection="column" gap={2}>
                                     <Box display="flex" gap={2}>
@@ -460,7 +557,7 @@ const Promotions: React.FC = () => {
                                         label="Mã khuyến mãi"
                                         name="code"
                                         value={editedDetail.code || ''}
-                                        onChange={(e) => handleChangeDetail('code', e.target.value)}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -471,7 +568,7 @@ const Promotions: React.FC = () => {
                                         label="Mô tả"
                                         name="description"
                                         value={editedDetail.description || ''}
-                                        onChange={(e) => handleChangeDetail('description', e.target.value)}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -485,7 +582,7 @@ const Promotions: React.FC = () => {
                                         <Select
                                           name="discount_type"
                                           value={editedDetail.discount_type || 'amount'}
-                                          onChange={(e) => handleChangeDetail('discount_type', e.target.value as DiscountType)}
+                                          onChange={handleSelectChange}
                                           label="Loại giảm"
                                         >
                                           <MenuItem value="percent">Phần trăm (%)</MenuItem>
@@ -502,7 +599,7 @@ const Promotions: React.FC = () => {
                                         name="discount_value"
                                         type="number"
                                         value={editedDetail.discount_value ?? ''}
-                                        onChange={(e) => handleChangeDetail('discount_value', Number(e.target.value))}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -516,7 +613,7 @@ const Promotions: React.FC = () => {
                                         name="start_date"
                                         type="date"
                                         value={editedDetail.start_date || ''}
-                                        onChange={(e) => handleChangeDetail('start_date', e.target.value)}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -529,7 +626,7 @@ const Promotions: React.FC = () => {
                                         name="end_date"
                                         type="date"
                                         value={editedDetail.end_date || ''}
-                                        onChange={(e) => handleChangeDetail('end_date', e.target.value)}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -544,7 +641,7 @@ const Promotions: React.FC = () => {
                                         name="usage_limit"
                                         type="number"
                                         value={editedDetail.usage_limit ?? ''}
-                                        onChange={(e) => handleChangeDetail('usage_limit', e.target.value ? Number(e.target.value) : null)}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -556,7 +653,7 @@ const Promotions: React.FC = () => {
                                         name="used_count"
                                         type="number"
                                         value={editedDetail.used_count ?? ''}
-                                        onChange={(e) => handleChangeDetail('used_count', Number(e.target.value))}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -569,8 +666,8 @@ const Promotions: React.FC = () => {
                                         control={
                                           <Switch
                                             checked={!!editedDetail.is_active}
-                                            onChange={(e) => handleChangeDetail('is_active', e.target.checked)}
-                                            color="primary"
+                                            onChange={(e) => handleChangeDetail({ target: { name: 'is_active', value: e.target.checked } } as never)}
+                                            color="default"
                                           />
                                         }
                                         label="Kích hoạt"
@@ -581,13 +678,14 @@ const Promotions: React.FC = () => {
                                     <Button
                                       variant="contained"
                                       color="primary"
-                                      onClick={() => handleSaveDetail(promotion.id)}
+                                      onClick={handleSaveDetail}
                                       disabled={loading}
                                     >
                                       Lưu
                                     </Button>
                                     <Button
                                       variant="outlined"
+                                      className='promotion-btn-cancel'
                                       color="secondary"
                                       onClick={handleCancelEdit}
                                       disabled={loading}
@@ -603,7 +701,7 @@ const Promotions: React.FC = () => {
                                 </>
                               ) : (
                                 <>
-                                  <Table className="detail-table">
+                                  <Table className="promotion-detail-table">
                                     <TableBody>
                                       <TableRow>
                                         <TableCell><strong>Mã CTKM:</strong> {promotion.code}</TableCell>
@@ -611,15 +709,15 @@ const Promotions: React.FC = () => {
                                       </TableRow>
                                       <TableRow>
                                         <TableCell><strong>Loại giảm:</strong> {promotion.discount_type === 'percent' ? 'Phần trăm' : 'Số tiền'}</TableCell>
-                                        <TableCell><strong>Giá trị giảm:</strong> {promotion.discount_value} {promotion.discount_type === 'percent' ? '%' : 'VNĐ'}</TableCell>
+                                        <TableCell><strong>Giá trị giảm:</strong> {formatCurrency(promotion.discount_value, promotion.discount_type)}</TableCell>
                                       </TableRow>
                                       <TableRow>
-                                        <TableCell><strong>Ngày bắt đầu:</strong> {promotion.start_date}</TableCell>
-                                        <TableCell><strong>Ngày kết thúc:</strong> {promotion.end_date}</TableCell>
+                                        <TableCell><strong>Ngày bắt đầu:</strong> {formatDate(promotion.start_date)}</TableCell>
+                                        <TableCell><strong>Ngày kết thúc:</strong> {formatDate(promotion.end_date)}</TableCell>
                                       </TableRow>
                                       <TableRow>
                                         <TableCell><strong>Giới hạn số lần:</strong> {promotion.usage_limit ?? 'Không giới hạn'}</TableCell>
-                                        <TableCell><strong>Số lần đã dùng:</strong> {promotion.used_count}</TableCell>
+                                        <TableCell><strong>Số lần sử dụng:</strong> {promotion.used_count}</TableCell>
                                       </TableRow>
                                       <TableRow>
                                         <TableCell colSpan={2}>
@@ -654,6 +752,27 @@ const Promotions: React.FC = () => {
           </Box>
         </>
       )}
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        classes={{ paper: 'promotion-dialog' }}
+      >
+        <DialogTitle>Xác nhận xóa khuyến mãi</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc chắn muốn xóa hoặc tắt mã khuyến mãi này không? Hành động này không thể hoàn tác.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>
+            Hủy
+          </Button>
+          <Button onClick={confirmDelete} variant="contained" color="error">
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbarOpen}

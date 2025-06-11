@@ -1,28 +1,34 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   TextField,
   Button,
-  Box,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
   Typography,
   CircularProgress,
-  MenuItem,
+  Box,
+  SelectChangeEvent,
+  Switch,
+  FormControlLabel,
   Snackbar,
   Alert,
 } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
 import '../../css/Promotion.css';
 import api from '../../api/axios';
 
-type DiscountType = 'percentage' | 'amount';
+type DiscountType = 'percent' | 'amount';
 
-interface FormData {
+interface PromotionFormData {
   code: string;
   description: string;
   discount_type: DiscountType;
   discount_value: number;
   start_date: string;
   end_date: string;
-  usage_limit: number;
+  usage_limit: number | null;
   used_count: number;
   is_active: boolean;
 }
@@ -35,133 +41,104 @@ interface ValidationErrors {
   start_date?: string;
   end_date?: string;
   usage_limit?: string;
+  used_count?: string;
 }
 
 const AddPromotion: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<PromotionFormData>({
     code: '',
     description: '',
-    discount_type: 'percentage',
+    discount_type: 'amount',
     discount_value: 0,
     start_date: '',
     end_date: '',
-    usage_limit: 0,
+    usage_limit: null,
     used_count: 0,
     is_active: true,
   });
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
 
-  const fieldErrorMessages: { [key: string]: string } = {
-    code: 'Mã khuyến mãi',
-    description: 'Mô tả',
-    discount_type: 'Loại giảm',
-    discount_value: 'Giá trị giảm',
-    start_date: 'Ngày bắt đầu',
-    end_date: 'Ngày kết thúc',
-    usage_limit: 'Giới hạn số lần dùng',
+  const validateForm = (data: PromotionFormData): ValidationErrors => {
+    const errors: ValidationErrors = {};
+    if (!data.code.trim()) errors.code = 'Mã CTKM không được để trống';
+    else if (data.code.length > 20) errors.code = 'Mã CTKM không được vượt quá 20 ký tự';
+    if (!data.description.trim()) errors.description = 'Mô tả không được để trống';
+    else if (data.description.length > 200) errors.description = 'Mô tả không được vượt quá 200 ký tự';
+    if (!data.discount_type) errors.discount_type = 'Vui lòng chọn loại giảm';
+    if (data.discount_value <= 0) errors.discount_value = 'Giá trị giảm phải lớn hơn 0';
+    else if (data.discount_type === 'percent' && data.discount_value > 100) {
+      errors.discount_value = 'Giá trị giảm không được vượt quá 100%';
+    }
+    if (!data.start_date) errors.start_date = 'Ngày bắt đầu không được để trống';
+    if (!data.end_date) errors.end_date = 'Ngày kết thúc không được để trống';
+    else if (data.start_date && data.end_date && data.start_date > data.end_date) {
+      errors.end_date = 'Ngày kết thúc phải sau ngày bắt đầu';
+    }
+    if (data.usage_limit !== null && data.usage_limit < 0) errors.usage_limit = 'Giới hạn số lần dùng không được âm';
+    if (data.used_count < 0) errors.used_count = 'Số lần đã dùng không được âm';
+    return errors;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    let updatedValue: string | number;
-    if (name === 'discount_type') {
-      updatedValue = value as DiscountType;
-    } else if (name === 'discount_value' || name === 'usage_limit') {
-      updatedValue = value === '' ? 0 : Number(value);
-    } else {
-      updatedValue = value;
-    }
-    setFormData({
-      ...formData,
-      [name]: updatedValue,
-    });
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'discount_value' || name === 'used_count' ? Number(value) : name === 'usage_limit' ? (value ? Number(value) : null) : value,
+    }));
+    const errors = validateForm({ ...formData, [name]: value });
+    setValidationErrors(errors);
   };
 
-  const validateForm = (data: FormData): ValidationErrors => {
-    const errs: ValidationErrors = {};
-    const today = new Date().toISOString().split('T')[0];
-
-    if (!data.code.trim()) errs.code = 'Mã CTKM không được để trống';
-    else if (data.code.length > 20) errs.code = 'Mã CTKM không được vượt quá 20 ký tự';
-    else if (!/^[A-Za-z0-9]+$/.test(data.code)) errs.code = 'Mã CTKM chỉ được chứa chữ cái và số';
-
-    if (!data.description.trim()) errs.description = 'Mô tả không được để trống';
-    else if (data.description.length > 200) errs.description = 'Mô tả không được vượt quá 200 ký tự';
-
-    if (!data.discount_type) errs.discount_type = 'Vui lòng chọn loại giảm';
-
-    if (isNaN(data.discount_value) || data.discount_value <= 0) errs.discount_value = 'Giá trị giảm phải là số lớn hơn 0';
-    else if (data.discount_type === 'percentage' && data.discount_value > 100) {
-      errs.discount_value = 'Giá trị giảm không được vượt quá 100%';
+  const handleSelectChange = (e: SelectChangeEvent) => {
+    const { name, value } = e.target;
+    if (name) {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+      const errors = validateForm({ ...formData, [name]: value });
+      setValidationErrors(errors);
     }
+  };
 
-    if (!data.start_date) errs.start_date = 'Ngày bắt đầu không được để trống';
-    else if (!/^\d{4}-\d{2}-\d{2}$/.test(data.start_date)) errs.start_date = 'Ngày bắt đầu không đúng định dạng YYYY-MM-DD';
-    else if (data.start_date < today) errs.start_date = 'Ngày bắt đầu không được nhỏ hơn ngày hiện tại';
-
-    if (!data.end_date) errs.end_date = 'Ngày kết thúc không được để trống';
-    else if (!/^\d{4}-\d{2}-\d{2}$/.test(data.end_date)) errs.end_date = 'Ngày kết thúc không đúng định dạng YYYY-MM-DD';
-    else if (data.start_date && data.end_date && data.start_date > data.end_date) {
-      errs.end_date = 'Ngày kết thúc phải sau ngày bắt đầu';
-    }
-
-    if (data.usage_limit === undefined || isNaN(data.usage_limit)) errs.usage_limit = 'Giới hạn số lần dùng không được để trống';
-    else if (data.usage_limit < 0) errs.usage_limit = 'Giới hạn số lần dùng không được âm';
-
-    return errs;
+  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, is_active: e.target.checked }));
   };
 
   const handleSave = async () => {
     const errors = validateForm(formData);
-    setValidationErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
 
     setLoading(true);
     try {
-      const dataToSend = {
-        ...formData,
-        discount_type: formData.discount_type === 'percentage' ? 'percent' : 'amount',
-        used_count: 0,
-        is_active: true,
-        start_date: formData.start_date || undefined,
-        end_date: formData.end_date || undefined,
-      };
-      console.log('Data sent to API:', dataToSend);
-      const response = await api.post('/promotions', dataToSend);
-      console.log('API response:', response);
+      const response = await api.post('/promotions', formData);
       if (response.status === 201) {
         setSnackbarMessage('Thêm khuyến mãi thành công!');
         setSnackbarOpen(true);
-        setTimeout(() => navigate('/promotions'), 1000);
+        setTimeout(() => navigate('/promotions'), 2000);
       } else {
         throw new Error('Không thể thêm khuyến mãi mới');
       }
     } catch (err: unknown) {
       let errorMessage = 'Đã xảy ra lỗi khi thêm khuyến mãi';
       if (err instanceof Error) {
-        errorMessage = `Lỗi: ${err.message}`;
+        errorMessage = err.message;
       }
       if (typeof err === 'object' && err !== null && 'response' in err) {
         const axiosError = err as { response?: { data?: { message?: string; errors?: { [key: string]: string[] } } } };
-        if (axiosError.response?.data?.message) {
-          errorMessage = `Lỗi: ${axiosError.response.data.message}`;
-        } else if (axiosError.response?.data?.errors) {
-          const errors = axiosError.response.data.errors;
-          errorMessage = Object.keys(errors)
-            .map((key) => {
-              const fieldName = fieldErrorMessages[key] || key;
-              return `Lỗi: ${fieldName} ${errors[key].join(', ')}`;
-            })
-            .join('; ');
-        }
+        errorMessage =
+          axiosError.response?.data?.message ||
+          JSON.stringify(axiosError.response?.data?.errors) ||
+          errorMessage;
       }
+      setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
-      console.error('Lỗi khi thêm khuyến mãi:', err);
     } finally {
       setLoading(false);
     }
@@ -179,11 +156,11 @@ const AddPromotion: React.FC = () => {
   return (
     <div className="promotion-wrapper">
       <div className="promotion-title">
-        <div className="header-content">
+        <div className="promotion-header-content">
           <h2>
             Add New <b>Promotion</b>
           </h2>
-          <Box>
+          <Box className="promotion-form-buttons">
             <Button
               variant="contained"
               color="primary"
@@ -195,20 +172,12 @@ const AddPromotion: React.FC = () => {
             </Button>
             <Button
               variant="outlined"
+              className='promotion-btn-cancel'
               color="secondary"
               onClick={handleCancel}
               disabled={loading}
               component={Link}
               to="/promotions"
-              sx={{
-                color: 'error.main',
-                borderColor: 'error.main',
-                '&:hover': {
-                  color: 'error.main',
-                  borderColor: 'error.main',
-                  backgroundColor: 'transparent',
-                },
-              }}
             >
               Hủy
             </Button>
@@ -217,17 +186,21 @@ const AddPromotion: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="loading-container">
+        <div className="promotion-loading-container">
           <CircularProgress />
           <Typography>Đang xử lý...</Typography>
         </div>
+      ) : error ? (
+        <Typography color="error" className="promotion-error-message">
+          {error}
+        </Typography>
       ) : (
-        <div className="detail-container">
+        <div className="promotion-detail-container">
           <h3>Thông tin khuyến mãi</h3>
           <Box display="flex" flexDirection="column" gap={2}>
             <Box display="flex" gap={2}>
               <TextField
-                label="Mã CTKM"
+                label="Mã khuyến mãi"
                 name="code"
                 value={formData.code}
                 onChange={handleChange}
@@ -238,7 +211,7 @@ const AddPromotion: React.FC = () => {
                 helperText={validationErrors.code}
               />
               <TextField
-                label="Mô tả chi tiết"
+                label="Mô tả"
                 name="description"
                 value={formData.description}
                 onChange={handleChange}
@@ -250,27 +223,29 @@ const AddPromotion: React.FC = () => {
               />
             </Box>
             <Box display="flex" gap={2}>
-              <TextField
-                label="Loại giảm"
-                name="discount_type"
-                value={formData.discount_type}
-                onChange={handleChange}
-                select
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.discount_type}
-                helperText={validationErrors.discount_type}
-              >
-                <MenuItem value="percentage">Phần trăm (%)</MenuItem>
-                <MenuItem value="amount">Số tiền (VNĐ)</MenuItem>
-              </TextField>
+              <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.discount_type}>
+                <InputLabel>Loại giảm</InputLabel>
+                <Select
+                  name="discount_type"
+                  value={formData.discount_type}
+                  onChange={handleSelectChange}
+                  label="Loại giảm"
+                >
+                  <MenuItem value="percent">Phần trăm (%)</MenuItem>
+                  <MenuItem value="amount">Số tiền (VNĐ)</MenuItem>
+                </Select>
+                {validationErrors.discount_type && (
+                  <Typography color="error" variant="caption">
+                    {validationErrors.discount_type}
+                  </Typography>
+                )}
+              </FormControl>
               <TextField
                 label="Giá trị giảm"
                 name="discount_value"
+                type="number"
                 value={formData.discount_value}
                 onChange={handleChange}
-                type="number"
                 fullWidth
                 variant="outlined"
                 size="small"
@@ -310,14 +285,38 @@ const AddPromotion: React.FC = () => {
               <TextField
                 label="Giới hạn số lần dùng"
                 name="usage_limit"
-                value={formData.usage_limit}
-                onChange={handleChange}
                 type="number"
+                value={formData.usage_limit ?? ''}
+                onChange={handleChange}
                 fullWidth
                 variant="outlined"
                 size="small"
                 error={!!validationErrors.usage_limit}
-                helperText={validationErrors.usage_limit}
+                helperText={validationErrors.usage_limit || 'Để trống nếu không giới hạn'}
+              />
+              <TextField
+                label="Số lần đã dùng"
+                name="used_count"
+                type="number"
+                value={formData.used_count}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!validationErrors.used_count}
+                helperText={validationErrors.used_count}
+              />
+            </Box>
+            <Box display="flex" gap={2}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={formData.is_active}
+                    onChange={handleSwitchChange}
+                    color="primary"
+                  />
+                }
+                label="Kích hoạt"
               />
             </Box>
           </Box>
@@ -326,7 +325,7 @@ const AddPromotion: React.FC = () => {
 
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={5000}
+        autoHideDuration={3000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >

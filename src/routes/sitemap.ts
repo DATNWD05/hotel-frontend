@@ -22,19 +22,19 @@ const sitemap: MenuItem[] = [
     id: 'oderRoom',
     subheader: 'Đặt Phòng',
     path: '/',
-    icon: 'material-symbols:hotel', // khách sạn
+    icon: 'material-symbols:hotel',
     active: true,
   },
   {
     id: 'room',
     subheader: 'Phòng',
-    icon: 'mdi:door', // cửa/phòng
+    icon: 'mdi:door',
     active: true,
     items: [
       {
         name: 'Loại Phòng',
         pathName: 'roomtype',
-        path: '/room/type',
+        path: '/rooms',
       },
       {
         name: 'Tầng',
@@ -52,31 +52,31 @@ const sitemap: MenuItem[] = [
     id: 'user',
     subheader: 'Người Dùng',
     path: '/user',
-    icon: 'material-symbols:person', // biểu tượng người
+    icon: 'material-symbols:person',
   },
   {
-    id: 'client',
+    id: 'customer',
     subheader: 'Khách hàng',
-    path: '/client',
-    icon: 'material-symbols:group', // nhóm người
+    path: '/customer',
+    icon: 'material-symbols:group',
   },
   {
-  id: 'promotions',
-  subheader: 'Khuyến mãi',
-  path: '/promotions',
-  icon: 'material-symbols:percent'
+    id: 'promotions',
+    subheader: 'Khuyến mãi',
+    path: '/promotions',
+    icon: 'material-symbols:percent',
   },
   {
     id: 'calenda',
     subheader: 'Lịch',
     path: '/calenda',
-    icon: 'material-symbols:calendar-month', // lịch
+    icon: 'material-symbols:calendar-month',
   },
   {
     id: 'finance',
     subheader: 'Tài chính',
     path: '/',
-    icon: 'mdi:finance', // tài chính
+    icon: 'mdi:finance',
   },
   {
     id: 'service',
@@ -99,33 +99,32 @@ const sitemap: MenuItem[] = [
     id: 'report',
     subheader: 'Báo cáo',
     path: '#!',
-    icon: 'material-symbols:analytics-outline', // biểu tượng báo cáo
+    icon: 'material-symbols:analytics-outline',
   },
   {
     id: 'account',
     subheader: 'Tài khoản',
     path: '#!',
-    icon: 'material-symbols:account-circle', // tài khoản cá nhân
+    icon: 'material-symbols:account-circle',
   },
   {
     id: 'settings',
     subheader: 'Cài đặt',
     path: '#!',
-    icon: 'material-symbols:settings', // bánh răng
+    icon: 'material-symbols:settings',
   },
   {
     id: 'role',
     subheader: 'Vai trò',
     path: '/role',
-    icon: 'material-symbols:settings', // bánh răng
+    icon: 'material-symbols:admin-panel-settings', // Updated icon
   },
   {
     id: 'authentication',
     subheader: 'Đăng nhập',
-    icon: 'material-symbols:security', // bảo mật
-    // active: true,
+    icon: 'material-symbols:security',
     path: '/login',
-  }
+  },
 ];
 
 export default sitemap;
