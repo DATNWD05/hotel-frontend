@@ -27,6 +27,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Checkbox,
+  Chip,
   Tooltip,
 } from '@mui/material';
 import { SelectChangeEvent } from '@mui/material/Select';
@@ -97,7 +99,7 @@ const Promotions: React.FC = () => {
   const [allPromotions, setAllPromotions] = useState<Promotion[]>([]);
   const [filteredPromotions, setFilteredPromotions] = useState<Promotion[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<string>('Tất cả');
+  const [statusFilters, setStatusFilters] = useState<string[]>([]); // Array to hold multiple selected statuses
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
@@ -163,7 +165,7 @@ const Promotions: React.FC = () => {
       );
     }
 
-    if (statusFilter !== 'Tất cả') {
+    if (statusFilters.length > 0) {
       filtered = filtered.filter((prev) => {
         const { status } = getPromotionStatus(
           prev.is_active,
@@ -172,14 +174,14 @@ const Promotions: React.FC = () => {
           prev.used_count,
           prev.usage_limit
         );
-        return status === statusFilter;
+        return statusFilters.includes(status);
       });
     }
 
     setFilteredPromotions(filtered);
     setLastPage(Math.ceil(filtered.length / 10));
     setPromotions(filtered.slice((currentPage - 1) * 10, currentPage * 10));
-  }, [searchQuery, statusFilter, allPromotions, currentPage]);
+  }, [searchQuery, statusFilters, allPromotions, currentPage]);
 
   const getPromotionStatus = (
     isActive: boolean,
@@ -209,8 +211,8 @@ const Promotions: React.FC = () => {
     if (!data.code?.trim()) errors.code = 'Mã CTKM không được để trống';
     else if (data.code && data.code.length > 20) errors.code = 'Mã CTKM không được vượt quá 20 ký tự';
     if (!data.description?.trim()) errors.description = 'Mô tả không được để trống';
-    else if (data.description && data.description.length > 255) errors.description = 'Mô tả không được vượt quá 255 ký tự';
-    if (!data.discount_type) errors.discount_type = 'Vui lòng chọn loại giảm giá';
+    else if (data.description && data.description.length > 200) errors.description = 'Mô tả không được vượt quá 200 ký tự';
+    if (!data.discount_type) errors.discount_type = 'Vui lòng chọn loại giảm';
     if (data.discount_value === undefined || data.discount_value <= 0) errors.discount_value = 'Giá trị giảm phải lớn hơn 0';
     else if (data.discount_type === 'percent' && data.discount_value > 100) {
       errors.discount_value = 'Giá trị giảm không được vượt quá 100%';
@@ -254,7 +256,7 @@ const Promotions: React.FC = () => {
     setValidationErrors({});
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChangeDetail = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setEditedDetail((prev) => ({ ...prev, [name]: value } as Partial<Promotion>));
     setValidationErrors((prev) => {
@@ -277,7 +279,7 @@ const Promotions: React.FC = () => {
   };
 
   const handleSaveDetail = async () => {
-    if (!editedDetail || !editingDetailId) return;
+    if (!editedDetail || !editedDetail.id) return;
 
     const errors = validateForm(editedDetail);
     if (Object.keys(errors).length > 0) {
@@ -299,7 +301,7 @@ const Promotions: React.FC = () => {
         is_active: !!editedDetail.is_active,
       };
 
-      const response = await api.put(`/promotions/${editingDetailId}`, payload);
+      const response = await api.put(`/promotions/${editedDetail.id}`, payload);
       if (response.status === 200) {
         await fetchAllPromotions();
         setEditingDetailId(null);
@@ -384,6 +386,17 @@ const Promotions: React.FC = () => {
     setPromotions(filteredPromotions.slice((page - 1) * 10, page * 10));
   };
 
+  const handleStatusChange = (event: SelectChangeEvent<string[]>) => {
+    const {
+      target: { value },
+    } = event;
+    setStatusFilters(typeof value === 'string' ? value.split(',') : value);
+  };
+
+  const handleDeleteStatus = (statusToDelete: string) => () => {
+    setStatusFilters((prev) => prev.filter((status) => status !== statusToDelete));
+  };
+
   return (
     <div className="promotion-wrapper">
       <div className="promotion-title">
@@ -404,19 +417,57 @@ const Promotions: React.FC = () => {
             <FormControl sx={{ width: '200px' }} variant="outlined" size="small">
               <InputLabel>Lọc theo trạng thái</InputLabel>
               <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as string)}
+                multiple
+                value={statusFilters}
+                onChange={handleStatusChange}
                 label="Lọc theo trạng thái"
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip
+                        key={value}
+                        label={value}
+                        onDelete={handleDeleteStatus(value)}
+                        sx={{ backgroundColor: '#e0e0e0', color: '#000', fontSize: '12px' }}
+                      />
+                    ))}
+                  </Box>
+                )}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      maxHeight: 200,
+                      width: 250,
+                    },
+                  },
+                }}
               >
-                <MenuItem value="Tất cả">Tất cả</MenuItem>
-                <MenuItem value="Chưa bắt đầu">Chưa bắt đầu</MenuItem>
-                <MenuItem value="Đang hoạt động">Đang hoạt động</MenuItem>
-                <MenuItem value="Hết lượt">Hết lượt</MenuItem>
-                <MenuItem value="Hết hạn">Hết hạn</MenuItem>
-                <MenuItem value="Bị tắt">Bị tắt</MenuItem>
+                <MenuItem value="Chưa bắt đầu">
+                  <Checkbox checked={statusFilters.includes('Chưa bắt đầu')} />
+                  <span>Chưa bắt đầu</span>
+                </MenuItem>
+                <MenuItem value="Đang hoạt động">
+                  <Checkbox checked={statusFilters.includes('Đang hoạt động')} />
+                  <span>Đang hoạt động</span>
+                </MenuItem>
+                <MenuItem value="Hết lượt">
+                  <Checkbox checked={statusFilters.includes('Hết lượt')} />
+                  <span>Hết lượt</span>
+                </MenuItem>
+                <MenuItem value="Hết hạn">
+                  <Checkbox checked={statusFilters.includes('Hết hạn')} />
+                  <span>Hết hạn</span>
+                </MenuItem>
+                <MenuItem value="Bị tắt">
+                  <Checkbox checked={statusFilters.includes('Bị tắt')} />
+                  <span>Bị tắt</span>
+                </MenuItem>
               </Select>
             </FormControl>
-            <Link className="promotion-btn-add" to="/promotions/add">
+            <Link
+              className="promotion-btn-add"
+              to="/promotions/add"
+            >
               Thêm mới
             </Link>
           </Box>
@@ -434,7 +485,7 @@ const Promotions: React.FC = () => {
         </Typography>
       ) : filteredPromotions.length === 0 ? (
         <Typography className="promotion-no-data">
-          {searchQuery || statusFilter !== 'Tất cả'
+          {searchQuery || statusFilters.length > 0
             ? 'Không tìm thấy mã khuyến mãi phù hợp.'
             : 'Không tìm thấy khuyến mãi nào.'}
         </Typography>
@@ -506,7 +557,7 @@ const Promotions: React.FC = () => {
                                         label="Mã khuyến mãi"
                                         name="code"
                                         value={editedDetail.code || ''}
-                                        onChange={handleChange}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -517,7 +568,7 @@ const Promotions: React.FC = () => {
                                         label="Mô tả"
                                         name="description"
                                         value={editedDetail.description || ''}
-                                        onChange={handleChange}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -548,7 +599,7 @@ const Promotions: React.FC = () => {
                                         name="discount_value"
                                         type="number"
                                         value={editedDetail.discount_value ?? ''}
-                                        onChange={handleChange}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -562,7 +613,7 @@ const Promotions: React.FC = () => {
                                         name="start_date"
                                         type="date"
                                         value={editedDetail.start_date || ''}
-                                        onChange={handleChange}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -575,7 +626,7 @@ const Promotions: React.FC = () => {
                                         name="end_date"
                                         type="date"
                                         value={editedDetail.end_date || ''}
-                                        onChange={handleChange}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -590,7 +641,7 @@ const Promotions: React.FC = () => {
                                         name="usage_limit"
                                         type="number"
                                         value={editedDetail.usage_limit ?? ''}
-                                        onChange={handleChange}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -602,7 +653,7 @@ const Promotions: React.FC = () => {
                                         name="used_count"
                                         type="number"
                                         value={editedDetail.used_count ?? ''}
-                                        onChange={handleChange}
+                                        onChange={handleChangeDetail}
                                         fullWidth
                                         variant="outlined"
                                         size="small"
@@ -614,10 +665,10 @@ const Promotions: React.FC = () => {
                                       <FormControlLabel
                                         control={
                                           <Switch
-                                          checked={!!editedDetail.is_active}
-                                          onChange={(e) => handleChange(e)}
-                                          color="default"
-                                        />
+                                            checked={!!editedDetail.is_active}
+                                            onChange={(e) => handleChangeDetail({ target: { name: 'is_active', value: e.target.checked } } as never)}
+                                            color="default"
+                                          />
                                         }
                                         label="Kích hoạt"
                                       />
@@ -634,6 +685,7 @@ const Promotions: React.FC = () => {
                                     </Button>
                                     <Button
                                       variant="outlined"
+                                      className='promotion-btn-cancel'
                                       color="secondary"
                                       onClick={handleCancelEdit}
                                       disabled={loading}
@@ -648,32 +700,34 @@ const Promotions: React.FC = () => {
                                   )}
                                 </>
                               ) : (
-                                <Table className="promotion-detail-table">
-                                  <TableBody>
-                                    <TableRow>
-                                      <TableCell><strong>Mã CTKM:</strong> {promotion.code}</TableCell>
-                                      <TableCell><strong>Mô tả:</strong> {promotion.description}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell><strong>Loại giảm:</strong> {promotion.discount_type === 'percent' ? 'Phần trăm' : 'Số tiền'}</TableCell>
-                                      <TableCell><strong>Giá trị giảm:</strong> {formatCurrency(promotion.discount_value, promotion.discount_type)}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell><strong>Ngày bắt đầu:</strong> {formatDate(promotion.start_date)}</TableCell>
-                                      <TableCell><strong>Ngày kết thúc:</strong> {formatDate(promotion.end_date)}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell><strong>Giới hạn số lần:</strong> {promotion.usage_limit ?? 'Không giới hạn'}</TableCell>
-                                      <TableCell><strong>Số lần sử dụng:</strong> {promotion.used_count}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell colSpan={2}>
-                                        <strong>Trạng thái:</strong>{' '}
-                                        <span style={{ color, fontWeight: 'bold' }}>{status}</span>
-                                      </TableCell>
-                                    </TableRow>
-                                  </TableBody>
-                                </Table>
+                                <>
+                                  <Table className="promotion-detail-table">
+                                    <TableBody>
+                                      <TableRow>
+                                        <TableCell><strong>Mã CTKM:</strong> {promotion.code}</TableCell>
+                                        <TableCell><strong>Mô tả:</strong> {promotion.description}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell><strong>Loại giảm:</strong> {promotion.discount_type === 'percent' ? 'Phần trăm' : 'Số tiền'}</TableCell>
+                                        <TableCell><strong>Giá trị giảm:</strong> {formatCurrency(promotion.discount_value, promotion.discount_type)}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell><strong>Ngày bắt đầu:</strong> {formatDate(promotion.start_date)}</TableCell>
+                                        <TableCell><strong>Ngày kết thúc:</strong> {formatDate(promotion.end_date)}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell><strong>Giới hạn số lần:</strong> {promotion.usage_limit ?? 'Không giới hạn'}</TableCell>
+                                        <TableCell><strong>Số lần sử dụng:</strong> {promotion.used_count}</TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell colSpan={2}>
+                                          <strong>Trạng thái:</strong>{' '}
+                                          <span style={{ color, fontWeight: 'bold' }}>{status}</span>
+                                        </TableCell>
+                                      </TableRow>
+                                    </TableBody>
+                                  </Table>
+                                </>
                               )}
                             </div>
                           </Collapse>
@@ -711,7 +765,9 @@ const Promotions: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Hủy</Button>
+          <Button onClick={() => setDeleteDialogOpen(false)}>
+            Hủy
+          </Button>
           <Button onClick={confirmDelete} variant="contained" color="error">
             Xác nhận
           </Button>
