@@ -160,3 +160,11 @@
 .user-search-input {
   padding: 10px;
 }
+
+.user-wrapper .action-edit {
+  color: #4318FF;
+}
+
+.user-action-edit:hover {
+  opacity: 0.8;
+}

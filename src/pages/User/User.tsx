@@ -1033,7 +1033,7 @@ const User: React.FC = () => {
                                         variant="outlined"
                                         startIcon={<EditIcon />}
                                         onClick={() => handleEditDetail(emp)}
-                                        className="action-employee"
+                                        className="action-edit"
                                       >
                                         Chỉnh sửa thông tin nhân viên
                                       </Button>
