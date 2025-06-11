@@ -78,18 +78,29 @@ const User: React.FC = () => {
   const rowsPerPage = 10;
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
-  const [errors, setErrors] = useState<Partial<Record<keyof Employee, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof Employee, string>>>(
+    {}
+  );
   const [generalError, setGeneralError] = useState<string | null>(null);
-  const [credentialErrors, setCredentialErrors] = useState<Partial<Record<keyof User, string>>>({});
-  const [generalCredentialError, setGeneralCredentialError] = useState<string | null>(null);
+  const [credentialErrors, setCredentialErrors] = useState<
+    Partial<Record<keyof User, string>>
+  >({});
+  const [generalCredentialError, setGeneralCredentialError] = useState<
+    string | null
+  >(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [roles, setRoles] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Employee>>({});
-  const [viewCredentialsId, setViewCredentialsId] = useState<number | null>(null);
-  const [editingCredentialsId, setEditingCredentialsId] = useState<number | null>(null);
+  const [viewCredentialsId, setViewCredentialsId] = useState<number | null>(
+    null
+  );
+  const [editingCredentialsId, setEditingCredentialsId] = useState<
+    number | null
+  >(null);
   const [editedCredentials, setEditedCredentials] = useState<Partial<User>>({});
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
@@ -100,32 +111,34 @@ const User: React.FC = () => {
       try {
         setLoading(true);
         setGeneralError(null);
-        const [employeeRes, userRes, departmentRes] = await Promise.all([
-          api.get("/employees"),
-          api.get("/users"),
-          api.get("/departments"),
-        ]);
 
-        const employees = employeeRes.data.data;
-        const users = userRes.data.data;
+        const [employeeRes, userRes, departmentRes, roleRes] =
+          await Promise.all([
+            api.get("/employees"),
+            api.get("/users"),
+            api.get("/departments"),
+            api.get("/role"), // giữ nguyên endpoint của bạn
+          ]);
+
+        // --- Thay đổi ở đây ---
+        // trích mảng roles từ response.roles
+        const rolesFromApi = roleRes.data.roles ?? [];
+        console.log("Roles từ API:", rolesFromApi);
+        setRoles(rolesFromApi);
+        // --- hết thay đổi ---
+
         const departments = departmentRes.data.data;
+        const users = userRes.data.data;
+        const employees = employeeRes.data.data;
 
+        // merge employees + user như trước
         const merged = employees.map((emp: Employee) => {
           const user = users.find((u: User) => u.id === emp.user_id);
           return {
             ...emp,
             user: user || undefined,
-            name: emp.name || "Không xác định",
-            email: emp.email || "Không xác định",
-            role: emp.role || "Không xác định",
-            phone: emp.phone || "Không xác định",
-            address: emp.address || "Không xác định",
-            cccd: emp.cccd || "Không xác định",
-            gender: emp.gender || "Không xác định",
-            birthday: emp.birthday || "Không xác định",
-            hire_date: emp.hire_date || "Không xác định",
-            status: emp.status || "Không xác định",
             department_id: emp.department_id ?? null,
+            // (những field còn lại giữ nguyên, không cần override `role:`)
           };
         });
 
@@ -133,8 +146,8 @@ const User: React.FC = () => {
         setFilteredEmployees(merged);
         setDepartments(departments);
       } catch (err) {
-        setGeneralError("Lỗi khi tải dữ liệu");
         console.error(err);
+        setGeneralError("Lỗi khi tải dữ liệu");
       } finally {
         setLoading(false);
       }
@@ -147,9 +160,12 @@ const User: React.FC = () => {
     let filtered = [...employees];
 
     if (searchQuery.trim() !== "") {
-      filtered = filtered.filter((employee) =>
-        employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (employee.user?.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (employee) =>
+          employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (employee.user?.email || "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
       );
     }
 
@@ -163,7 +179,9 @@ const User: React.FC = () => {
     setEditedDetail({
       name: employee.name || "",
       email: employee.email || "",
-      role: employee.role || "",
+      role: employee.user?.role_id
+        ? roleIdToLabel(employee.user.role_id)
+        : "Không xác định",
       phone: employee.phone || "",
       address: employee.address || "",
       cccd: employee.cccd || "",
@@ -177,7 +195,10 @@ const User: React.FC = () => {
     setGeneralError(null);
   };
 
-  const handleChangeDetail = (field: keyof Employee, value: string | number) => {
+  const handleChangeDetail = (
+    field: keyof Employee,
+    value: string | number
+  ) => {
     setEditedDetail((prev) => ({
       ...prev,
       [field]: value,
@@ -189,7 +210,10 @@ const User: React.FC = () => {
     });
   };
 
-  const handleChangeCredentials = (field: keyof User, value: string | number) => {
+  const handleChangeCredentials = (
+    field: keyof User,
+    value: string | number
+  ) => {
     setEditedCredentials((prev) => ({
       ...prev,
       [field]: value,
@@ -285,13 +309,7 @@ const User: React.FC = () => {
         !["Làm việc", "Nghỉ làm", "Chờ Xét Duyệt"].includes(editedDetail.status)
       ) {
         newErrors.status =
-          "Trạng thái phải là Làm việc, Nghỉ làm, Chờ Xét Duyệt.";
-      }
-
-      if (!editedDetail.role) {
-        newErrors.role = "Vai trò không được để trống.";
-      } else if (!["staff", "admin", "user"].includes(editedDetail.role)) {
-        newErrors.role = "Vai trò phải là staff, admin hoặc user.";
+          "Trạng thái phải là Làm việc, Nghỉ làm hoặc Chờ Xét Duyệt.";
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -451,15 +469,9 @@ const User: React.FC = () => {
     }
   };
 
-  const roleIdToLabel = (role_id: number) => {
-    switch (role_id) {
-      case 1:
-        return "Quản lí";
-      case 2:
-        return "Lễ tân";
-      default:
-        return "Không xác định";
-    }
+  const roleIdToLabel = (role_id?: number): string => {
+    const found = roles.find((r) => r.id === role_id);
+    return found ? found.name : "Không xác định";
   };
 
   const handleDelete = async (id: number, user_id?: number) => {
@@ -477,7 +489,9 @@ const User: React.FC = () => {
       try {
         await api.delete(`/users/${user_id}`);
         setEmployees((prev) => prev.filter((e) => e.user_id !== user_id));
-        setFilteredEmployees((prev) => prev.filter((e) => e.user_id !== user_id));
+        setFilteredEmployees((prev) =>
+          prev.filter((e) => e.user_id !== user_id)
+        );
         setSnackbarMessage("Xóa nhân viên thành công!");
         setSnackbarOpen(true);
       } catch (err: unknown) {
@@ -509,8 +523,8 @@ const User: React.FC = () => {
     setEditingCredentialsId(employee.id);
     setViewCredentialsId(employee.id);
     setEditedCredentials({
-      role_id: employee.user?.role_id || 0,
-      status: employee.user?.status || "active",
+      role_id: employee.user?.role_id ?? 0,
+      status: employee.user?.status ?? "active",
     });
     setCredentialErrors({});
     setGeneralCredentialError(null);
@@ -535,7 +549,10 @@ const User: React.FC = () => {
     setSnackbarMessage("");
   };
 
-  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
     setCurrentPage(page);
   };
 
@@ -560,7 +577,7 @@ const User: React.FC = () => {
           <Box display="flex" gap={2} alignItems="center">
             <TextField
               label="Tìm kiếm (Tên hoặc Email)"
-              className = "search-input"
+              className="search-input"
               variant="outlined"
               size="small"
               value={searchQuery}
@@ -585,7 +602,9 @@ const User: React.FC = () => {
         </Typography>
       ) : filteredEmployees.length === 0 ? (
         <Typography className="no-data">
-          {searchQuery ? "Không tìm thấy nhân viên phù hợp." : "Không tìm thấy nhân viên nào."}
+          {searchQuery
+            ? "Không tìm thấy nhân viên phù hợp."
+            : "Không tìm thấy nhân viên nào."}
         </Typography>
       ) : (
         <>
@@ -604,7 +623,9 @@ const User: React.FC = () => {
                   <React.Fragment key={emp.id}>
                     <TableRow>
                       <TableCell>{emp.name}</TableCell>
-                      <TableCell>{emp.user?.email || "Không xác định"}</TableCell>
+                      <TableCell>
+                        {emp.user?.email || "Không xác định"}
+                      </TableCell>
                       <TableCell>
                         {emp.user?.role_id
                           ? roleIdToLabel(emp.user.role_id)
@@ -641,20 +662,34 @@ const User: React.FC = () => {
                     </TableRow>
                     <TableRow>
                       <TableCell colSpan={4} style={{ padding: 0 }}>
-                        <Collapse in={viewDetailId === emp.id || viewCredentialsId === emp.id}>
+                        <Collapse
+                          in={
+                            viewDetailId === emp.id ||
+                            viewCredentialsId === emp.id
+                          }
+                        >
                           <div className="detail-container">
                             {viewDetailId === emp.id && (
                               <>
                                 <h3>Thông tin nhân viên</h3>
                                 {editingDetailId === emp.id ? (
                                   <>
-                                    <Box display="flex" flexDirection="column" gap={2}>
+                                    <Box
+                                      display="flex"
+                                      flexDirection="column"
+                                      gap={2}
+                                    >
                                       <Box display="flex" gap={2}>
                                         <TextField
                                           label="Họ Tên"
                                           name="name"
                                           value={editedDetail.name || ""}
-                                          onChange={(e) => handleChangeDetail("name", e.target.value)}
+                                          onChange={(e) =>
+                                            handleChangeDetail(
+                                              "name",
+                                              e.target.value
+                                            )
+                                          }
                                           fullWidth
                                           variant="outlined"
                                           size="small"
@@ -665,7 +700,12 @@ const User: React.FC = () => {
                                           label="Email"
                                           name="email"
                                           value={editedDetail.email || ""}
-                                          onChange={(e) => handleChangeDetail("email", e.target.value)}
+                                          onChange={(e) =>
+                                            handleChangeDetail(
+                                              "email",
+                                              e.target.value
+                                            )
+                                          }
                                           fullWidth
                                           variant="outlined"
                                           size="small"
@@ -678,7 +718,12 @@ const User: React.FC = () => {
                                           label="Số Điện Thoại"
                                           name="phone"
                                           value={editedDetail.phone || ""}
-                                          onChange={(e) => handleChangeDetail("phone", e.target.value)}
+                                          onChange={(e) =>
+                                            handleChangeDetail(
+                                              "phone",
+                                              e.target.value
+                                            )
+                                          }
                                           fullWidth
                                           variant="outlined"
                                           size="small"
@@ -689,7 +734,12 @@ const User: React.FC = () => {
                                           label="Địa chỉ"
                                           name="address"
                                           value={editedDetail.address || ""}
-                                          onChange={(e) => handleChangeDetail("address", e.target.value)}
+                                          onChange={(e) =>
+                                            handleChangeDetail(
+                                              "address",
+                                              e.target.value
+                                            )
+                                          }
                                           fullWidth
                                           variant="outlined"
                                           size="small"
@@ -703,7 +753,12 @@ const User: React.FC = () => {
                                           name="birthday"
                                           type="date"
                                           value={editedDetail.birthday || ""}
-                                          onChange={(e) => handleChangeDetail("birthday", e.target.value)}
+                                          onChange={(e) =>
+                                            handleChangeDetail(
+                                              "birthday",
+                                              e.target.value
+                                            )
+                                          }
                                           fullWidth
                                           variant="outlined"
                                           size="small"
@@ -711,44 +766,81 @@ const User: React.FC = () => {
                                           error={!!errors.birthday}
                                           helperText={errors.birthday}
                                         />
-                                        <FormControl fullWidth variant="outlined" size="small" error={!!errors.gender}>
+                                        <FormControl
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={!!errors.gender}
+                                        >
                                           <InputLabel>Giới tính</InputLabel>
                                           <Select
                                             name="gender"
                                             value={editedDetail.gender || ""}
-                                            onChange={(e) => handleChangeDetail("gender", e.target.value)}
+                                            onChange={(e) =>
+                                              handleChangeDetail(
+                                                "gender",
+                                                e.target.value
+                                              )
+                                            }
                                             label="Giới tính"
                                           >
-                                            <MenuItem value="">Chọn giới tính</MenuItem>
+                                            <MenuItem value="">
+                                              Chọn giới tính
+                                            </MenuItem>
                                             <MenuItem value="Nam">Nam</MenuItem>
                                             <MenuItem value="Nữ">Nữ</MenuItem>
-                                            <MenuItem value="Khác">Khác</MenuItem>
+                                            <MenuItem value="Khác">
+                                              Khác
+                                            </MenuItem>
                                           </Select>
                                           {errors.gender && (
-                                            <Typography color="error" variant="caption">
+                                            <Typography
+                                              color="error"
+                                              variant="caption"
+                                            >
                                               {errors.gender}
                                             </Typography>
                                           )}
                                         </FormControl>
                                       </Box>
                                       <Box display="flex" gap={2}>
-                                        <FormControl fullWidth variant="outlined" size="small" error={!!errors.department_id}>
+                                        <FormControl
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={!!errors.department_id}
+                                        >
                                           <InputLabel>Phòng ban</InputLabel>
                                           <Select
                                             name="department_id"
-                                            value={editedDetail.department_id || ""}
-                                            onChange={(e) => handleChangeDetail("department_id", Number(e.target.value))}
+                                            value={
+                                              editedDetail.department_id || ""
+                                            }
+                                            onChange={(e) =>
+                                              handleChangeDetail(
+                                                "department_id",
+                                                Number(e.target.value)
+                                              )
+                                            }
                                             label="Phòng ban"
                                           >
-                                            <MenuItem value="">Chọn phòng ban</MenuItem>
+                                            <MenuItem value="">
+                                              Chọn phòng ban
+                                            </MenuItem>
                                             {departments.map((dept) => (
-                                              <MenuItem key={dept.id} value={dept.id}>
+                                              <MenuItem
+                                                key={dept.id}
+                                                value={dept.id}
+                                              >
                                                 {dept.name}
                                               </MenuItem>
                                             ))}
                                           </Select>
                                           {errors.department_id && (
-                                            <Typography color="error" variant="caption">
+                                            <Typography
+                                              color="error"
+                                              variant="caption"
+                                            >
                                               {errors.department_id}
                                             </Typography>
                                           )}
@@ -757,43 +849,67 @@ const User: React.FC = () => {
                                           label="CCCD"
                                           name="cccd"
                                           value={editedDetail.cccd || ""}
-                                          onChange={(e) => handleChangeDetail("cccd", e.target.value)}
+                                          onChange={(e) =>
+                                            handleChangeDetail(
+                                              "cccd",
+                                              e.target.value
+                                            )
+                                          }
                                           fullWidth
                                           variant="outlined"
                                           size="small"
                                           error={!!errors.cccd}
-                                          helperText={errors.cccd || "Ví dụ: 123456789012"}
+                                          helperText={
+                                            errors.cccd || "Ví dụ: 123456789012"
+                                          }
                                         />
                                       </Box>
                                       <Box display="flex" gap={2}>
-                                        <FormControl fullWidth variant="outlined" size="small" error={!!errors.status}>
+                                        <FormControl
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                        >
                                           <InputLabel>Trạng thái</InputLabel>
                                           <Select
                                             name="status"
                                             value={editedDetail.status || ""}
-                                            onChange={(e) => handleChangeDetail("status", e.target.value)}
+                                            onChange={(e) =>
+                                              handleChangeDetail(
+                                                "status",
+                                                e.target.value
+                                              )
+                                            }
                                             label="Trạng thái"
                                           >
-                                            <MenuItem value="Làm việc">Làm việc</MenuItem>
-                                            <MenuItem value="Nghỉ làm">Nghỉ làm</MenuItem>
-                                            <MenuItem value="Chờ Xét Duyệt">Chờ Xét Duyệt</MenuItem>
+                                            <MenuItem value="Làm việc">
+                                              Làm việc
+                                            </MenuItem>
+                                            <MenuItem value="Nghỉ làm">
+                                              Nghỉ làm
+                                            </MenuItem>
+                                            <MenuItem value="Chờ Xét Duyệt">
+                                              Chờ Xét Duyệt
+                                            </MenuItem>
                                           </Select>
-                                          {errors.status && (
-                                            <Typography color="error" variant="caption">
-                                              {errors.status}
-                                            </Typography>
-                                          )}
                                         </FormControl>
                                         <TextField
                                           label="Ngày tuyển dụng"
                                           name="hire_date"
                                           type="date"
                                           value={editedDetail.hire_date || ""}
-                                          onChange={(e) => handleChangeDetail("hire_date", e.target.value)}
+                                          onChange={(e) =>
+                                            handleChangeDetail(
+                                              "hire_date",
+                                              e.target.value
+                                            )
+                                          }
                                           fullWidth
                                           variant="outlined"
                                           size="small"
-                                          InputLabelProps={{ shrink: true }}
+                                          slotProps={{
+                                            inputLabel: { shrink: true },
+                                          }}
                                           error={!!errors.hire_date}
                                           helperText={errors.hire_date}
                                         />
@@ -802,13 +918,17 @@ const User: React.FC = () => {
                                         <TextField
                                           label="Vai trò"
                                           name="role"
-                                          value={editedDetail.role || ""}
-                                          onChange={(e) => handleChangeDetail("role", e.target.value)}
+                                          value={
+                                            emp.user?.role_id
+                                              ? roleIdToLabel(emp.user.role_id)
+                                              : "Không xác định"
+                                          }
                                           fullWidth
                                           variant="outlined"
                                           size="small"
-                                          error={!!errors.role}
-                                          helperText={errors.role}
+                                          slotProps={{
+                                            input: { readOnly: true },
+                                          }}
                                         />
                                       </Box>
                                     </Box>
@@ -819,7 +939,11 @@ const User: React.FC = () => {
                                         onClick={() => handleSaveDetail(emp.id)}
                                         disabled={saving}
                                       >
-                                        {saving ? <CircularProgress size={24} /> : "Lưu"}
+                                        {saving ? (
+                                          <CircularProgress size={24} />
+                                        ) : (
+                                          "Lưu"
+                                        )}
                                       </Button>
                                       <Button
                                         variant="outlined"
@@ -840,45 +964,79 @@ const User: React.FC = () => {
                                   <Table className="detail-table">
                                     <TableBody>
                                       <TableRow>
-                                        <TableCell><strong>Họ Tên:</strong> {emp.name}</TableCell>
-                                        <TableCell><strong>Email:</strong> {emp.email}</TableCell>
+                                        <TableCell>
+                                          <strong>Họ Tên:</strong> {emp.name}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>Email:</strong> {emp.email}
+                                        </TableCell>
                                       </TableRow>
                                       <TableRow>
-                                        <TableCell><strong>Số Điện Thoại:</strong> {emp.phone}</TableCell>
-                                        <TableCell><strong>Địa chỉ:</strong> {emp.address}</TableCell>
+                                        <TableCell>
+                                          <strong>Số Điện Thoại:</strong>{" "}
+                                          {emp.phone}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>Địa chỉ:</strong>{" "}
+                                          {emp.address}
+                                        </TableCell>
                                       </TableRow>
                                       <TableRow>
-                                        <TableCell><strong>Ngày sinh:</strong> {emp.birthday}</TableCell>
-                                        <TableCell><strong>Giới tính:</strong> {emp.gender}</TableCell>
+                                        <TableCell>
+                                          <strong>Ngày sinh:</strong>{" "}
+                                          {emp.birthday}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>Giới tính:</strong>{" "}
+                                          {emp.gender}
+                                        </TableCell>
                                       </TableRow>
                                       <TableRow>
-                                        <TableCell><strong>Phòng ban:</strong> {departments.find(
-                                          (d) => d.id === emp.department_id
-                                        )?.name || "Không xác định"}</TableCell>
-                                        <TableCell><strong>CCCD:</strong> {emp.cccd}</TableCell>
+                                        <TableCell>
+                                          <strong>Phòng ban:</strong>{" "}
+                                          {departments.find(
+                                            (d) => d.id === emp.department_id
+                                          )?.name || "Không xác định"}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>CCCD:</strong> {emp.cccd}
+                                        </TableCell>
                                       </TableRow>
                                       <TableRow>
-                                        <TableCell><strong>Trạng thái:</strong> {emp.status}</TableCell>
-                                        <TableCell><strong>Ngày tuyển dụng:</strong> {emp.hire_date}</TableCell>
+                                        <TableCell>
+                                          <strong>Trạng thái:</strong> {emp.status || "Không xác định"}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>Ngày tuyển dụng:</strong>{" "}
+                                          {emp.hire_date}
+                                        </TableCell>
                                       </TableRow>
+
                                       <TableRow>
-                                        <TableCell colSpan={2}><strong>Vai trò:</strong> {emp.role}</TableCell>
+                                        <TableCell colSpan={2}>
+                                          <strong>Vai trò:</strong>{" "}
+                                          {emp.user?.role_id
+                                            ? roleIdToLabel(emp.user.role_id)
+                                            : "Không xác định"}
+                                        </TableCell>
                                       </TableRow>
                                     </TableBody>
                                   </Table>
                                 )}
-                                {(currentUserRoleId === 1 || currentUserRoleId === 3) && editingDetailId !== emp.id && (
-                                  <Box mt={2}>
-                                    <Button
-                                      variant="outlined"
-                                      startIcon={<EditIcon />}
-                                      onClick={() => handleEditDetail(emp)}
-                                      className="action-employee"
-                                    >
-                                      Chỉnh sửa thông tin nhân viên
-                                    </Button>
-                                  </Box>
-                                )}
+                                {(currentUserRoleId === 1 ||
+                                  currentUserRoleId === 3) &&
+                                  editingDetailId !== emp.id && (
+                                    <Box mt={2}>
+                                      <Button
+                                        variant="outlined"
+                                        startIcon={<EditIcon />}
+                                        onClick={() => handleEditDetail(emp)}
+                                        className="action-employee"
+                                      >
+                                        Chỉnh sửa thông tin nhân viên
+                                      </Button>
+                                    </Box>
+                                  )}
                               </>
                             )}
                             {viewCredentialsId === emp.id && (
@@ -886,37 +1044,81 @@ const User: React.FC = () => {
                                 <h3>Thông tin tài khoản đăng nhập</h3>
                                 {editingCredentialsId === emp.id ? (
                                   <>
-                                    <Box display="flex" flexDirection="column" gap={2}>
-                                      <FormControl fullWidth variant="outlined" size="small" error={!!credentialErrors.role_id}>
+                                    <Box
+                                      display="flex"
+                                      flexDirection="column"
+                                      gap={2}
+                                    >
+                                      <FormControl
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!credentialErrors.role_id}
+                                      >
                                         <InputLabel>Vai trò</InputLabel>
                                         <Select
                                           name="role_id"
-                                          value={editedCredentials.role_id || ""}
-                                          onChange={(e) => handleChangeCredentials("role_id", Number(e.target.value))}
-                                          label="Vai trò"
+                                          value={
+                                            editedCredentials.role_id ?? ""
+                                          }
+                                          onChange={(e) =>
+                                            handleChangeCredentials(
+                                              "role_id",
+                                              Number(e.target.value)
+                                            )
+                                          }
                                         >
-                                          <MenuItem value={1}>Quản lí</MenuItem>
-                                          <MenuItem value={2}>Lễ tân</MenuItem>
+                                          <MenuItem value="">
+                                            Chọn vai trò
+                                          </MenuItem>
+                                          {roles.map((role) => (
+                                            <MenuItem
+                                              key={role.id}
+                                              value={role.id}
+                                            >
+                                              {role.name}
+                                            </MenuItem>
+                                          ))}
                                         </Select>
                                         {credentialErrors.role_id && (
-                                          <Typography color="error" variant="caption">
+                                          <Typography
+                                            color="error"
+                                            variant="caption"
+                                          >
                                             {credentialErrors.role_id}
                                           </Typography>
                                         )}
                                       </FormControl>
-                                      <FormControl fullWidth variant="outlined" size="small" error={!!credentialErrors.status}>
+                                      <FormControl
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!credentialErrors.status}
+                                      >
                                         <InputLabel>Trạng thái</InputLabel>
                                         <Select
                                           name="status"
-                                          value={editedCredentials.status || ""}
-                                          onChange={(e) => handleChangeCredentials("status", e.target.value)}
-                                          label="Trạng thái"
+                                          value={editedCredentials.status ?? ""}
+                                          onChange={(e) =>
+                                            handleChangeCredentials(
+                                              "status",
+                                              e.target.value
+                                            )
+                                          }
                                         >
-                                          <MenuItem value="active">Hoạt động</MenuItem>
-                                          <MenuItem value="not_active">Không hoạt động</MenuItem>
+                                          <MenuItem value="active">
+                                            Hoạt động
+                                          </MenuItem>
+                                          <MenuItem value="not_active">
+                                            Không hoạt động
+                                          </MenuItem>
                                         </Select>
+
                                         {credentialErrors.status && (
-                                          <Typography color="error" variant="caption">
+                                          <Typography
+                                            color="error"
+                                            variant="caption"
+                                          >
                                             {credentialErrors.status}
                                           </Typography>
                                         )}
@@ -929,8 +1131,12 @@ const User: React.FC = () => {
                                         onClick={() => {
                                           const userId = emp.user?.id;
                                           if (!userId) {
-                                            setGeneralCredentialError("Không tìm thấy ID người dùng.");
-                                            setSnackbarMessage("Không tìm thấy ID người dùng.");
+                                            setGeneralCredentialError(
+                                              "Không tìm thấy ID người dùng."
+                                            );
+                                            setSnackbarMessage(
+                                              "Không tìm thấy ID người dùng."
+                                            );
                                             setSnackbarOpen(true);
                                             return;
                                           }
@@ -938,7 +1144,11 @@ const User: React.FC = () => {
                                         }}
                                         disabled={saving}
                                       >
-                                        {saving ? <CircularProgress size={24} /> : "Lưu"}
+                                        {saving ? (
+                                          <CircularProgress size={24} />
+                                        ) : (
+                                          "Lưu"
+                                        )}
                                       </Button>
                                       <Button
                                         variant="outlined"
@@ -959,35 +1169,51 @@ const User: React.FC = () => {
                                   <Table className="detail-table">
                                     <TableBody>
                                       <TableRow>
-                                        <TableCell><strong>Email:</strong> {emp.user?.email || "Không xác định"}</TableCell>
-                                        <TableCell><strong>Vai trò:</strong> {emp.user?.role_id
-                                          ? roleIdToLabel(emp.user.role_id)
-                                          : "Không xác định"}</TableCell>
+                                        <TableCell>
+                                          <strong>Email:</strong>{" "}
+                                          {emp.user?.email || "Không xác định"}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>Vai trò:</strong>{" "}
+                                          {emp.user?.role_id
+                                            ? roleIdToLabel(emp.user.role_id)
+                                            : "Không xác định"}
+                                        </TableCell>
                                       </TableRow>
                                       <TableRow>
-                                        <TableCell><strong>Trạng thái:</strong> {emp.user?.status === "active"
-                                          ? "Hoạt động"
-                                          : emp.user?.status === "not_active"
-                                          ? "Không hoạt động"
-                                          : "Không xác định"}</TableCell>
-                                        <TableCell><strong>Ngày tạo:</strong> {emp.user?.created_at?.slice(0, 10) ||
-                                          "Không xác định"}</TableCell>
+                                        <TableCell>
+                                          <strong>Trạng thái:</strong>{" "}
+                                          {emp.user?.status === "active"
+                                            ? "Hoạt động"
+                                            : emp.user?.status === "not_active"
+                                            ? "Không hoạt động"
+                                            : "Không xác định"}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>Ngày tạo:</strong>{" "}
+                                          {emp.user?.created_at?.slice(0, 10) ||
+                                            "Không xác định"}
+                                        </TableCell>
                                       </TableRow>
                                     </TableBody>
                                   </Table>
                                 )}
-                                {(currentUserRoleId === 1 || currentUserRoleId === 3) && editingCredentialsId !== emp.id && (
-                                  <Box mt={2}>
-                                    <Button
-                                      variant="outlined"
-                                      startIcon={<EditIcon />}
-                                      onClick={() => handleEditCredentials(emp)}
-                                      className="action-edit"
-                                    >
-                                      Chỉnh sửa tài khoản
-                                    </Button>
-                                  </Box>
-                                )}
+                                {(currentUserRoleId === 1 ||
+                                  currentUserRoleId === 3) &&
+                                  editingCredentialsId !== emp.id && (
+                                    <Box mt={2}>
+                                      <Button
+                                        variant="outlined"
+                                        startIcon={<EditIcon />}
+                                        onClick={() =>
+                                          handleEditCredentials(emp)
+                                        }
+                                        className="action-edit"
+                                      >
+                                        Chỉnh sửa tài khoản
+                                      </Button>
+                                    </Box>
+                                  )}
                               </>
                             )}
                           </div>
@@ -1021,7 +1247,9 @@ const User: React.FC = () => {
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes("thành công") ? "success" : "error"}
+          severity={
+            snackbarMessage.includes("thành công") ? "success" : "error"
+          }
           sx={{ width: "100%" }}
         >
           {snackbarMessage}
