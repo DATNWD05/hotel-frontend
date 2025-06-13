@@ -3,7 +3,7 @@ import MainLayout from "./layouts/main-layout";
 import Login from "./components/auth/Login";
 import User from "./pages/User/User";
 import AddUser from "./pages/User/AddUser";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/OrderRoom/OrderRoom";
 import AddPromotion from "./pages/Promotion/AddPromotion";
 import Promotions from "./pages/Promotion/Promotions";
 import RoleBasedRoute from "./routes/helpers/RoleBasedRoute";

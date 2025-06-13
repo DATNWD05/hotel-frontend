@@ -102,8 +102,15 @@
   opacity: 0.8;
 }
 
+.user-wrapper .user-btn-cancel {
+  color: #d32f2f;
+}
+
 .user-detail-container {
   padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .user-detail-container h3 {

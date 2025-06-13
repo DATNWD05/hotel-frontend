@@ -90,15 +90,19 @@
   color: #FACC15;
 }
 
-.customer-wrapper .customer-btn-cancel{
+.customer-wrapper .customer-btn-cancel {
   color: #d32f2f;
 }
+
 .customer-wrapper .customer-action-edit:hover {
   opacity: 0.8;
 }
 
 .customer-detail-container {
   padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .customer-detail-container h3 {

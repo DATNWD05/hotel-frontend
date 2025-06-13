@@ -11,8 +11,6 @@ import {
   CircularProgress,
   Box,
   SelectChangeEvent,
-  Switch,
-  FormControlLabel,
   Snackbar,
   Alert,
 } from '@mui/material';
@@ -28,9 +26,8 @@ interface PromotionFormData {
   discount_value: number;
   start_date: string;
   end_date: string;
-  usage_limit: number | null;
+  usage_limit: number;
   used_count: number;
-  is_active: boolean;
 }
 
 interface ValidationErrors {
@@ -53,9 +50,8 @@ const AddPromotion: React.FC = () => {
     discount_value: 0,
     start_date: '',
     end_date: '',
-    usage_limit: null,
+    usage_limit: 0,
     used_count: 0,
-    is_active: true,
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +75,7 @@ const AddPromotion: React.FC = () => {
     else if (data.start_date && data.end_date && data.start_date > data.end_date) {
       errors.end_date = 'Ngày kết thúc phải sau ngày bắt đầu';
     }
-    if (data.usage_limit !== null && data.usage_limit < 0) errors.usage_limit = 'Giới hạn số lần dùng không được âm';
+    if (data.usage_limit <= 0) errors.usage_limit = 'Giới hạn số lần dùng phải lớn hơn 0';
     if (data.used_count < 0) errors.used_count = 'Số lần đã dùng không được âm';
     return errors;
   };
@@ -88,7 +84,7 @@ const AddPromotion: React.FC = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'discount_value' || name === 'used_count' ? Number(value) : name === 'usage_limit' ? (value ? Number(value) : null) : value,
+      [name]: name === 'discount_value' || name === 'usage_limit' || name === 'used_count' ? Number(value) : value,
     }));
     const errors = validateForm({ ...formData, [name]: value });
     setValidationErrors(errors);
@@ -101,10 +97,6 @@ const AddPromotion: React.FC = () => {
       const errors = validateForm({ ...formData, [name]: value });
       setValidationErrors(errors);
     }
-  };
-
-  const handleSwitchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, is_active: e.target.checked }));
   };
 
   const handleSave = async () => {
@@ -160,28 +152,6 @@ const AddPromotion: React.FC = () => {
           <h2>
             Add New <b>Promotion</b>
           </h2>
-          <Box className="promotion-form-buttons">
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSave}
-              disabled={loading}
-              sx={{ mr: 1 }}
-            >
-              Lưu
-            </Button>
-            <Button
-              variant="outlined"
-              className='promotion-btn-cancel'
-              color="secondary"
-              onClick={handleCancel}
-              disabled={loading}
-              component={Link}
-              to="/promotions"
-            >
-              Hủy
-            </Button>
-          </Box>
         </div>
       </div>
 
@@ -286,13 +256,13 @@ const AddPromotion: React.FC = () => {
                 label="Giới hạn số lần dùng"
                 name="usage_limit"
                 type="number"
-                value={formData.usage_limit ?? ''}
+                value={formData.usage_limit}
                 onChange={handleChange}
                 fullWidth
                 variant="outlined"
                 size="small"
                 error={!!validationErrors.usage_limit}
-                helperText={validationErrors.usage_limit || 'Để trống nếu không giới hạn'}
+                helperText={validationErrors.usage_limit}
               />
               <TextField
                 label="Số lần đã dùng"
@@ -307,17 +277,26 @@ const AddPromotion: React.FC = () => {
                 helperText={validationErrors.used_count}
               />
             </Box>
-            <Box display="flex" gap={2}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={formData.is_active}
-                    onChange={handleSwitchChange}
-                    color="primary"
-                  />
-                }
-                label="Kích hoạt"
-              />
+            <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSave}
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} /> : "Lưu"}
+              </Button>
+              <Button
+                variant="outlined"
+                className="promotion-btn-cancel"
+                color="secondary"
+                onClick={handleCancel}
+                disabled={loading}
+                component={Link}
+                to="/promotions"
+              >
+                Hủy
+              </Button>
             </Box>
           </Box>
         </div>

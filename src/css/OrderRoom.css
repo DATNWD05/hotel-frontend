@@ -1,0 +1,248 @@
+.order-room-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  background: linear-gradient(135deg, #f0f4f8, #e0e7ee);
+  min-height: 100vh;
+}
+
+.order-room-title .order-room-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.order-room-title h2 {
+  margin: 0;
+  font-size: 32px;
+  color: #2c3e50;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.order-room-title h2 b {
+  color: #e74c3c;
+  font-weight: 900;
+}
+
+.order-room-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 30px;
+}
+
+.order-room-filter {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  min-width: 100px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(45deg, #34495e, #2c3e50);
+}
+
+.order-room-filter:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.order-room-filter.active {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.order-room-filter-tat_ca{
+    background: linear-gradient(135deg, #e8f2e6, #d7b8c0, #f9e8d6);
+
+}
+
+.order-room-filter-tat_ca:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.order-room-filter-tat_ca.active {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.order-room-filter-trong{
+    background: linear-gradient(135deg, #e0f2e1, #3abb3a); 
+
+}
+
+.order-room-filter-trong:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.order-room-filter-trong.active {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.order-room-filter-da_dat{
+      background: linear-gradient(135deg, #ffebee, #e74a5a); 
+}
+
+.order-room-filter-da_dat:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.order-room-filter-da_dat.active {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.order-room-filter-dang_sua{
+        background: linear-gradient(135deg, #fff8e1, #f1c94f); 
+
+}
+
+.order-room-filter-dang_sua:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.order-room-filter-dang_sua.active {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.order-room-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr); /* Thay đổi thành 5 cột */
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.order-room-card {
+  position: relative;
+  border-radius: 15px;
+  padding: 15px; /* Giảm padding để phù hợp với chiều cao mới */
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  background: white;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  border-left: 6px solid transparent;
+  min-height: 167px; /* Giảm 1/3 từ 250px (250 / 3 * 2 = 166.67, làm tròn thành 167px) */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.order-room-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+}
+
+.order-room-status-nhan_phong { 
+  border-left-color: #F44336; 
+  background: linear-gradient(135deg, #ffebee, #ffcdd2); 
+}
+.order-room-status-trong { 
+  border-left-color: #43A047; 
+  background: linear-gradient(135deg, #e0f2e1, #b7d8b7); 
+}
+.order-room-status-qua_han { 
+  border-left-color: #FF9800; 
+  background: linear-gradient(135deg, #ffe0b2, #ffcc80); 
+}
+.order-room-status-da_dat { 
+  border-left-color: #F44336; 
+  background: linear-gradient(135deg, #ffebee, #ffcdd2); 
+}
+.order-room-status-dang_sua { 
+  border-left-color: #FFC107; 
+  background: linear-gradient(135deg, #fff8e1, #ffecb3); 
+}
+
+.order-room-id {
+  font-size: 22px;
+  font-weight: 700;
+  color: #2c3e50;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 12px; /* Giảm padding để phù hợp với chiều cao mới */
+  border-radius: 8px;
+  margin-bottom: 10px; /* Giảm margin để phù hợp với chiều cao mới */
+  display: inline-block;
+  text-transform: uppercase;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.order-room-guest-name {
+  font-size: 15px;
+  color: #34495e;
+  font-weight: 500;
+  margin-bottom: 6px; /* Giảm margin để phù hợp với chiều cao mới */
+  text-align: center;
+  padding: 4px; /* Giảm padding để phù hợp với chiều cao mới */
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 5px;
+}
+
+.order-room-date {
+  font-size: 13px;
+  color: #7f8c8d;
+  margin-bottom: 8px; /* Giảm margin để phù hợp với chiều cao mới */
+  text-align: center;
+  padding: 4px; /* Giảm padding để phù hợp với chiều cao mới */
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 5px;
+}
+
+.order-room-countdown {
+  font-size: 13px;
+  color: #e74c3c;
+  font-weight: 600;
+  text-align: center;
+  padding: 6px; /* Giảm padding để phù hợp với chiều cao mới */
+  background: rgba(231, 76, 60, 0.15);
+  border-radius: 5px;
+  margin-top: 8px; /* Giảm margin để phù hợp với chiều cao mới */
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.order-room-guest {
+  font-size: 15px;
+  color: #2c3e50;
+  font-weight: 600;
+  text-align: center;
+  padding: 6px; /* Giảm padding để phù hợp với chiều cao mới */
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 5px;
+  margin-top: auto;
+}
+
+.order-room-action-view {
+  color: #3498db;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  padding: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.order-room-action-view:hover {
+  color: #2980b9;
+  transform: scale(1.1);
+  background: rgba(52, 152, 219, 0.1);
+}
+
+.order-room-no-data {
+  text-align: center;
+  padding: 20px;
+  color: #7f8c8d;
+  font-size: 18px;
+  font-weight: 500;
+}

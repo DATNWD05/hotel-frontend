@@ -158,28 +158,6 @@ const AddCustomer: React.FC = () => {
           <h2>
             Add New <b>Customer</b>
           </h2>
-          <Box>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSave}
-              disabled={loading}
-              sx={{ mr: 1 }}
-            >
-              Lưu
-            </Button>
-            <Button
-              variant="outlined"
-              className='customer-btn-cancel'
-              color="secondary"
-              onClick={handleCancel}
-              disabled={loading}
-              component={Link}
-              to="/customer"
-            >
-              Hủy
-            </Button>
-          </Box>
         </div>
       </div>
 
@@ -319,6 +297,27 @@ const AddCustomer: React.FC = () => {
                 error={!!validationErrors.note}
                 helperText={validationErrors.note || "Tối đa 200 ký tự"}
               />
+            </Box>
+            <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSave}
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} /> : "Lưu"}
+              </Button>
+              <Button
+                variant="outlined"
+                className="customer-btn-cancel"
+                color="secondary"
+                onClick={handleCancel}
+                disabled={loading}
+                component={Link}
+                to="/customer"
+              >
+                Hủy
+              </Button>
             </Box>
           </Box>
         </div>
