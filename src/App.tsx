@@ -13,11 +13,14 @@ import Role from "./pages/Role/Role";
 import AddRole from "./pages/Role/AddRole";
 import Service from "./pages/Services/service";
 import CreateService from "./pages/Services/CreateService";
-import EditService from "./pages/Services/EditService";
 import ServiceCategoryList from "./pages/Services/Service_category";
 import AddServiceCategory from "./pages/Services/AddServiceCategory";
 import Customer from "./pages/Customer/Customer";
 import AddCustomer from "./pages/Customer/AddCustomer";
+import RoomList from "./pages/Room/RoomList";
+import RoomView from "./pages/Room/RoomView";
+import RoomTypesList from "./pages/Room/RoomTypeList";
+import AddRoomType from "./pages/Room/AddRoomType";
 
 function App() {
   return (
@@ -42,9 +45,15 @@ function App() {
 
         <Route path="/service" element={<RoleBasedRoute allowedRoleIds={[1]}><Service /></RoleBasedRoute>} />
         <Route path="service/add" element={<RoleBasedRoute allowedRoleIds={[1]}><CreateService /></RoleBasedRoute>} />
-        <Route path="/service/edit/:serviceId" element={<RoleBasedRoute allowedRoleIds={[1]}><EditService /></RoleBasedRoute>} />
         <Route path="service-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><ServiceCategoryList /></RoleBasedRoute>} />
         <Route path="/service-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddServiceCategory /></RoleBasedRoute>} />
+
+        <Route path="/rooms" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomList /></RoleBasedRoute>} />
+        <Route path="/rooms/add" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomList /></RoleBasedRoute>} />
+        <Route path="/room/:id" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomView /></RoleBasedRoute>} />
+        <Route path="/room-types" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomTypesList /></RoleBasedRoute>} />
+        <Route path="/room-types/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRoomType /></RoleBasedRoute>} />
+
       </Route>
 
       {/* Auth */}

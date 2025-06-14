@@ -1,44 +1,78 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../../css/service.css';
+import {
+  TextField,
+  Button,
+  Typography,
+  CircularProgress,
+  Box,
+  Snackbar,
+  Alert,
+} from '@mui/material';
+import '../../css/CreateService.css';
 
 interface ServiceCategoryInput {
   name: string;
   description: string;
 }
 
+interface ValidationErrors {
+  [key: string]: string | undefined;
+  name?: string;
+  description?: string;
+}
+
 const AddServiceCategory: React.FC = () => {
-  const [category, setCategory] = useState<ServiceCategoryInput>({
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState<ServiceCategoryInput>({
     name: '',
     description: '',
   });
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const navigate = useNavigate();
+  const [error, setError] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const validateForm = (data: ServiceCategoryInput): ValidationErrors => {
+    const errors: ValidationErrors = {};
+    if (!data.name.trim()) errors.name = 'Tên danh mục không được để trống';
+    else if (data.name.length > 255) errors.name = 'Tên danh mục không được vượt quá 255 ký tự';
+    if (data.description && data.description.length > 1000) errors.description = 'Mô tả không được vượt quá 1000 ký tự';
+    return errors;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    const errors = validateForm({ ...formData, [name]: value });
+    setValidationErrors(errors);
+  };
+
+  const handleSave = async () => {
+    const errors = validateForm(formData);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
     setLoading(true);
+    setError(null);
 
     const token = localStorage.getItem('auth_token');
     if (!token) {
       setError('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      setSnackbarMessage('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      setSnackbarOpen(true);
       setLoading(false);
-      navigate('/login');
+      setTimeout(() => navigate('/login'), 2000);
       return;
     }
 
     const payload = {
-      name: category.name.trim(),
-      description: category.description.trim() || null,
+      name: formData.name.trim(),
+      description: formData.description.trim() || null,
     };
-
-    if (!payload.name) {
-      setError('Tên danh mục không được để trống.');
-      setLoading(false);
-      return;
-    }
 
     try {
       const res = await fetch('http://127.0.0.1:8000/api/service-categories', {
@@ -52,16 +86,29 @@ const AddServiceCategory: React.FC = () => {
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Lỗi tạo danh mục: ${res.status} ${res.statusText}. Chi tiết: ${text}`);
+        const result = await res.json();
+        if (res.status === 422 && result.errors) {
+          const formattedErrors: ValidationErrors = {};
+          Object.keys(result.errors).forEach((key) => {
+            formattedErrors[key] = result.errors[key][0];
+          });
+          setValidationErrors(formattedErrors);
+        } else {
+          throw new Error(result.message || `Lỗi tạo danh mục: ${res.status} ${res.statusText}`);
+        }
+        setLoading(false);
+        return;
       }
 
-      setError('Tạo danh mục thành công!');
+      setSnackbarMessage('Tạo danh mục thành công!');
+      setSnackbarOpen(true);
       setLoading(false);
-      navigate('/service-categories');
+      setTimeout(() => navigate('/service-categories'), 2000);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? `Không thể tạo danh mục: ${err.message}` : 'Lỗi không xác định';
       setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
       setLoading(false);
     }
   };
@@ -70,52 +117,96 @@ const AddServiceCategory: React.FC = () => {
     navigate('/service-categories');
   };
 
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+    setSnackbarMessage('');
+  };
+
   return (
-    <div className="service-container">
-      <div className="breadcrumb">
-        <a href="/service-categories">Danh mục dịch vụ</a><span>Tạo mới</span>
+    <div className="add-service-category-wrapper">
+      <div className="add-service-category-title">
+        <div className="add-service-category-header-content">
+          <h2>
+            Create New <b>Service Category</b>
+          </h2>
+          <Box className="add-service-category-form-buttons">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSave}
+              disabled={loading}
+              sx={{ mr: 1 }}
+            >
+              Lưu
+            </Button>
+            <Button
+              variant="outlined"
+              className="add-service-category-btn-cancel"
+              color="secondary"
+              onClick={handleCancel}
+              disabled={loading}
+            >
+              Hủy
+            </Button>
+          </Box>
+        </div>
       </div>
-      <div className="header">
-        <h1>Tạo mới Danh mục dịch vụ</h1>
-      </div>
-      {error && <div className="error">{error}</div>}
-      {loading && <div className="loading">Đang xử lý...</div>}
-      <div className="edit-form-container">
-        <h3 className="edit-form-title">Tạo mới Danh mục</h3>
-        <form onSubmit={handleSubmit} className="edit-form">
-          <div>
-            <label className="form-label">Tên danh mục:</label>
-            <input
-              type="text"
-              value={category.name}
-              onChange={(e) => setCategory({ ...category, name: e.target.value })}
-              required
-              maxLength={255}
-              className="form-input"
+
+      {loading ? (
+        <div className="add-service-category-loading-container">
+          <CircularProgress />
+          <Typography>Đang xử lý...</Typography>
+        </div>
+      ) : error && Object.keys(validationErrors).length === 0 ? (
+        <Typography color="error" className="add-service-category-error-message">
+          {error}
+        </Typography>
+      ) : (
+        <div className="add-service-category-detail-container">
+          <h3>Thông tin danh mục</h3>
+          <Box display="flex" flexDirection="column" gap={2}>
+            <TextField
+              label="Tên danh mục"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+              size="small"
+              error={!!validationErrors.name}
+              helperText={validationErrors.name}
             />
-          </div>
-          <div>
-            <label className="form-label">Mô tả:</label>
-            <textarea
-              value={category.description}
-              onChange={(e) => setCategory({ ...category, description: e.target.value })}
+            <TextField
+              label="Mô tả"
+              name="description"
+              value={formData.description}
+              onChange={handleChange}
+              fullWidth
+              variant="outlined"
+              size="small"
+              multiline
               rows={4}
-              className="form-textarea"
+              error={!!validationErrors.description}
+              helperText={validationErrors.description}
             />
-          </div>
-          <button type="submit" className="form-button" disabled={loading}>
-            Lưu danh mục
-          </button>
-          <button
-            type="button"
-            className="form-button cancel-button"
-            onClick={handleCancel}
-            disabled={loading}
-          >
-            Hủy
-          </button>
-        </form>
-      </div>
+          </Box>
+        </div>
+      )}
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

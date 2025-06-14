@@ -7,10 +7,9 @@ import {
   Select,
   MenuItem,
   Chip,
-  Button,
   SelectChangeEvent
 } from '@mui/material';
-import { CheckCircle as CheckCircleIcon, Add as AddIcon } from '@mui/icons-material';
+import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 
@@ -23,15 +22,16 @@ interface Room {
   id: number;
   room_number: string;
   room_type_id: number;
-  status: 'available' | 'unavailable';
-  floor: number;
+  status: 'available' | 'booked' | 'cleaning' | 'maintenance';
   note?: string;
 }
 
-const statusOptions: Array<{ key: 'all' | 'available' | 'unavailable'; label: string }> = [
+const statusOptions: Array<{ key: 'all' | 'available' | 'booked' | 'cleaning' | 'maintenance'; label: string }> = [
   { key: 'all', label: 'Tất cả' },
   { key: 'available', label: 'Phòng trống' },
-  { key: 'unavailable', label: 'Phòng đóng' }
+  { key: 'booked', label: 'Đã đặt' },
+  { key: 'cleaning', label: 'Đang dọn' },
+  { key: 'maintenance', label: 'Bảo trì' }
 ];
 
 const RoomList: React.FC = () => {
@@ -39,7 +39,7 @@ const RoomList: React.FC = () => {
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [search, setSearch] = useState('');
   const [selectedType, setSelectedType] = useState<number | 'all'>('all');
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'available' | 'unavailable'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'available' | 'booked' | 'cleaning' | 'maintenance'>('all');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,7 +64,7 @@ const RoomList: React.FC = () => {
     setSelectedType(event.target.value as number | 'all');
   };
 
-  const handleStatusChange = (key: 'all' | 'available' | 'unavailable') => {
+  const handleStatusChange = (key: 'all' | 'available' | 'booked' | 'cleaning' | 'maintenance') => {
     setSelectedStatus(prev => (prev === key ? 'all' : key));
   };
 
@@ -74,7 +74,6 @@ const RoomList: React.FC = () => {
     r.room_number.toLowerCase().includes(search.toLowerCase())
   ));
 
-  // Group rooms by room type name
   const roomsByType = filteredRooms.reduce((acc, room) => {
     const roomType = roomTypes.find(rt => rt.id === room.room_type_id);
     const typeName = roomType?.name || 'Khác';
@@ -85,10 +84,9 @@ const RoomList: React.FC = () => {
     return acc;
   }, {} as Record<string, Room[]>);
 
-  // Sort room types alphabetically
   const sortedTypes = Object.keys(roomsByType).sort();
 
-  const getStatusColor = (status: 'available' | 'unavailable') =>
+  const getStatusColor = (status: 'available' | 'booked' | 'cleaning' | 'maintenance') =>
     status === 'available' ? 'success.main' : 'error.main';
 
   return (
@@ -103,13 +101,6 @@ const RoomList: React.FC = () => {
             onChange={e => setSearch(e.target.value)}
             sx={{ width: 200, mr: 2 }}
           />
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => navigate('/rooms/add')}
-          >
-            Thêm phòng
-          </Button>
         </Box>
       </Box>
 
