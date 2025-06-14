@@ -1,20 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Button,
-  Typography,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
-} from '@mui/material';
+import { Button, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableRow } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import CloseIcon from '@mui/icons-material/Close';
+import BookingForm from './BookingForm';
 import '../../css/OrderRoom.css';
+
 
 interface Room {
   id: number;
@@ -52,8 +42,9 @@ const OrderRoom: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [openDialog, setOpenDialog] = useState<boolean>(false);
+  const [openBooking, setOpenBooking] = useState<boolean>(false);
+  const [bookingRoom, setBookingRoom] = useState<string>('');
 
-  // Gọi API để lấy dữ liệu khi component mount
   useEffect(() => {
     const fetchRooms = async () => {
       try {
@@ -63,11 +54,11 @@ const OrderRoom: React.FC = () => {
           throw new Error('Không thể lấy dữ liệu từ API');
         }
         const data: Room[] = await response.json();
-        // Lọc dữ liệu để chỉ giữ 3 trạng thái
         const filteredData = data.filter(room => ['trong', 'da_dat', 'dang_sua'].includes(room.status));
         setAllRooms(filteredData);
         setRooms(filteredData);
         setFilteredRooms(filteredData);
+      
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (err) {
         setError('Có lỗi xảy ra khi lấy dữ liệu. Vui lòng thử lại.');
@@ -79,7 +70,6 @@ const OrderRoom: React.FC = () => {
     fetchRooms();
   }, []);
 
-  // Lọc phòng theo trạng thái
   useEffect(() => {
     let filtered = [...allRooms];
     if (statusFilter !== 'all') {
@@ -103,6 +93,16 @@ const OrderRoom: React.FC = () => {
     setSelectedRoom(null);
   };
 
+  const handleBookRoom = (roomNumber: string) => {
+    setBookingRoom(roomNumber);
+    setOpenBooking(true);
+  };
+
+  const handleCloseBooking = () => {
+    setOpenBooking(false);
+    setBookingRoom('');
+  };
+
   const getStatusText = (status: string) => {
     switch (status) {
       case 'trong': return 'Trống';
@@ -114,9 +114,9 @@ const OrderRoom: React.FC = () => {
 
   const getCardColor = (status: string) => {
     switch (status) {
-      case 'trong': return '#1B5E20'; // Xanh lá cây đậm
-      case 'da_dat': return '#B71C1C'; // Đỏ đậm
-      case 'dang_sua': return '#F57F17'; // Vàng cam đậm
+      case 'trong': return '#e0f2e1';
+      case 'da_dat': return '#ffebee';
+      case 'dang_sua': return '#fff8e1';
       default: return '#f5f5f5';
     }
   };
@@ -177,14 +177,19 @@ const OrderRoom: React.FC = () => {
       ) : (
         <div className="order-room-grid">
           {rooms.map((room) => (
-            <div key={room.id} className={`order-room-card order-room-status-${room.status}`} style={{ backgroundColor: getCardColor(room.status) }}>
+            <div
+              key={room.id}
+              className={`order-room-card order-room-status-${room.status}`}
+              style={{ backgroundColor: getCardColor(room.status) }}
+              onClick={() => room.status === 'trong' ? handleBookRoom(room.room_number) : null}
+            >
               <div className="order-room-header">
                 <div className="order-room-id">{room.room_number}</div>
                 <IconButton
                   className="order-room-action-view"
                   title="Xem chi tiết"
                   sx={{ position: 'absolute', top: '10px', right: '10px' }}
-                  onClick={() => handleViewDetails(room)}
+                  onClick={(e) => { e.stopPropagation(); handleViewDetails(room); }}
                 >
                   <VisibilityIcon />
                 </IconButton>
@@ -197,21 +202,12 @@ const OrderRoom: React.FC = () => {
         </div>
       )}
 
-      {/* Dialog hiển thị chi tiết phòng với animation từ phải sang */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
         maxWidth="sm"
         fullWidth
-        sx={{
-          '& .MuiDialog-paper': {
-            animation: '$slideFromRight 0.3s ease-out',
-          },
-          '@keyframes slideFromRight': {
-            '0%': { transform: 'translateX(100%)' },
-            '100%': { transform: 'translateX(0)' },
-          },
-        }}
+        sx={{ '& .MuiDialog-paper': { animation: '$slideFromRight 0.3s ease-out' }, '@keyframes slideFromRight': { '0%': { transform: 'translateX(100%)' }, '100%': { transform: 'translateX(0)' } } }}
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Chi tiết phòng {selectedRoom?.room_number}
@@ -223,7 +219,6 @@ const OrderRoom: React.FC = () => {
           {selectedRoom && (
             <>
               {selectedRoom.status === 'trong' ? (
-                // Hiển thị thông tin cơ bản cho phòng trống
                 <Table>
                   <TableBody>
                     <TableRow>
@@ -245,7 +240,6 @@ const OrderRoom: React.FC = () => {
                   </TableBody>
                 </Table>
               ) : selectedRoom.status === 'da_dat' ? (
-                // Hiển thị thông tin chi tiết từ db.json cho phòng đã đặt
                 <div style={{ padding: '10px' }}>
                   <Typography variant="h6" gutterBottom>Thông tin phòng</Typography>
                   <Table>
@@ -272,7 +266,6 @@ const OrderRoom: React.FC = () => {
                       </TableRow>
                     </TableBody>
                   </Table>
-
                   <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Kênh</Typography>
                   <Table>
                     <TableBody>
@@ -294,7 +287,6 @@ const OrderRoom: React.FC = () => {
                       </TableRow>
                     </TableBody>
                   </Table>
-
                   <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>Khách hàng</Typography>
                   <Table>
                     <TableBody>
@@ -334,7 +326,6 @@ const OrderRoom: React.FC = () => {
                   </Table>
                 </div>
               ) : (
-                // Hiển thị thông tin cơ bản cho các trạng thái khác (dang_sua)
                 <Table>
                   <TableBody>
                     <TableRow>
@@ -365,6 +356,8 @@ const OrderRoom: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <BookingForm open={openBooking} onClose={handleCloseBooking} roomNumber={bookingRoom} />
     </div>
   );
 };

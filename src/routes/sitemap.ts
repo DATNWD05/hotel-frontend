@@ -75,7 +75,7 @@ const sitemap: MenuItem[] = [
   {
     id: 'finance',
     subheader: 'Tài chính',
-    path: '/',
+    path: '/finance',
     icon: 'mdi:finance',
   },
   {

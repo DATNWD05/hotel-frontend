@@ -1,0 +1,401 @@
+/* Dialog Container */
+.booking-dialog .MuiDialog-paper {
+  border-radius: 20px !important;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25) !important;
+  overflow: hidden;
+  max-width: 1000px !important;
+  max-height: 90vh !important;
+}
+
+/* Dialog Title */
+.booking-dialog-title {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  padding: 25px 30px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.booking-dialog-title::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(45deg);
+}
+
+.title-content {
+  position: relative;
+  z-index: 2;
+}
+
+.title-content h2 {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 5px 0;
+}
+
+.title-content p {
+  opacity: 0.9;
+  font-size: 14px;
+  margin: 0;
+}
+
+.close-button {
+  position: absolute !important;
+  top: 20px !important;
+  right: 25px !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  width: 35px !important;
+  height: 35px !important;
+  border-radius: 50% !important;
+  font-size: 18px !important;
+  z-index: 3;
+  transition: all 0.3s ease !important;
+}
+
+.close-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  transform: rotate(90deg);
+}
+
+/* Dialog Content */
+.booking-dialog-content {
+  padding: 35px 30px !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+  max-height: calc(90vh - 200px) !important;
+  overflow-y: auto !important;
+}
+
+/* Form Container */
+.booking-form-container {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+.booking-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.section-header h3::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 2px;
+  margin-right: 10px;
+}
+
+/* Booking Sections */
+.booking-section {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.room-details-section {
+  padding: 20px;
+}
+
+/* Form Rows */
+.form-row {
+  margin-bottom: 20px;
+}
+
+.form-row-group {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.form-row-group .booking-textfield {
+  flex: 1;
+}
+
+/* Text Fields */
+.booking-textfield .MuiOutlinedInput-root {
+  border-radius: 12px !important;
+  background: #f8fafc !important;
+  transition: all 0.3s ease !important;
+  border: 2px solid #e2e8f0 !important;
+}
+
+.booking-textfield .MuiOutlinedInput-root:hover {
+  background: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.booking-textfield .MuiOutlinedInput-root.Mui-focused {
+  background: white !important;
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+.booking-textfield .MuiOutlinedInput-notchedOutline {
+  border: none !important;
+}
+
+.booking-textfield .MuiInputLabel-root {
+  color: #64748b !important;
+  font-weight: 500 !important;
+}
+
+.booking-textfield .MuiInputLabel-root.Mui-focused {
+  color: #667eea !important;
+}
+
+.booking-textfield .MuiOutlinedInput-input {
+  padding: 12px 16px !important;
+  font-size: 15px !important;
+}
+
+/* Currency Addon */
+.currency {
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+/* Add Room Button */
+.add-room-button {
+  background: linear-gradient(135deg, #00b894, #00cec9) !important;
+  color: white !important;
+  border-radius: 25px !important;
+  padding: 8px 20px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.add-room-button:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(0, 184, 148, 0.4) !important;
+}
+
+/* Room Detail Cards */
+.room-detail-card {
+  background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+.room-detail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.room-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.room-number {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 14px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.delete-room-button {
+  color: #e53e3e !important;
+  background: rgba(229, 62, 62, 0.1) !important;
+  transition: all 0.3s ease !important;
+}
+
+.delete-room-button:hover {
+  background: rgba(229, 62, 62, 0.2) !important;
+  transform: scale(1.1);
+}
+
+.room-detail-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Dialog Actions */
+.booking-dialog-actions {
+  padding: 20px 30px !important;
+  background: white !important;
+  border-top: 1px solid #e2e8f0 !important;
+  gap: 15px !important;
+}
+
+.cancel-btn {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border: 2px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 12px 28px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  transition: all 0.3s ease !important;
+}
+
+.cancel-btn:hover {
+  background: #e2e8f0 !important;
+  transform: translateY(-2px);
+  border-color: #cbd5e1 !important;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2) !important;
+  color: white !important;
+  border-radius: 12px !important;
+  padding: 12px 28px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+  transition: all 0.3s ease !important;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+}
+
+/* Responsive Design */
+@media (max-width: 900px) {
+  .booking-form-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .booking-dialog-content {
+    padding: 25px 20px !important;
+  }
+  
+  .form-row-group {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .booking-dialog-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .cancel-btn, .submit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .booking-dialog .MuiDialog-paper {
+    margin: 10px !important;
+    border-radius: 15px !important;
+    max-width: calc(100vw - 20px) !important;
+  }
+  
+  .booking-dialog-title {
+    padding: 20px !important;
+  }
+  
+  .title-content h2 {
+    font-size: 20px;
+  }
+  
+  .booking-section {
+    padding: 20px;
+  }
+}
+
+/* Custom Scrollbar */
+.booking-dialog-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.booking-dialog-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.booking-dialog-content::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 3px;
+}
+
+.booking-dialog-content::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5a67d8, #6b46c1);
+}
+
+/* Animation for form fields */
+.booking-textfield {
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Focus ring for better accessibility */
+.booking-textfield .MuiOutlinedInput-root:focus-within {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* Hover effects for interactive elements */
+.room-detail-card {
+  cursor: pointer;
+}
+
+.booking-section {
+  transition: all 0.3s ease;
+}
+
+.booking-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}

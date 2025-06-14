@@ -1,6 +1,7 @@
+import { useLocation } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
-import DrawerItems from './DrawerItems'; // Giữ nguyên vì cùng thư mục
+import DrawerItems from './DrawerItems';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -9,6 +10,7 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ mobileOpen, setMobileOpen, setIsClosing }: SidebarProps) => {
+  const location = useLocation();
   const handleDrawerClose = () => {
     setIsClosing(true);
     setMobileOpen(false);
@@ -21,25 +23,49 @@ const Sidebar = ({ mobileOpen, setMobileOpen, setIsClosing }: SidebarProps) => {
   return (
     <Box
       component="nav"
-      width={{ lg: 300 }}
+      width={{ lg: 280 }}
       flexShrink={{ lg: 0 }}
-      display={{ xs: 'none', lg: 'block' }}
+      sx={{
+        bgcolor: 'background.paper',
+        boxShadow: '2px 0 8px rgba(0, 0, 0, 0.1)',
+        display: { xs: 'none', lg: 'block' },
+        transition: 'width 0.3s ease',
+      }}
     >
-      {/* Mobile drawer */}
       <Drawer
         variant="temporary"
         open={mobileOpen}
         onTransitionEnd={handleDrawerTransitionEnd}
         onClose={handleDrawerClose}
         ModalProps={{ keepMounted: true }}
-        sx={{ display: { xs: 'block', lg: 'none' } }}
+        sx={{
+          display: { xs: 'block', lg: 'none' },
+          '& .MuiDrawer-paper': {
+            width: 280,
+            bgcolor: '#1A2A44',
+            color: '#fff',
+            boxShadow: '2px 0 8px rgba(0, 0, 0, 0.2)',
+          },
+        }}
       >
-        <DrawerItems />
+        <DrawerItems currentPath={location.pathname} />
       </Drawer>
 
-      {/* Desktop drawer */}
-      <Drawer variant="permanent" sx={{ display: { xs: 'none', lg: 'block' } }} open>
-        <DrawerItems />
+      <Drawer
+        variant="permanent"
+        sx={{
+          display: { xs: 'none', lg: 'block' },
+          '& .MuiDrawer-paper': {
+            width: 280,
+            bgcolor: '#1A2A44',
+            color: '#fff',
+            boxShadow: '2px 0 8px rgba(0, 0, 0, 0.2)',
+            borderRight: 'none',
+          },
+        }}
+        open
+      >
+        <DrawerItems currentPath={location.pathname} />
       </Drawer>
     </Box>
   );
