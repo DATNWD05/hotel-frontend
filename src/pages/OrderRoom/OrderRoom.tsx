@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableRow } from '@mui/material';
-import VisibilityIcon from '@mui/icons-material/Visibility';
 import CloseIcon from '@mui/icons-material/Close';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import PersonIcon from '@mui/icons-material/Person';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import BookingForm from './BookingForm';
 import '../../css/OrderRoom.css';
-
 
 interface Room {
   id: number;
@@ -112,13 +113,23 @@ const OrderRoom: React.FC = () => {
     }
   };
 
-  const getCardColor = (status: string) => {
-    switch (status) {
-      case 'trong': return '#e0f2e1';
-      case 'da_dat': return '#ffebee';
-      case 'dang_sua': return '#fff8e1';
-      default: return '#f5f5f5';
-    }
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   if (loading) {
@@ -180,22 +191,77 @@ const OrderRoom: React.FC = () => {
             <div
               key={room.id}
               className={`order-room-card order-room-status-${room.status}`}
-              style={{ backgroundColor: getCardColor(room.status) }}
               onClick={() => room.status === 'trong' ? handleBookRoom(room.room_number) : null}
             >
-              <div className="order-room-header">
-                <div className="order-room-id">{room.room_number}</div>
-                <IconButton
-                  className="order-room-action-view"
-                  title="Xem chi tiết"
-                  sx={{ position: 'absolute', top: '10px', right: '10px' }}
-                  onClick={(e) => { e.stopPropagation(); handleViewDetails(room); }}
-                >
-                  <VisibilityIcon />
-                </IconButton>
+              {/* Phần bên trái - màu đậm */}
+              <div className="order-room-left-section">
+                <div className="order-room-status-label">
+                  {room.status === 'trong' && 'STD'}
+                  {room.status === 'da_dat' && 'STD'}
+                  {room.status === 'dang_sua' && 'STD'}
+                </div>
+                <div className="order-room-number">{room.room_number}</div>
+                {room.status === 'trong' && (
+                  <div className="order-room-icon">
+                    <PersonIcon />
+                  </div>
+                )}
+                {room.status === 'da_dat' && (
+                  <div className="order-room-icon">
+                    <CalendarTodayIcon />
+                  </div>
+                )}
+                {room.status === 'dang_sua' && (
+                  <div className="order-room-icon">
+                    <AccessTimeIcon />
+                  </div>
+                )}
               </div>
-              <div className="order-room-content">
-                <div className="order-room-guest">{getStatusText(room.status)}</div>
+
+              {/* Phần bên phải - màu nhạt */}
+              <div className="order-room-right-section">
+                <button
+                  className="order-room-view-button"
+                  title="Xem chi tiết"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleViewDetails(room);
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                  </svg>
+                </button>
+
+                <div className="order-room-content">
+                  {room.status === 'trong' && (
+                    <div className="order-room-status-text">Trống</div>
+                  )}
+                  
+                  {room.status === 'da_dat' && (
+                    <>
+                      <div className="order-room-date-time">
+                        {formatDate(room.check_in_date)}, {formatTime(room.check_in_date)}
+                      </div>
+                      <div className="order-room-guest-name">{room.guest_name}</div>
+                      {room.stay_days && (
+                        <div className="order-room-countdown">
+                          {String(room.stay_days).padStart(2, '0')} : 00 : 00
+                        </div>
+                      )}
+                    </>
+                  )}
+                  
+                  {room.status === 'dang_sua' && (
+                    <>
+                      <div className="order-room-date-time">
+                        {formatDate(room.updated_at)}, {formatTime(room.updated_at)}
+                      </div>
+                      <div className="order-room-status-text">Đang sửa chữa</div>
+                      <div className="order-room-countdown">00 : 00 : 00</div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           ))}
