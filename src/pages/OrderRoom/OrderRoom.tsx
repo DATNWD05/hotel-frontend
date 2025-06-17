@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Typography, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Table, TableBody, TableCell, TableRow } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import { Button, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Chip, Divider } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PersonIcon from '@mui/icons-material/Person';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import InfoIcon from '@mui/icons-material/Info';
+import HomeIcon from '@mui/icons-material/Home';
+import PaymentIcon from '@mui/icons-material/Payment';
+import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
+import StarIcon from '@mui/icons-material/Star';
 import BookingForm from './BookingForm';
 import '../../css/OrderRoom.css';
 import api from '../../api/axios';
@@ -187,6 +191,16 @@ const OrderRoom: React.FC = () => {
     });
   };
 
+  const InfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | number }) => (
+    <div className="info-row">
+      <div className="info-row-icon">{icon}</div>
+      <div className="info-row-content">
+        <span className="info-row-label">{label}</span>
+        <span className="info-row-value">{value}</span>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return <Typography align="center" sx={{ mt: 4 }}>Đang tải dữ liệu...</Typography>;
   }
@@ -326,177 +340,213 @@ const OrderRoom: React.FC = () => {
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
-        maxWidth="md"
+        maxWidth="lg"
         fullWidth
-        sx={{ '& .MuiDialog-paper': { borderRadius: '12px', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)', animation: '$slideFromRight 0.3s ease-out' }, '@keyframes slideFromRight': { '0%': { transform: 'translateX(100%)' }, '100%': { transform: 'translateX(0)' } } }}
+        className="room-details-dialog"
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#2c3e50', color: 'white', borderRadius: '12px 12px 0 0', padding: '16px 24px' }}>
-          Chi tiết phòng {selectedRoom?.room_number}
-          <IconButton onClick={handleCloseDialog} sx={{ color: 'white' }}>
-            <CloseIcon />
-          </IconButton>
+        <DialogTitle className="dialog-header">
+          <div className="dialog-title-content">
+            <HomeIcon className="dialog-title-icon" />
+            <span>Chi tiết phòng {selectedRoom?.room_number}</span>
+          </div>
+          
         </DialogTitle>
-        <DialogContent>
+        
+        <DialogContent className="dialog-content-enhanced">
           {selectedRoom && (
-            <div className="dialog-content">
-              <Typography variant="h6" gutterBottom sx={{ mt: 2, color: '#2c3e50' }}>Thông tin phòng</Typography>
-              <div className="info-grid">
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell component="th" scope="row">Số phòng</TableCell>
-                      <TableCell>{selectedRoom.room_number}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th" scope="row">Loại phòng</TableCell>
-                      <TableCell>{selectedRoom.room_type.name}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th" scope="row">Mã loại phòng</TableCell>
-                      <TableCell>{selectedRoom.room_type.code}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th" scope="row">Sức chứa tối đa</TableCell>
-                      <TableCell>{selectedRoom.room_type.max_occupancy}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th" scope="row">Giá</TableCell>
-                      <TableCell>{Number(selectedRoom.room_type.base_rate).toLocaleString('vi-VN')} VNĐ</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th" scope="row">Mô tả</TableCell>
-                      <TableCell>{selectedRoom.room_type.description || 'N/A'}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-                <Table>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell component="th" scope="row">Trạng thái</TableCell>
-                      <TableCell>{getStatusText(selectedRoom.status)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th" scope="row">Ngày tạo</TableCell>
-                      <TableCell>{formatDate(selectedRoom.created_at)}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell component="th" scope="row">Ngày cập nhật</TableCell>
-                      <TableCell>{formatDate(selectedRoom.updated_at)}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
+            <div className="room-details-container">
+              {/* Room Information Card */}
+              <Card className="info-card room-info-card">
+                <CardContent>
+                  <div className="card-header">
+                    <InfoIcon className="card-icon" />
+                    <Typography variant="h6" className="card-title">Thông tin phòng</Typography>
+                    <Chip 
+                      label={getStatusText(selectedRoom.status)} 
+                      className={`status-chip status-${mapStatusToUI(selectedRoom.status)}`}
+                    />
+                  </div>
+                  <Divider className="card-divider" />
+                  <div className="info-grid-enhanced">
+                    <InfoRow 
+                      icon={<HomeIcon />} 
+                      label="Số phòng" 
+                      value={selectedRoom.room_number} 
+                    />
+                    <InfoRow 
+                      icon={<StarIcon />} 
+                      label="Loại phòng" 
+                      value={selectedRoom.room_type.name} 
+                    />
+                    <InfoRow 
+                      icon={<InfoIcon />} 
+                      label="Mã loại phòng" 
+                      value={selectedRoom.room_type.code} 
+                    />
+                    <InfoRow 
+                      icon={<PersonIcon />} 
+                      label="Sức chứa tối đa" 
+                      value={`${selectedRoom.room_type.max_occupancy} người`} 
+                    />
+                    <InfoRow 
+                      icon={<PaymentIcon />} 
+                      label="Giá" 
+                      value={`${Number(selectedRoom.room_type.base_rate).toLocaleString('vi-VN')} VNĐ`} 
+                    />
+                    <InfoRow 
+                      icon={<CalendarTodayIcon />} 
+                      label="Ngày tạo" 
+                      value={formatDate(selectedRoom.created_at)} 
+                    />
+                  </div>
+                  {selectedRoom.room_type.description && (
+                    <div className="description-section">
+                      <Typography variant="subtitle2" className="description-label">Mô tả:</Typography>
+                      <Typography className="description-text">{selectedRoom.room_type.description}</Typography>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
+              {/* Booking Information Card - Only for booked rooms */}
               {mapStatusToUI(selectedRoom.status) === 'da_dat' && (
-                <>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2, color: '#2c3e50' }}>Thông tin đặt phòng</Typography>
-                  <Table className="details-table">
-                    <TableBody>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Nhận phòng</TableCell>
-                        <TableCell>{formatDate(selectedRoom.check_in_date)} ({selectedRoom.stay_days || 'N/A'} đêm)</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Trả phòng</TableCell>
-                        <TableCell>{formatDate(selectedRoom.check_out_date)}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Mã đặt phòng</TableCell>
-                        <TableCell>{selectedRoom.booking_code || 'N/A'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Số khách</TableCell>
-                        <TableCell>{selectedRoom.guest_count || 'N/A'}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2, color: '#2c3e50' }}>Kênh</Typography>
-                  <Table className="details-table">
-                    <TableBody>
-                      <TableRow>
-                        <TableCell component="th" scope="row">TT thanh toán</TableCell>
-                        <TableCell>{selectedRoom.payment_status || 'N/A'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Nguồn</TableCell>
-                        <TableCell>{selectedRoom.source || 'N/A'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">OTA code</TableCell>
-                        <TableCell>{selectedRoom.ota_code || '-'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Ngày đặt</TableCell>
-                        <TableCell>{formatDate(selectedRoom.booking_date)}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                  <Typography variant="h6" gutterBottom sx={{ mt: 2, color: '#2c3e50' }}>Khách hàng</Typography>
-                  <Table className="details-table">
-                    <TableBody>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Tên đầy đủ</TableCell>
-                        <TableCell>{selectedRoom.guest_name || 'N/A'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">SĐT</TableCell>
-                        <TableCell>{selectedRoom.guest_phone || 'N/A'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Email</TableCell>
-                        <TableCell>{selectedRoom.guest_email || 'N/A'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Quốc gia</TableCell>
-                        <TableCell>{selectedRoom.guest_country || '-'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Nghề nghiệp</TableCell>
-                        <TableCell>{selectedRoom.guest_occupation || '-'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Số định danh</TableCell>
-                        <TableCell>{selectedRoom.guest_id_number || '-'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">Số tài khoản</TableCell>
-                        <TableCell>{selectedRoom.guest_account_number || 'N/A'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell component="th" scope="row">SL ngày ở</TableCell>
-                        <TableCell>{selectedRoom.stay_days || 'N/A'}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </>
+                <Card className="info-card booking-info-card">
+                  <CardContent>
+                    <div className="card-header">
+                      <CalendarTodayIcon className="card-icon" />
+                      <Typography variant="h6" className="card-title">Thông tin đặt phòng</Typography>
+                    </div>
+                    <Divider className="card-divider" />
+                    <div className="info-grid-enhanced">
+                      <InfoRow 
+                        icon={<CalendarTodayIcon />} 
+                        label="Nhận phòng" 
+                        value={`${formatDate(selectedRoom.check_in_date)} (${selectedRoom.stay_days || 'N/A'} đêm)`} 
+                      />
+                      <InfoRow 
+                        icon={<CalendarTodayIcon />} 
+                        label="Trả phòng" 
+                        value={formatDate(selectedRoom.check_out_date)} 
+                      />
+                      <InfoRow 
+                        icon={<InfoIcon />} 
+                        label="Mã đặt phòng" 
+                        value={selectedRoom.booking_code || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<PersonIcon />} 
+                        label="Số khách" 
+                        value={selectedRoom.guest_count || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<PaymentIcon />} 
+                        label="TT thanh toán" 
+                        value={selectedRoom.payment_status || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<InfoIcon />} 
+                        label="Nguồn" 
+                        value={selectedRoom.source || 'N/A'} 
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
-              <Typography variant="h6" gutterBottom sx={{ mt: 2, color: '#2c3e50' }}>Tiện nghi</Typography>
-              <Table className="details-table">
-                <TableBody>
-                  {selectedRoom.room_type.amenities && selectedRoom.room_type.amenities.length > 0 ? (
-                    selectedRoom.room_type.amenities.map((amenity) => (
-                      <TableRow key={amenity.id}>
-                        <TableCell component="th" scope="row">{amenity.name}</TableCell>
-                        <TableCell>
-                          Giá: {Number(amenity.price).toLocaleString('vi-VN')} VNĐ, 
-                          Số lượng: {amenity.pivot.quantity}, 
-                          Trạng thái: {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={2}>Không có tiện nghi nào.</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              {/* Guest Information Card - Only for booked rooms */}
+              {mapStatusToUI(selectedRoom.status) === 'da_dat' && (
+                <Card className="info-card guest-info-card">
+                  <CardContent>
+                    <div className="card-header">
+                      <ContactPhoneIcon className="card-icon" />
+                      <Typography variant="h6" className="card-title">Thông tin khách hàng</Typography>
+                    </div>
+                    <Divider className="card-divider" />
+                    <div className="info-grid-enhanced">
+                      <InfoRow 
+                        icon={<PersonIcon />} 
+                        label="Tên đầy đủ" 
+                        value={selectedRoom.guest_name || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<ContactPhoneIcon />} 
+                        label="Số điện thoại" 
+                        value={selectedRoom.guest_phone || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<InfoIcon />} 
+                        label="Email" 
+                        value={selectedRoom.guest_email || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<InfoIcon />} 
+                        label="Quốc gia" 
+                        value={selectedRoom.guest_country || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<InfoIcon />} 
+                        label="Nghề nghiệp" 
+                        value={selectedRoom.guest_occupation || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<InfoIcon />} 
+                        label="Số định danh" 
+                        value={selectedRoom.guest_id_number || 'N/A'} 
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Amenities Card */}
+              <Card className="info-card amenities-card">
+                <CardContent>
+                  <div className="card-header">
+                    <StarIcon className="card-icon" />
+                    <Typography variant="h6" className="card-title">Tiện nghi</Typography>
+                  </div>
+                  <Divider className="card-divider" />
+                  <div className="amenities-grid">
+                    {selectedRoom.room_type.amenities && selectedRoom.room_type.amenities.length > 0 ? (
+                      selectedRoom.room_type.amenities.map((amenity) => (
+                        <div key={amenity.id} className="amenity-item">
+                          <div className="amenity-header">
+                            <StarIcon className="amenity-icon" />
+                            <span className="amenity-name">{amenity.name}</span>
+                          </div>
+                          <div className="amenity-details">
+                            <span className="amenity-price">
+                              {Number(amenity.price).toLocaleString('vi-VN')} VNĐ
+                            </span>
+                            <span className="amenity-quantity">
+                              SL: {amenity.pivot.quantity}
+                            </span>
+                            <Chip 
+                              label={amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'} 
+                              size="small"
+                              className={`amenity-status ${amenity.status}`}
+                            />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="no-amenities">
+                        <Typography>Không có tiện nghi nào.</Typography>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </DialogContent>
-        <DialogActions sx={{ backgroundColor: '#f8f9fa', padding: '16px', borderRadius: '0 0 12px 12px' }}>
-          <Button onClick={handleCloseDialog} color="primary" variant="contained" sx={{ backgroundColor: '#2c3e50', '&:hover': { backgroundColor: '#34495e' } }}>
+        
+        <DialogActions className="dialog-actions-enhanced">
+          <Button 
+            onClick={handleCloseDialog} 
+            variant="contained" 
+            className="close-dialog-button"
+          >
             Đóng
           </Button>
         </DialogActions>
