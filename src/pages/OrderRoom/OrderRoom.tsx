@@ -42,6 +42,38 @@ interface RoomType {
   }>;
 }
 
+interface Customer {
+  id: number;
+  cccd: string;
+  name: string;
+  gender: string;
+  email: string;
+  phone: string;
+  date_of_birth: string;
+  nationality: string;
+  address: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Booking {
+  id: number;
+  customer_id: number;
+  room_id: number;
+  created_by: number;
+  check_in_date: string;
+  check_out_date: string;
+  status: string;
+  deposit_amount: string;
+  raw_total: string;
+  discount_amount: string;
+  total_amount: string;
+  created_at: string | null;
+  updated_at: string | null;
+  customer: Customer;
+}
+
 interface Room {
   id: number;
   room_number: string;
@@ -52,22 +84,27 @@ interface Room {
   updated_at: string;
   room_type: RoomType;
   price?: number;
-  guest_name?: string;
+  booking_id?: string;
+  customer_id?: number;
+  created_by?: number;
   check_in_date?: string;
   check_out_date?: string;
-  booking_code?: string;
-  guest_count?: string;
-  payment_status?: string;
-  source?: string;
-  ota_code?: string | null;
-  booking_date?: string;
+  booking_status?: string;
+  deposit_amount?: string;
+  raw_total?: string;
+  discount_amount?: string;
+  total_amount?: string;
+  guest_name?: string;
   guest_phone?: string;
   guest_email?: string;
-  guest_country?: string | null;
-  guest_occupation?: string | null;
-  guest_id_number?: string | null;
-  guest_account_number?: string;
+  guest_country?: string;
+  guest_id_number?: string;
+  guest_gender?: string;
+  guest_date_of_birth?: string;
+  guest_address?: string;
+  guest_note?: string | null;
   stay_days?: number;
+  bookings?: Booking[];
 }
 
 const OrderRoom: React.FC = () => {
@@ -83,38 +120,80 @@ const OrderRoom: React.FC = () => {
   const [bookingRoom, setBookingRoom] = useState<string>('');
 
   const fetchRooms = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await api.get('/rooms');
-      console.log(response.data);
-      
-      if (response.status === 200) {
-        const data: Room[] = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
-        const sanitizedData = data.filter(room => 
+  try {
+    setLoading(true);
+    setError(null);
+    const response = await api.get('/rooms');
+    console.log(response.data);
+
+    if (response.status === 200) {
+      const data: Room[] = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+      const sanitizedData = data
+        .filter(room => 
           room &&
           room.id &&
           room.room_number &&
           room.room_type &&
           ['available', 'booked', 'maintenance'].includes(room.status)
-        ).map(room => ({
-          ...room,
-          price: room.price || Number(room.room_type.base_rate) || 0
-        }));
-        setAllRooms(sanitizedData);
-        setFilteredRooms(sanitizedData);
-        setRooms(sanitizedData);
-      } else {
-        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
-      setError(errorMessage);
-      console.error('Lỗi khi tải danh sách phòng:', errorMessage);
-    } finally {
-      setLoading(false);
+        )
+        .map(room => {
+          // Chọn đặt phòng gần nhất nếu phòng có trạng thái 'booked' và có bookings
+          let latestBooking: Booking | null = null;
+          if (room.status === 'booked' && room.bookings && room.bookings.length > 0) {
+            latestBooking = room.bookings.reduce((latest: Booking | null, booking: Booking) => {
+              const latestDate = latest ? new Date(latest.check_in_date) : null;
+              const currentDate = booking.check_in_date ? new Date(booking.check_in_date) : null;
+              return (!latestDate || (currentDate && currentDate > latestDate)) ? booking : latest;
+            }, null);
+          }
+
+          // Tính số ngày lưu trú
+          let stayDays = 0;
+          if (latestBooking && latestBooking.check_in_date && latestBooking.check_out_date) {
+            const checkIn = new Date(latestBooking.check_in_date);
+            const checkOut = new Date(latestBooking.check_out_date);
+            stayDays = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24));
+          }
+
+          return {
+            ...room,
+            price: room.price || Number(room.room_type.base_rate) || 0,
+            booking_id: latestBooking?.id?.toString() || undefined,
+            customer_id: latestBooking?.customer_id || undefined,
+            created_by: latestBooking?.created_by || undefined,
+            check_in_date: latestBooking?.check_in_date || undefined,
+            check_out_date: latestBooking?.check_out_date || undefined,
+            booking_status: latestBooking?.status || undefined,
+            deposit_amount: latestBooking?.deposit_amount || undefined,
+            raw_total: latestBooking?.raw_total || undefined,
+            discount_amount: latestBooking?.discount_amount || undefined,
+            total_amount: latestBooking?.total_amount || undefined,
+            guest_name: latestBooking?.customer.name || undefined,
+            guest_phone: latestBooking?.customer.phone || undefined,
+            guest_email: latestBooking?.customer.email || undefined,
+            guest_country: latestBooking?.customer.nationality || undefined,
+            guest_id_number: latestBooking?.customer.cccd || undefined,
+            guest_gender: latestBooking?.customer.gender || undefined,
+            guest_date_of_birth: latestBooking?.customer.date_of_birth || undefined,
+            guest_address: latestBooking?.customer.address || undefined,
+            guest_note: latestBooking?.customer.note || undefined,
+            stay_days: stayDays || undefined,
+          };
+        });
+      setAllRooms(sanitizedData);
+      setFilteredRooms(sanitizedData);
+      setRooms(sanitizedData);
+    } else {
+      throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
     }
-  };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
+    setError(errorMessage);
+    console.error('Lỗi khi tải danh sách phòng:', errorMessage);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchRooms();
@@ -349,7 +428,6 @@ const OrderRoom: React.FC = () => {
             <HomeIcon className="dialog-title-icon" />
             <span>Chi tiết phòng {selectedRoom?.room_number}</span>
           </div>
-          
         </DialogTitle>
         
         <DialogContent className="dialog-content-enhanced">
@@ -393,11 +471,6 @@ const OrderRoom: React.FC = () => {
                       label="Giá" 
                       value={`${Number(selectedRoom.room_type.base_rate).toLocaleString('vi-VN')} VNĐ`} 
                     />
-                    <InfoRow 
-                      icon={<CalendarTodayIcon />} 
-                      label="Ngày tạo" 
-                      value={formatDate(selectedRoom.created_at)} 
-                    />
                   </div>
                   {selectedRoom.room_type.description && (
                     <div className="description-section">
@@ -419,35 +492,51 @@ const OrderRoom: React.FC = () => {
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
                       <InfoRow 
-                        icon={<CalendarTodayIcon />} 
-                        label="Nhận phòng" 
-                        value={`${formatDate(selectedRoom.check_in_date)} (${selectedRoom.stay_days || 'N/A'} đêm)`} 
-                      />
-                      <InfoRow 
-                        icon={<CalendarTodayIcon />} 
-                        label="Trả phòng" 
-                        value={formatDate(selectedRoom.check_out_date)} 
-                      />
-                      <InfoRow 
-                        icon={<InfoIcon />} 
-                        label="Mã đặt phòng" 
-                        value={selectedRoom.booking_code || 'N/A'} 
-                      />
-                      <InfoRow 
                         icon={<PersonIcon />} 
-                        label="Số khách" 
-                        value={selectedRoom.guest_count || 'N/A'} 
+                        label="Người đặt" 
+                        value={selectedRoom.created_by || 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<PaymentIcon />} 
-                        label="TT thanh toán" 
-                        value={selectedRoom.payment_status || 'N/A'} 
+                        icon={<CalendarTodayIcon />} 
+                        label="Ngày nhận phòng" 
+                        value={formatDate(selectedRoom.check_in_date) || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<CalendarTodayIcon />} 
+                        label="Ngày trả phòng" 
+                        value={formatDate(selectedRoom.check_out_date) || 'N/A'} 
                       />
                       <InfoRow 
                         icon={<InfoIcon />} 
-                        label="Nguồn" 
-                        value={selectedRoom.source || 'N/A'} 
+                        label="Trạng thái" 
+                        value={
+                          selectedRoom.booking_status === 'Pending' ? 'Đang chờ' :
+                          selectedRoom.booking_status === 'Confirmed' ? 'Đã xác nhận' :
+                          selectedRoom.booking_status === 'Checked-in' ? 'Đã nhận phòng' :
+                          selectedRoom.booking_status === 'Checked-out' ? 'Đã trả phòng' :
+                          selectedRoom.booking_status === 'Canceled' ? 'Đã hủy' : 'N/A'
+                        } 
                       />
+                      <InfoRow 
+                          icon={<PaymentIcon />} 
+                          label="Tiền đặt cọc" 
+                          value={selectedRoom.deposit_amount ? `${Number(selectedRoom.deposit_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                        />
+                        <InfoRow 
+                          icon={<PaymentIcon />} 
+                          label="Tổng gốc" 
+                          value={selectedRoom.raw_total ? `${Number(selectedRoom.raw_total).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                        />
+                        <InfoRow 
+                          icon={<PaymentIcon />} 
+                          label="Tổng giảm" 
+                          value={selectedRoom.discount_amount ? `${Number(selectedRoom.discount_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                        />
+                        <InfoRow 
+                          icon={<PaymentIcon />} 
+                          label="Tổng giá cuối" 
+                          value={selectedRoom.total_amount ? `${Number(selectedRoom.total_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                        />
                     </div>
                   </CardContent>
                 </Card>
@@ -464,14 +553,23 @@ const OrderRoom: React.FC = () => {
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
                       <InfoRow 
+                        icon={<InfoIcon />} 
+                        label="Số CCCD" 
+                        value={selectedRoom.guest_id_number || 'N/A'} 
+                      />
+                      <InfoRow 
                         icon={<PersonIcon />} 
-                        label="Tên đầy đủ" 
+                        label="Tên" 
                         value={selectedRoom.guest_name || 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<ContactPhoneIcon />} 
-                        label="Số điện thoại" 
-                        value={selectedRoom.guest_phone || 'N/A'} 
+                        icon={<InfoIcon />} 
+                        label="Giới tính" 
+                        value={
+                          selectedRoom.guest_gender === 'male' ? 'Nam' : 
+                          selectedRoom.guest_gender === 'female' ? 'Nữ' : 
+                          selectedRoom.guest_gender === 'other' ? 'Không xác định' : 'N/A'
+                        } 
                       />
                       <InfoRow 
                         icon={<InfoIcon />} 
@@ -479,19 +577,29 @@ const OrderRoom: React.FC = () => {
                         value={selectedRoom.guest_email || 'N/A'} 
                       />
                       <InfoRow 
+                        icon={<ContactPhoneIcon />} 
+                        label="Số điện thoại" 
+                        value={selectedRoom.guest_phone || 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<CalendarTodayIcon />} 
+                        label="Ngày sinh" 
+                        value={formatDate(selectedRoom.guest_date_of_birth) || 'N/A'} 
+                      />
+                      <InfoRow 
                         icon={<InfoIcon />} 
-                        label="Quốc gia" 
+                        label="Quốc tịch" 
                         value={selectedRoom.guest_country || 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<InfoIcon />} 
-                        label="Nghề nghiệp" 
-                        value={selectedRoom.guest_occupation || 'N/A'} 
+                        icon={<HomeIcon />} 
+                        label="Địa chỉ" 
+                        value={selectedRoom.guest_address || 'N/A'} 
                       />
                       <InfoRow 
                         icon={<InfoIcon />} 
-                        label="Số định danh" 
-                        value={selectedRoom.guest_id_number || 'N/A'} 
+                        label="Ghi chú" 
+                        value={selectedRoom.guest_note || 'N/A'} 
                       />
                     </div>
                   </CardContent>

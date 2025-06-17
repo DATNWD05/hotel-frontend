@@ -23,6 +23,27 @@
   color: #d93025;
 }
 
+.promotion-filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.promotion-filter-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-transform: none;
+  font-weight: 500;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.promotion-filter-btn.active {
+  font-weight: 600;
+  transform: scale(1.05);
+}
+
 .promotion-title .promotion-btn-add {
   background: #4318FF;
   color: #fff;
@@ -172,30 +193,4 @@
 .promotion-search-input {
   background: #fff;
   border-radius: 4px;
-}
-
-.promotion-status-filter {
-  background: #fff;
-  border-radius: 4px;
-  transition: box-shadow 0.2s ease;
-}
-
-.promotion-status-filter:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.promotion-status-menu {
-  padding: 8px 0;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  background: #fff;
-}
-
-.promotion-status-menu-item {
-  padding: 6px 16px;
-  transition: background 0.2s ease;
-}
-
-.promotion-status-menu-item:hover {
-  background: #f5f5f5;
 }
