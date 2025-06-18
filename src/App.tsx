@@ -11,13 +11,20 @@ import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/helpers/ProtectedRoute";
 import Role from "./pages/Role/Role";
 import AddRole from "./pages/Role/AddRole";
-import Service from "./pages/Services/service";
-import CreateService from "./pages/Services/CreateService";
-import EditService from "./pages/Services/EditService";
-import ServiceCategoryList from "./pages/Services/Service_category";
-import AddServiceCategory from "./pages/Services/AddServiceCategory";
 import Customer from "./pages/Customer/Customer";
 import AddCustomer from "./pages/Customer/AddCustomer";
+import CreateService from "./pages/Services/CreateService";
+import ServiceCategoryList from "./pages/Services/Service_category";
+import AddServiceCategory from "./pages/Services/AddServiceCategory";
+import RoomList from "./pages/Room/RoomList";
+import RoomView from "./pages/Room/RoomView";
+import RoomTypesList from "./pages/Room/RoomTypeList";
+import AddRoomType from "./pages/Room/AddRoomType";
+import Amenities from "./pages/Room/Amenities";
+import AmenitiesAdd from "./pages/Room/AmenitiesAdd";
+import Service from "./pages/Services/Service";
+import AmenitiesCategoryList from "./pages/Room/Amenities_Category";
+import AddAmenityCategory from "./pages/Room/AddAmenitiesCaregory";
 
 function App() {
   return (
@@ -32,7 +39,7 @@ function App() {
 
         <Route path="customer" element={<RoleBasedRoute allowedRoleIds={[1]}><Customer /></RoleBasedRoute>} />
         <Route path="customer/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddCustomer
-         /></RoleBasedRoute>} />
+        /></RoleBasedRoute>} />
 
         <Route path="/promotions" element={<RoleBasedRoute allowedRoleIds={[1]}><Promotions /></RoleBasedRoute>} />
         <Route path="promotions/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddPromotion /></RoleBasedRoute>} />
@@ -42,9 +49,24 @@ function App() {
 
         <Route path="/service" element={<RoleBasedRoute allowedRoleIds={[1]}><Service /></RoleBasedRoute>} />
         <Route path="service/add" element={<RoleBasedRoute allowedRoleIds={[1]}><CreateService /></RoleBasedRoute>} />
-        <Route path="/service/edit/:serviceId" element={<RoleBasedRoute allowedRoleIds={[1]}><EditService /></RoleBasedRoute>} />
         <Route path="service-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><ServiceCategoryList /></RoleBasedRoute>} />
         <Route path="/service-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddServiceCategory /></RoleBasedRoute>} />
+
+        <Route path="/rooms" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomList /></RoleBasedRoute>} />
+        <Route path="/room/:id" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomView /></RoleBasedRoute>} />
+
+        <Route path="/room-types" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomTypesList /></RoleBasedRoute>} />
+        <Route path="/room-types/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRoomType /></RoleBasedRoute>} />
+
+        <Route path="/amenities" element={<RoleBasedRoute allowedRoleIds={[1]}><Amenities /></RoleBasedRoute>} />
+        <Route path="/amenities/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AmenitiesAdd /></RoleBasedRoute>} />
+
+        <Route path="/amenity-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><AmenitiesCategoryList /></RoleBasedRoute>} />
+        <Route path="/amenity-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddAmenityCategory /></RoleBasedRoute>} />
+
+
+        
+        {/* Add more routes as needed */}
       </Route>
 
       {/* Auth */}
