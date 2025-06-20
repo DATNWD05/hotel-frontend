@@ -9,38 +9,38 @@ import {
   Stepper,
   Step,
   StepLabel,
+  Typography,
+  CircularProgress,
 } from '@mui/material';
 import { 
-  Delete as DeleteIcon, 
-  Add as AddIcon,
+  Close as CloseIcon,
   Info as InfoIcon,
   Person as PersonIcon,
   AttachMoney as MoneyIcon,
   ArrowBack as ArrowBackIcon,
-  ArrowForward as ArrowForwardIcon
+  ArrowForward as ArrowForwardIcon,
 } from '@mui/icons-material';
 import '../../css/BookingForm.css';
+import api from '../../api/axios';
 
 interface BookingFormProps {
   open: boolean;
   onClose: () => void;
   roomNumber: string;
+  roomId: number; // Thêm roomId để gửi trong API
 }
 
 interface BookingData {
-  checkInDate: string;
-  checkOutDate: string;
-  source: string;
-  adults: number;
-  children: number;
-  infants: number;
-  price: string;
+  check_in_date: string;
+  check_out_date: string;
+  deposit_amount: string;
+  raw_total: string;
+  discount_amount: string;
+  total_amount: string;
   note: string;
-  roomDetails: { roomType: string; room: string; category: string; deposit: number }[];
 }
 
 interface CustomerData {
-  id: string;
   cccd: string;
   name: string;
   gender: string;
@@ -52,21 +52,20 @@ interface CustomerData {
   note: string;
 }
 
-const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) => {
+const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber, roomId }) => {
   const [activeStep, setActiveStep] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [bookingData, setBookingData] = useState<BookingData>({
-    checkInDate: '',
-    checkOutDate: '',
-    source: '',
-    adults: 1,
-    children: 0,
-    infants: 0,
-    price: '',
+    check_in_date: '',
+    check_out_date: '',
+    deposit_amount: '',
+    raw_total: '',
+    discount_amount: '0',
+    total_amount: '',
     note: '',
-    roomDetails: [{ roomType: '', room: '', category: '', deposit: 0 }],
   });
   const [customerData, setCustomerData] = useState<CustomerData>({
-    id: '',
     cccd: '',
     name: '',
     gender: '',
@@ -75,48 +74,63 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
     date_of_birth: '',
     nationality: 'Việt Nam',
     address: '',
-    note: ''
+    note: '',
   });
 
   const steps = [
     { label: 'Thông tin đặt phòng', icon: <InfoIcon /> },
     { label: 'Khách hàng', icon: <PersonIcon /> },
-    { label: 'Đặt cọc', icon: <MoneyIcon /> }
+    { label: 'Đặt cọc', icon: <MoneyIcon /> },
   ];
 
-  const handleBookingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleBookingChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setBookingData({ ...bookingData, [e.target.name]: e.target.value });
   };
 
-  const handleCustomerChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleCustomerChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setCustomerData({ ...customerData, [e.target.name]: e.target.value });
   };
 
-  const handleRoomDetailChange = (index: number) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const newRoomDetails = [...bookingData.roomDetails];
-    newRoomDetails[index] = { ...newRoomDetails[index], [e.target.name]: e.target.value };
-    setBookingData({ ...bookingData, roomDetails: newRoomDetails });
-  };
-
-  const addRoomDetail = () => {
-    setBookingData({
-      ...bookingData,
-      roomDetails: [...bookingData.roomDetails, { roomType: '', room: '', category: '', deposit: 0 }],
-    });
-  };
-
-  const removeRoomDetail = (index: number) => {
-    const newRoomDetails = bookingData.roomDetails.filter((_, i) => i !== index);
-    setBookingData({ ...bookingData, roomDetails: newRoomDetails });
-  };
-
-  const handleNext = () => {
+  const handleNext = async () => {
     if (activeStep < steps.length - 1) {
       setActiveStep(activeStep + 1);
     } else {
-      console.log('Booking Data:', bookingData);
-      console.log('Customer Data:', customerData);
-      onClose();
+      // Gửi API khi hoàn thành
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await api.post('/bookings', {
+          room_id: roomId,
+          customer: {
+            cccd: customerData.cccd,
+            name: customerData.name,
+            gender: customerData.gender,
+            email: customerData.email,
+            phone: customerData.phone,
+            date_of_birth: customerData.date_of_birth,
+            nationality: customerData.nationality,
+            address: customerData.address,
+            note: customerData.note,
+          },
+          check_in_date: bookingData.check_in_date,
+          check_out_date: bookingData.check_out_date,
+          deposit_amount: bookingData.deposit_amount,
+          raw_total: bookingData.raw_total,
+          discount_amount: bookingData.discount_amount,
+          total_amount: bookingData.total_amount,
+          note: bookingData.note,
+        });
+
+        if (response.status === 201) {
+          onClose();
+        } else {
+          throw new Error('Đặt phòng thất bại');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi đặt phòng');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -143,11 +157,11 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
             <div className="booking-grid">
               <div className="form-group">
                 <TextField
-                  name="checkInDate"
+                  name="check_in_date"
                   label="Nhận phòng"
-                  type="datetime-local"
+                  type="date"
                   required
-                  value={bookingData.checkInDate}
+                  value={bookingData.check_in_date}
                   onChange={handleBookingChange}
                   InputLabelProps={{ shrink: true }}
                   className="booking-textfield"
@@ -156,78 +170,13 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
               </div>
               <div className="form-group">
                 <TextField
-                  name="checkOutDate"
+                  name="check_out_date"
                   label="Trả phòng"
-                  type="datetime-local"
+                  type="date"
                   required
-                  value={bookingData.checkOutDate}
+                  value={bookingData.check_out_date}
                   onChange={handleBookingChange}
                   InputLabelProps={{ shrink: true }}
-                  className="booking-textfield"
-                  size="small"
-                />
-              </div>
-              <div className="form-group">
-                <TextField
-                  name="source"
-                  label="Nguồn"
-                  select
-                  required
-                  value={bookingData.source}
-                  onChange={handleBookingChange}
-                  className="booking-textfield"
-                  size="small"
-                >
-                  <MenuItem value="PPTT">PPTT</MenuItem>
-                  <MenuItem value="Booking.com">Booking.com</MenuItem>
-                  <MenuItem value="Agoda">Agoda</MenuItem>
-                  <MenuItem value="Direct">Trực tiếp</MenuItem>
-                </TextField>
-              </div>
-              <div className="form-group">
-                <TextField
-                  name="adults"
-                  label="Người lớn"
-                  type="number"
-                  value={bookingData.adults}
-                  onChange={handleBookingChange}
-                  className="booking-textfield"
-                  inputProps={{ min: 1 }}
-                  size="small"
-                />
-              </div>
-              <div className="form-group">
-                <TextField
-                  name="children"
-                  label="Trẻ em"
-                  type="number"
-                  value={bookingData.children}
-                  onChange={handleBookingChange}
-                  className="booking-textfield"
-                  inputProps={{ min: 0 }}
-                  size="small"
-                />
-              </div>
-              <div className="form-group">
-                <TextField
-                  name="infants"
-                  label="Trẻ sơ sinh"
-                  type="number"
-                  value={bookingData.infants}
-                  onChange={handleBookingChange}
-                  className="booking-textfield"
-                  inputProps={{ min: 0 }}
-                  size="small"
-                />
-              </div>
-              <div className="form-group">
-                <TextField
-                  name="price"
-                  label="Phí hoa hồng"
-                  type="number"
-                  value={bookingData.price}
-                  onChange={handleBookingChange}
-                  InputProps={{ endAdornment: <span className="currency">VND</span> }}
                   className="booking-textfield"
                   size="small"
                 />
@@ -248,95 +197,6 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
             </div>
           </div>
         </div>
-        <div className="room-details-section">
-          <div className="section-header">
-            <h3>Chi tiết phòng</h3>
-            <Button
-              variant="contained"
-              onClick={addRoomDetail}
-              className="add-room-button"
-              startIcon={<AddIcon />}
-              size="small"
-            >
-              Thêm phòng
-            </Button>
-          </div>
-          <div className="room-cards-container">
-            {bookingData.roomDetails.map((roomDetail, index) => (
-              <div key={index} className="room-card">
-                <div className="room-card-header">
-                  <div className="room-number">Phòng #{index + 1}</div>
-                  {index > 0 && (
-                    <IconButton
-                      onClick={() => removeRoomDetail(index)}
-                      className="delete-room-button"
-                      size="small"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  )}
-                </div>
-                <div className="room-card-content">
-                  <div className="room-field-row">
-                    <TextField
-                      name="roomType"
-                      label="Loại phòng"
-                      select
-                      value={roomDetail.roomType}
-                      onChange={handleRoomDetailChange(index)}
-                      className="booking-textfield"
-                      size="small"
-                      fullWidth
-                    >
-                      <MenuItem value="standard">Standard</MenuItem>
-                      <MenuItem value="deluxe">Deluxe</MenuItem>
-                      <MenuItem value="suite">Suite</MenuItem>
-                    </TextField>
-                    <TextField
-                      name="room"
-                      label="Phòng"
-                      select
-                      value={roomDetail.room}
-                      onChange={handleRoomDetailChange(index)}
-                      className="booking-textfield"
-                      size="small"
-                      fullWidth
-                    >
-                      <MenuItem value={roomNumber}>{roomNumber}</MenuItem>
-                    </TextField>
-                  </div>
-                  <div className="room-field-row">
-                    <TextField
-                      name="category"
-                      label="Phân loại giá"
-                      select
-                      value={roomDetail.category}
-                      onChange={handleRoomDetailChange(index)}
-                      className="booking-textfield"
-                      size="small"
-                      fullWidth
-                    >
-                      <MenuItem value="normal">Normal</MenuItem>
-                      <MenuItem value="weekend">Weekend</MenuItem>
-                      <MenuItem value="holiday">Holiday</MenuItem>
-                    </TextField>
-                    <TextField
-                      name="deposit"
-                      label="Giá/đêm"
-                      type="number"
-                      value={roomDetail.deposit}
-                      onChange={handleRoomDetailChange(index)}
-                      InputProps={{ endAdornment: <span className="currency">VND</span> }}
-                      className="booking-textfield"
-                      size="small"
-                      fullWidth
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -349,17 +209,6 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
         </div>
         <div className="booking-section">
           <div className="customer-grid">
-            <div className="form-group">
-              <TextField
-                name="id"
-                label="ID khách hàng"
-                value={customerData.id}
-                onChange={handleCustomerChange}
-                className="booking-textfield"
-                placeholder="Mã khách hàng (tự động tạo)"
-                size="small"
-              />
-            </div>
             <div className="form-group">
               <TextField
                 name="cccd"
@@ -464,7 +313,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
                 value={customerData.note}
                 onChange={handleCustomerChange}
                 multiline
-                rows={2}
+                rows= "2"
                 className="booking-textfield"
                 placeholder="Ghi chú thêm về khách hàng..."
                 size="small"
@@ -483,29 +332,64 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
           <h3>Thông tin đặt cọc</h3>
         </div>
         <div className="booking-section">
-          <div className="deposit-summary">
-            <h4>Tóm tắt đặt phòng</h4>
-            <div className="summary-item">
-              <span>Phòng:</span>
-              <span>{roomNumber}</span>
+          <div className="deposit-grid">
+            <div className="form-group">
+              <TextField
+                name="deposit_amount"
+                label="Tiền đặt cọc"
+                type="number"
+                required
+                value={bookingData.deposit_amount}
+                onChange={handleBookingChange}
+                InputProps={{ endAdornment: <span className="currency">VND</span> }}
+                className="booking-textfield"
+                size="small"
+              />
             </div>
-            <div className="summary-item">
-              <span>Khách hàng:</span>
-              <span>{customerData.name || 'Chưa nhập'}</span>
+            <div className="form-group">
+              <TextField
+                name="raw_total"
+                label="Tổng gốc"
+                type="number"
+                required
+                value={bookingData.raw_total}
+                onChange={handleBookingChange}
+                InputProps={{ endAdornment: <span className="currency">VND</span> }}
+                className="booking-textfield"
+                size="small"
+              />
             </div>
-            <div className="summary-item">
-              <span>Nhận phòng:</span>
-              <span>{bookingData.checkInDate ? new Date(bookingData.checkInDate).toLocaleString('vi-VN') : 'Chưa chọn'}</span>
+            <div className="form-group">
+              <TextField
+                name="discount_amount"
+                label="Tiền giảm giá"
+                type="number"
+                value={bookingData.discount_amount}
+                onChange={handleBookingChange}
+                InputProps={{ endAdornment: <span className="currency">VND</span> }}
+                className="booking-textfield"
+                size="small"
+              />
             </div>
-            <div className="summary-item">
-              <span>Trả phòng:</span>
-              <span>{bookingData.checkOutDate ? new Date(bookingData.checkOutDate).toLocaleString('vi-VN') : 'Chưa chọn'}</span>
-            </div>
-            <div className="summary-item">
-              <span>Tổng tiền:</span>
-              <span className="total-amount">{bookingData.price ? `${parseInt(bookingData.price).toLocaleString()} VND` : '0 VND'}</span>
+            <div className="form-group">
+              <TextField
+                name="total_amount"
+                label="Tổng giá cuối"
+                type="number"
+                required
+                value={bookingData.total_amount}
+                onChange={handleBookingChange}
+                InputProps={{ endAdornment: <span className="currency">VND</span> }}
+                className="booking-textfield"
+                size="small"
+              />
             </div>
           </div>
+          {error && (
+            <Typography color="error" sx={{ mt: 2, textAlign: 'center' }}>
+              {error}
+            </Typography>
+          )}
         </div>
       </div>
     </div>
@@ -528,7 +412,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
     <Dialog 
       open={open} 
       onClose={onClose} 
-      maxWidth="xl" 
+      maxWidth="lg" 
       fullWidth
       className="booking-dialog"
       PaperProps={{
@@ -541,7 +425,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
           onClick={onClose}
           size="small"
         >
-          ×
+          <CloseIcon />
         </IconButton>
         <div className="stepper-container">
           <h2>Đặt phòng {roomNumber}</h2>
@@ -569,7 +453,14 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
         </div>
       </div>
       <DialogContent className="booking-content">
-        {renderStepContent()}
+        {loading ? (
+          <div className="loading-state">
+            <CircularProgress />
+            <Typography sx={{ mt: 2 }}>Đang xử lý...</Typography>
+          </div>
+        ) : (
+          renderStepContent()
+        )}
       </DialogContent>
       <div className="booking-actions">
         <Button 
@@ -577,6 +468,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
           className="back-btn"
           variant="outlined"
           startIcon={activeStep === 0 ? null : <ArrowBackIcon />}
+          disabled={loading}
         >
           {activeStep === 0 ? 'Hủy bỏ' : 'Quay lại'}
         </Button>
@@ -585,6 +477,7 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber }) 
           className="next-btn"
           variant="contained"
           endIcon={activeStep === steps.length - 1 ? null : <ArrowForwardIcon />}
+          disabled={loading}
         >
           {activeStep === steps.length - 1 ? 'Hoàn thành' : 'Tiếp theo'}
         </Button>

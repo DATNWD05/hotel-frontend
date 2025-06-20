@@ -18,6 +18,10 @@ import ServiceCategoryList from "./pages/Services/Service_category";
 import AddServiceCategory from "./pages/Services/AddServiceCategory";
 import Customer from "./pages/Customer/Customer";
 import AddCustomer from "./pages/Customer/AddCustomer";
+import ListBookings from "./pages/Bookings/ListBookings";
+import DetailBookings from "./pages/Bookings/DetailBookings";
+import AddBookings from "./pages/Bookings/AddBookings";
+import Statistics from "./pages/Statistics/Statistics";
 
 function App() {
   return (
@@ -29,6 +33,13 @@ function App() {
         <Route path="user" element={<ProtectedRoute><RoleBasedRoute allowedRoleIds={[1]}><User /></RoleBasedRoute></ProtectedRoute>}/>
 
         <Route path="user/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddUser /></RoleBasedRoute>} />
+
+        <Route path="/listbookings" element={<RoleBasedRoute allowedRoleIds={[1]}><ListBookings /></RoleBasedRoute>} />
+        <Route path="/listbookings/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddBookings /></RoleBasedRoute>} />
+        <Route path="/listbookings/detail/:id" element={<RoleBasedRoute allowedRoleIds={[1]}><DetailBookings /></RoleBasedRoute>} />
+
+        <Route path="/statistics" element={<RoleBasedRoute allowedRoleIds={[1]}><Statistics /></RoleBasedRoute>} />
+
 
         <Route path="customer" element={<RoleBasedRoute allowedRoleIds={[1]}><Customer /></RoleBasedRoute>} />
         <Route path="customer/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddCustomer

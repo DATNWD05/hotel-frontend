@@ -1,68 +1,58 @@
 /* Booking Dialog */
 .booking-dialog .MuiDialog-paper {
-  border-radius: 20px !important;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
   overflow: hidden;
-  max-width: 1200px !important;
-  max-height: 95vh !important;
-  width: 95vw !important;
+  max-width: 900px !important;
+  max-height: 90vh !important;
+  width: 90vw !important;
+  background: #f8f9fa !important;
 }
 
 /* Header with Stepper */
 .booking-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50, #34495e);
   color: white;
-  padding: 25px 30px 20px;
+  padding: 20px 24px;
   position: relative;
-  overflow: hidden;
-}
-
-.booking-header::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -50%;
-  width: 100%;
-  height: 200%;
-  background: rgba(255, 255, 255, 0.1);
-  transform: rotate(45deg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .close-button {
   position: absolute !important;
-  top: 20px !important;
-  right: 25px !important;
+  top: 12px !important;
+  right: 12px !important;
   background: rgba(255, 255, 255, 0.2) !important;
   color: white !important;
-  width: 35px !important;
-  height: 35px !important;
+  width: 32px !important;
+  height: 32px !important;
   border-radius: 50% !important;
-  font-size: 18px !important;
-  z-index: 3;
   transition: all 0.3s ease !important;
 }
 
 .close-button:hover {
   background: rgba(255, 255, 255, 0.3) !important;
-  transform: rotate(90deg);
+  transform: scale(1.1);
 }
 
-/* Custom Stepper */
+/* Stepper */
 .stepper-container {
   position: relative;
-  z-index: 2;
 }
 
 .stepper-container h2 {
-  margin: 0 0 5px 0;
+  margin: 0;
   font-size: 24px;
   font-weight: 600;
+  color: #e74c3c;
 }
 
 .stepper-container p {
-  margin: 0 0 20px 0;
-  opacity: 0.9;
+  margin: 8px 0 16px;
   font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .custom-stepper {
@@ -70,65 +60,52 @@
 }
 
 .custom-stepper .MuiStepConnector-root {
-  top: 22px !important;
+  top: 20px !important;
   left: calc(-50% + 20px) !important;
   right: calc(50% + 20px) !important;
 }
 
 .custom-stepper .MuiStepConnector-line {
   height: 3px !important;
-  border: none !important;
   background: rgba(255, 255, 255, 0.3) !important;
-  border-radius: 2px !important;
 }
 
 .custom-stepper .MuiStepConnector-root.Mui-active .MuiStepConnector-line,
 .custom-stepper .MuiStepConnector-root.Mui-completed .MuiStepConnector-line {
-  background: white !important;
+  background: #4CAF50 !important;
 }
 
 .custom-step {
   cursor: pointer !important;
-  transition: all 0.3s ease !important;
-}
-
-.custom-step:hover {
-  transform: translateY(-2px);
 }
 
 .step-icon {
-  width: 44px !important;
-  height: 44px !important;
+  width: 40px !important;
+  height: 40px !important;
   border-radius: 50% !important;
   background: rgba(255, 255, 255, 0.2) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   color: white !important;
-  transition: all 0.3s ease !important;
-  backdrop-filter: blur(10px) !important;
   border: 2px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 .step-icon.active {
-  background: white !important;
-  color: #667eea !important;
+  background: #4CAF50 !important;
+  color: white !important;
   border-color: white !important;
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.3) !important;
-  transform: scale(1.1) !important;
 }
 
 .step-icon.completed {
   background: rgba(255, 255, 255, 0.9) !important;
-  color: #667eea !important;
-  border-color: white !important;
+  color: #4CAF50 !important;
 }
 
 .custom-step-label .MuiStepLabel-label {
   color: rgba(255, 255, 255, 0.8) !important;
   font-weight: 500 !important;
   margin-top: 8px !important;
-  font-size: 14px !important;
 }
 
 .custom-step-label.Mui-active .MuiStepLabel-label {
@@ -142,9 +119,9 @@
 
 /* Content Area */
 .booking-content {
-  padding: 30px !important;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
-  max-height: calc(95vh - 250px) !important;
+  padding: 24px !important;
+  background: #f8f9fa !important;
+  max-height: calc(90vh - 200px) !important;
   overflow-y: auto !important;
 }
 
@@ -163,253 +140,63 @@
   }
 }
 
-/* Booking Form Container (Step 1) */
+/* Booking Form Container */
 .booking-form-container {
   display: flex;
-  gap: 30px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.booking-info-section {
-  flex: 1;
-  min-width: 0;
-}
-
-.room-details-section {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Customer Form Container (Step 2) */
-.customer-form-container {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-/* Deposit Container (Step 3) */
+/* Customer and Deposit Containers */
+.customer-form-container,
 .deposit-container {
   max-width: 600px;
   margin: 0 auto;
 }
 
-.deposit-summary {
-  padding: 25px;
-  background: white;
-  border-radius: 16px;
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.deposit-summary h4 {
-  margin: 0 0 20px 0;
-  color: #2d3748;
-  font-size: 18px;
-  font-weight: 600;
-  text-align: center;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #e2e8f0;
-}
-
-.summary-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.summary-item:last-child {
-  border-bottom: none;
-  padding-top: 15px;
-  margin-top: 10px;
-  border-top: 2px solid #e2e8f0;
-}
-
-.summary-item span:first-child {
-  color: #64748b;
-  font-weight: 500;
-}
-
-.summary-item span:last-child {
-  color: #2d3748;
-  font-weight: 600;
-}
-
-.total-amount {
-  color: #667eea !important;
-  font-size: 18px !important;
-  font-weight: 700 !important;
-}
-
 /* Section Headers */
 .section-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .section-header h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #2d3748;
+  color: #2c3e50;
   margin: 0;
-  display: flex;
-  align-items: center;
 }
 
 .section-header h3::before {
   content: '';
   width: 4px;
   height: 20px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #4CAF50;
   border-radius: 2px;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 
 /* Booking Sections */
 .booking-section {
   background: white;
-  border-radius: 16px;
-  padding: 25px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 /* Grid Layouts */
-.booking-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-
-.customer-grid {
+.booking-grid,
+.customer-grid,
+.deposit-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px;
-  align-items: start;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
 }
 
 .form-group-full {
   grid-column: 1 / -1;
-}
-
-/* Room Cards Container */
-.room-cards-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: 5px;
-}
-
-.room-cards-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.room-cards-container::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 3px;
-}
-
-.room-cards-container::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 3px;
-}
-
-.room-cards-container::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Room Cards */
-.room-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.room-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-  border-color: #667eea;
-}
-
-.room-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #f1f5f9;
-}
-
-.room-number {
-  font-weight: 600;
-  color: #667eea;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-}
-
-.room-number::before {
-  content: '🏠';
-  margin-right: 8px;
-  font-size: 14px;
-}
-
-.delete-room-button {
-  background: rgba(239, 68, 68, 0.1) !important;
-  color: #ef4444 !important;
-  border-radius: 50% !important;
-  width: 32px !important;
-  height: 32px !important;
-  transition: all 0.3s ease !important;
-}
-
-.delete-room-button:hover {
-  background: rgba(239, 68, 68, 0.2) !important;
-  transform: scale(1.1);
-}
-
-.room-card-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.room-field-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-/* Add Room Button */
-.add-room-button {
-  background: linear-gradient(135deg, #667eea, #764ba2) !important;
-  color: white !important;
-  border-radius: 12px !important;
-  padding: 8px 16px !important;
-  font-weight: 500 !important;
-  text-transform: none !important;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
-  transition: all 0.3s ease !important;
-}
-
-.add-room-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
 }
 
 /* Text Fields */
@@ -418,9 +205,8 @@
 }
 
 .booking-textfield .MuiOutlinedInput-root {
-  border-radius: 12px !important;
-  background: rgba(255, 255, 255, 0.8) !important;
-  transition: all 0.3s ease !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.7) !important;
 }
 
 .booking-textfield .MuiOutlinedInput-root:hover {
@@ -429,144 +215,115 @@
 
 .booking-textfield .MuiOutlinedInput-root.Mui-focused {
   background: white !important;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.15) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
 .booking-textfield .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
-  border-color: #667eea !important;
-  border-width: 2px !important;
+  border-color: #4CAF50 !important;
 }
 
 .booking-textfield .MuiInputLabel-root.Mui-focused {
-  color: #667eea !important;
-  font-weight: 600 !important;
+  color: #4CAF50 !important;
 }
 
 .booking-textfield .MuiOutlinedInput-input {
-  padding: 14px !important;
+  padding: 12px !important;
   font-size: 14px !important;
 }
 
 .booking-textfield .MuiInputLabel-root {
   font-weight: 500 !important;
-  color: #64748b !important;
+  color: #666 !important;
 }
 
 /* Currency Addon */
 .currency {
-  color: #64748b;
+  color: #666;
   font-weight: 500;
-  font-size: 14px;
-  margin-left: 8px;
+  font-size: 12px;
   padding: 4px 8px;
   background: #f1f5f9;
   border-radius: 6px;
-  border-left: 2px solid #e2e8f0;
 }
 
 /* Action Buttons */
 .booking-actions {
-  padding: 20px 30px;
+  padding: 20px 24px;
   background: white;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #e0e0e0;
   display: flex;
   justify-content: space-between;
-  align-items: center;
   gap: 16px;
 }
 
 .back-btn {
-  color: #64748b !important;
-  border-color: #cbd5e1 !important;
-  padding: 12px 24px !important;
-  border-radius: 12px !important;
+  color: #666 !important;
+  border-color: #ccc !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
   font-weight: 500 !important;
   text-transform: none !important;
-  transition: all 0.3s ease !important;
 }
 
 .back-btn:hover {
-  border-color: #94a3b8 !important;
-  background: rgba(100, 116, 139, 0.05) !important;
-  transform: translateX(-2px);
+  background: rgba(0, 0, 0, 0.05) !important;
 }
 
 .next-btn {
-  background: linear-gradient(135deg, #667eea, #764ba2) !important;
+  background: linear-gradient(135deg, #4CAF50, #2E7D32) !important;
   color: white !important;
-  padding: 12px 24px !important;
-  border-radius: 12px !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
   font-weight: 600 !important;
   text-transform: none !important;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
-  transition: all 0.3s ease !important;
 }
 
 .next-btn:hover {
-  transform: translateX(2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+  background: linear-gradient(135deg, #2E7D32, #1B5E20) !important;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
 }
 
 /* Responsive Design */
-@media (max-width: 1024px) {
-  .booking-form-container {
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .booking-grid {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-  }
-  
-  .customer-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-  }
-  
-  .room-field-row {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-}
-
 @media (max-width: 768px) {
   .booking-dialog .MuiDialog-paper {
-    width: 98vw !important;
-    max-height: 98vh !important;
-    margin: 1vh !important;
+    width: 95vw !important;
+    margin: 16px !important;
   }
-  
+
   .booking-header {
-    padding: 20px 20px 15px;
+    padding: 16px;
   }
-  
+
   .stepper-container h2 {
     font-size: 20px;
   }
-  
+
   .booking-content {
-    padding: 20px !important;
+    padding: 16px !important;
   }
-  
+
   .booking-section {
-    padding: 20px;
+    padding: 16px;
   }
-  
+
   .booking-grid,
-  .customer-grid {
+  .customer-grid,
+  .deposit-grid {
     grid-template-columns: 1fr;
-    gap: 12px;
   }
-  
-  .booking-actions {
-    padding: 15px 20px;
-  }
-  
+
   .custom-stepper .MuiStepLabel-label {
     display: none !important;
   }
-  
+
   .step-icon {
     width: 36px !important;
     height: 36px !important;
@@ -575,32 +332,25 @@
 
 @media (max-width: 480px) {
   .booking-header {
-    padding: 15px 15px 10px;
+    padding: 12px;
   }
-  
+
   .stepper-container h2 {
     font-size: 18px;
   }
-  
+
   .stepper-container p {
     font-size: 12px;
   }
-  
-  .booking-content {
-    padding: 15px !important;
+
+  .booking-actions {
+    flex-direction: column;
+    gap: 12px;
   }
-  
-  .booking-section {
-    padding: 15px;
-  }
-  
-  .room-card {
-    padding: 15px;
-  }
-  
+
   .back-btn,
   .next-btn {
-    padding: 10px 16px !important;
-    font-size: 14px !important;
+    width: 100%;
+    padding: 10px !important;
   }
 }

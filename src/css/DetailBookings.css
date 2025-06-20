@@ -1,0 +1,242 @@
+.detail-booking-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f0f2f5;
+}
+
+.detail-booking-wrapper .detail-booking-title {
+  margin-bottom: 30px;
+}
+
+.detail-booking-wrapper .detail-booking-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detail-booking-wrapper .detail-booking-header-content h2 {
+  font-size: 24px;
+  color: #2c3e50;
+}
+
+.detail-booking-wrapper .container {
+  max-width: 12000px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+.detail-booking-wrapper .card {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+
+.detail-booking-wrapper .card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.detail-booking-wrapper .card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.detail-booking-wrapper .card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 15px;
+  font-size: 18px;
+  color: white;
+}
+
+.detail-booking-wrapper .room-info .card-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.detail-booking-wrapper .booking-info .card-icon {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.detail-booking-wrapper .customer-info .card-icon {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.detail-booking-wrapper .card-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.detail-booking-wrapper .info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.detail-booking-wrapper .info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-booking-wrapper .info-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+
+.detail-booking-wrapper .info-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #3498db;
+}
+
+.detail-booking-wrapper .status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.detail-booking-wrapper .status-new {
+  background: #d4edda;
+  color: #155724;
+}
+
+.detail-booking-wrapper .status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.detail-booking-wrapper .status-vip {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.detail-booking-wrapper .price-highlight {
+  font-size: 18px;
+  font-weight: 700;
+  color: #e74c3c;
+}
+
+.detail-booking-wrapper .customer-card {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+}
+
+.detail-booking-wrapper .customer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.detail-booking-wrapper .detail-booking-code {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.detail-booking-wrapper .edit-button {
+  margin-top: 20px;
+  padding: 8px 16px;
+  background: #ebb70e;
+  color: rgb(238, 17, 17);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.detail-booking-wrapper .edit-button:hover {
+  background: #2980b9;
+}
+
+.detail-booking-wrapper .detail-booking-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.detail-booking-wrapper .detail-booking-error-message {
+  text-align: center;
+  padding: 10px;
+  color: #d32f2f;
+  font-size: 16px;
+  background: #ffebee;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.detail-booking-wrapper .detail-booking-no-data {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-size: 16px;
+}
+
+.detail-booking-wrapper .detail-booking-back-button {
+  padding: 8px 16px;
+  border: 1px solid #1976d2;
+  background-color: white;
+  color: #1976d2;
+  font-size: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.detail-booking-wrapper .detail-booking-back-button:hover {
+  background-color: #e3f2fd;
+}
+
+@media (max-width: 768px) {
+  .detail-booking-wrapper .container {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .detail-booking-wrapper .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-booking-wrapper .customer-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-booking-wrapper .card {
+    padding: 20px;
+  }
+}

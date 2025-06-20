@@ -1,5 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Button, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Card, CardContent, Chip, Divider } from '@mui/material';
+import {
+  Button,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Snackbar,
+  Alert,
+  Box,
+  Paper,
+} from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PersonIcon from '@mui/icons-material/Person';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -8,6 +28,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import PaymentIcon from '@mui/icons-material/Payment';
 import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import StarIcon from '@mui/icons-material/Star';
+import EditIcon from '@mui/icons-material/Edit';
 import BookingForm from './BookingForm';
 import '../../css/OrderRoom.css';
 import api from '../../api/axios';
@@ -42,6 +63,17 @@ interface RoomType {
   }>;
 }
 
+interface Creator {
+  id: number;
+  name: string;
+  email: string;
+  email_verified_at: string | null;
+  role_id: number;
+  status: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 interface Customer {
   id: number;
   cccd: string;
@@ -72,6 +104,7 @@ interface Booking {
   created_at: string | null;
   updated_at: string | null;
   customer: Customer;
+  creator: Creator;
 }
 
 interface Room {
@@ -104,7 +137,14 @@ interface Room {
   guest_address?: string;
   guest_note?: string | null;
   stay_days?: number;
+  creator_name?: string;
   bookings?: Booking[];
+}
+
+interface ValidationErrors {
+  room_number?: string;
+  status?: string;
+  room_type_id?: string;
 }
 
 const OrderRoom: React.FC = () => {
@@ -117,83 +157,89 @@ const OrderRoom: React.FC = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [openDialog, setOpenDialog] = useState<boolean>(false);
   const [openBooking, setOpenBooking] = useState<boolean>(false);
-  const [bookingRoom, setBookingRoom] = useState<string>('');
+  const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
+  const [bookingRoom, setBookingRoom] = useState<{ roomNumber: string; roomId: number }>({ roomNumber: '', roomId: 0 });
+  const [editRoom, setEditRoom] = useState<Partial<Room>>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
 
   const fetchRooms = async () => {
-  try {
-    setLoading(true);
-    setError(null);
-    const response = await api.get('/rooms');
-    console.log(response.data);
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await api.get('/rooms');
+      console.log(response.data);
 
-    if (response.status === 200) {
-      const data: Room[] = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
-      const sanitizedData = data
-        .filter(room => 
-          room &&
-          room.id &&
-          room.room_number &&
-          room.room_type &&
-          ['available', 'booked', 'maintenance'].includes(room.status)
-        )
-        .map(room => {
-          // Chọn đặt phòng gần nhất nếu phòng có trạng thái 'booked' và có bookings
-          let latestBooking: Booking | null = null;
-          if (room.status === 'booked' && room.bookings && room.bookings.length > 0) {
-            latestBooking = room.bookings.reduce((latest: Booking | null, booking: Booking) => {
-              const latestDate = latest ? new Date(latest.check_in_date) : null;
-              const currentDate = booking.check_in_date ? new Date(booking.check_in_date) : null;
-              return (!latestDate || (currentDate && currentDate > latestDate)) ? booking : latest;
-            }, null);
-          }
+      if (response.status === 200) {
+        const data: Room[] = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+        const sanitizedData = data
+          .filter(room => 
+            room &&
+            room.id &&
+            room.room_number &&
+            room.room_type &&
+            ['available', 'booked', 'maintenance'].includes(room.status)
+          )
+          .map(room => {
+            let latestBooking: Booking | null = null;
+            if (room.status === 'booked' && room.bookings && room.bookings.length > 0) {
+              latestBooking = room.bookings.reduce((latest: Booking | null, booking: Booking) => {
+                const latestDate = latest ? new Date(latest.check_in_date) : null;
+                const currentDate = booking.check_in_date ? new Date(booking.check_in_date) : null;
+                return (!latestDate || (currentDate && currentDate > latestDate)) ? booking : latest;
+              }, null);
+            }
 
-          // Tính số ngày lưu trú
-          let stayDays = 0;
-          if (latestBooking && latestBooking.check_in_date && latestBooking.check_out_date) {
-            const checkIn = new Date(latestBooking.check_in_date);
-            const checkOut = new Date(latestBooking.check_out_date);
-            stayDays = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24));
-          }
+            let stayDays = 0;
+            if (latestBooking && latestBooking.check_in_date && latestBooking.check_out_date) {
+              const checkIn = new Date(latestBooking.check_in_date);
+              const checkOut = new Date(latestBooking.check_out_date);
+              stayDays = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24));
+            }
 
-          return {
-            ...room,
-            price: room.price || Number(room.room_type.base_rate) || 0,
-            booking_id: latestBooking?.id?.toString() || undefined,
-            customer_id: latestBooking?.customer_id || undefined,
-            created_by: latestBooking?.created_by || undefined,
-            check_in_date: latestBooking?.check_in_date || undefined,
-            check_out_date: latestBooking?.check_out_date || undefined,
-            booking_status: latestBooking?.status || undefined,
-            deposit_amount: latestBooking?.deposit_amount || undefined,
-            raw_total: latestBooking?.raw_total || undefined,
-            discount_amount: latestBooking?.discount_amount || undefined,
-            total_amount: latestBooking?.total_amount || undefined,
-            guest_name: latestBooking?.customer.name || undefined,
-            guest_phone: latestBooking?.customer.phone || undefined,
-            guest_email: latestBooking?.customer.email || undefined,
-            guest_country: latestBooking?.customer.nationality || undefined,
-            guest_id_number: latestBooking?.customer.cccd || undefined,
-            guest_gender: latestBooking?.customer.gender || undefined,
-            guest_date_of_birth: latestBooking?.customer.date_of_birth || undefined,
-            guest_address: latestBooking?.customer.address || undefined,
-            guest_note: latestBooking?.customer.note || undefined,
-            stay_days: stayDays || undefined,
-          };
-        });
-      setAllRooms(sanitizedData);
-      setFilteredRooms(sanitizedData);
-      setRooms(sanitizedData);
-    } else {
-      throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+            return {
+              ...room,
+              price: room.price || Number(room.room_type.base_rate) || 0,
+              booking_id: latestBooking?.id?.toString() || undefined,
+              customer_id: latestBooking?.customer_id || undefined,
+              created_by: latestBooking?.created_by || undefined,
+              check_in_date: latestBooking?.check_in_date || undefined,
+              check_out_date: latestBooking?.check_out_date || undefined,
+              booking_status: latestBooking?.status || undefined,
+              deposit_amount: latestBooking?.deposit_amount || undefined,
+              raw_total: latestBooking?.raw_total || undefined,
+              discount_amount: latestBooking?.discount_amount || undefined,
+              total_amount: latestBooking?.total_amount || undefined,
+              guest_name: latestBooking?.customer.name || undefined,
+              guest_phone: latestBooking?.customer.phone || undefined,
+              guest_email: latestBooking?.customer.email || undefined,
+              guest_country: latestBooking?.customer.nationality || undefined,
+              guest_id_number: latestBooking?.customer.cccd || undefined,
+              guest_gender: latestBooking?.customer.gender || undefined,
+              guest_date_of_birth: latestBooking?.customer.date_of_birth || undefined,
+              guest_address: latestBooking?.customer.address || undefined,
+              guest_note: latestBooking?.customer.note || undefined,
+              creator_name: latestBooking?.creator?.name || undefined,
+              stay_days: stayDays || undefined,
+            };
+          });
+        setAllRooms(sanitizedData);
+        setFilteredRooms(sanitizedData);
+        setRooms(sanitizedData);
+      } else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
+      setError(errorMessage);
+      setSnackbarOpen(true);
+      setSnackbarMessage(errorMessage);
+      console.error('Lỗi khi tải danh sách phòng:', errorMessage);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
-    setError(errorMessage);
-    console.error('Lỗi khi tải danh sách phòng:', errorMessage);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchRooms();
@@ -231,14 +277,112 @@ const OrderRoom: React.FC = () => {
     setSelectedRoom(null);
   };
 
-  const handleBookRoom = (roomNumber: string) => {
-    setBookingRoom(roomNumber);
+  const handleBookRoom = (room: Room) => {
+    setBookingRoom({ roomNumber: room.room_number, roomId: room.id });
     setOpenBooking(true);
   };
 
   const handleCloseBooking = () => {
     setOpenBooking(false);
-    setBookingRoom('');
+    setBookingRoom({ roomNumber: '', roomId: 0 });
+  };
+
+  const handleOpenEditDialog = (room: Room) => {
+    setEditRoom({
+      id: room.id,
+      room_number: room.room_number,
+      status: room.status,
+      room_type_id: room.room_type_id,
+    });
+    setOpenEditDialog(true);
+    setValidationErrors({});
+  };
+
+  const handleCloseEditDialog = () => {
+    setOpenEditDialog(false);
+    setEditRoom({});
+    setValidationErrors({});
+  };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditRoom((prev) => ({ ...prev, [name]: value }));
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[name as keyof ValidationErrors];
+      return newErrors;
+    });
+  };
+
+  const handleStatusChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+    const { name, value } = e.target;
+    if (name) {
+      setEditRoom((prev) => ({ ...prev, [name]: value }));
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name as keyof ValidationErrors];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateEditForm = (data: Partial<Room>): ValidationErrors => {
+    const errors: ValidationErrors = {};
+    if (!data.room_number?.trim()) {
+      errors.room_number = 'Số phòng không được để trống';
+    } else if (data.room_number.length > 20) {
+      errors.room_number = 'Số phòng không được vượt quá 20 ký tự';
+    }
+    if (!['available', 'maintenance'].includes(data.status || '')) {
+      errors.status = 'Trạng thái không hợp lệ';
+    }
+    if (!data.room_type_id || data.room_type_id <= 0) {
+      errors.room_type_id = 'Loại phòng không được để trống';
+    }
+    return errors;
+  };
+
+  const handleEditRoom = async () => {
+    if (!editRoom.id) return;
+
+    const errors = validateEditForm(editRoom);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const payload = {
+        room_number: editRoom.room_number?.trim(),
+        status: editRoom.status,
+        room_type_id: Number(editRoom.room_type_id),
+      };
+
+      const response = await api.put(`/rooms/${editRoom.id}`, payload);
+      if (response.status === 200) {
+        await fetchRooms();
+        setOpenEditDialog(false);
+        setEditRoom({});
+        setValidationErrors({});
+        setSnackbarMessage('Thông tin phòng đã được cập nhật thành công!');
+        setSnackbarOpen(true);
+      } else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật phòng';
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+      console.error('Lỗi khi cập nhật phòng:', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+    setSnackbarMessage('');
   };
 
   const getStatusText = (status: string) => {
@@ -261,14 +405,6 @@ const OrderRoom: React.FC = () => {
     });
   };
 
-  const formatTime = (dateString?: string) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   const InfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | number }) => (
     <div className="info-row">
@@ -280,11 +416,18 @@ const OrderRoom: React.FC = () => {
     </div>
   );
 
-  if (loading) {
+  // Simulated room types (replace with API call if available)
+  const roomTypes = [
+    { id: 1, name: 'Standard', code: 'STD' },
+    { id: 2, name: 'Deluxe', code: 'DLX' },
+    { id: 3, name: 'Suite', code: 'SUT' },
+  ];
+
+  if (loading && !snackbarOpen) {
     return <Typography align="center" sx={{ mt: 4 }}>Đang tải dữ liệu...</Typography>;
   }
 
-  if (error) {
+  if (error && !snackbarOpen) {
     return (
       <div style={{ textAlign: 'center', marginTop: '2rem' }}>
         <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>
@@ -344,8 +487,7 @@ const OrderRoom: React.FC = () => {
             <div
               key={room.id}
               className={`order-room-card order-room-status-${mapStatusToUI(room.status)}`}
-              onClick={() => mapStatusToUI(room.status) === 'trong' ? handleBookRoom(room.room_number) : null}
-              style={{ cursor: mapStatusToUI(room.status) === 'trong' ? 'pointer' : 'default' }}
+              onClick={() => handleViewDetails(room)}
             >
               <div className="order-room-left-section">
                 <div className="order-room-status-label">
@@ -370,19 +512,6 @@ const OrderRoom: React.FC = () => {
               </div>
 
               <div className="order-room-right-section">
-                <button
-                  className="order-room-view-button"
-                  title="Xem chi tiết"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleViewDetails(room);
-                  }}
-                >
-                  <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
-                  </svg>
-                </button>
-
                 <div className="order-room-content">
                   {mapStatusToUI(room.status) === 'trong' && (
                     <div className="order-room-status-text">Trống</div>
@@ -390,23 +519,19 @@ const OrderRoom: React.FC = () => {
                   {mapStatusToUI(room.status) === 'da_dat' && (
                     <>
                       <div className="order-room-date-time">
-                        {formatDate(room.check_in_date)}, {formatTime(room.check_in_date)}
+                        {formatDate(room.check_out_date)}
                       </div>
                       <div className="order-room-guest-name">{room.guest_name || 'N/A'}</div>
                       {room.stay_days && (
                         <div className="order-room-countdown">
-                          {String(room.stay_days).padStart(2, '0')} : 00 : 00
+                          {`--Còn ${room.stay_days} ngày--`}
                         </div>
                       )}
                     </>
                   )}
                   {mapStatusToUI(room.status) === 'dang_sua' && (
                     <>
-                      <div className="order-room-date-time">
-                        {formatDate(room.updated_at)}, {formatTime(room.updated_at)}
-                      </div>
                       <div className="order-room-status-text">Đang sửa chữa</div>
-                      <div className="order-room-countdown">00 : 00 : 00</div>
                     </>
                   )}
                 </div>
@@ -433,7 +558,6 @@ const OrderRoom: React.FC = () => {
         <DialogContent className="dialog-content-enhanced">
           {selectedRoom && (
             <div className="room-details-container">
-              {/* Room Information Card */}
               <Card className="info-card room-info-card">
                 <CardContent>
                   <div className="card-header">
@@ -481,7 +605,6 @@ const OrderRoom: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Booking Information Card - Only for booked rooms */}
               {mapStatusToUI(selectedRoom.status) === 'da_dat' && (
                 <Card className="info-card booking-info-card">
                   <CardContent>
@@ -493,8 +616,8 @@ const OrderRoom: React.FC = () => {
                     <div className="info-grid-enhanced">
                       <InfoRow 
                         icon={<PersonIcon />} 
-                        label="Người đặt" 
-                        value={selectedRoom.created_by || 'N/A'} 
+                        label="Người đặt phòng" 
+                        value={selectedRoom.creator_name || 'N/A'} 
                       />
                       <InfoRow 
                         icon={<CalendarTodayIcon />} 
@@ -518,31 +641,30 @@ const OrderRoom: React.FC = () => {
                         } 
                       />
                       <InfoRow 
-                          icon={<PaymentIcon />} 
-                          label="Tiền đặt cọc" 
-                          value={selectedRoom.deposit_amount ? `${Number(selectedRoom.deposit_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
-                        />
-                        <InfoRow 
-                          icon={<PaymentIcon />} 
-                          label="Tổng gốc" 
-                          value={selectedRoom.raw_total ? `${Number(selectedRoom.raw_total).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
-                        />
-                        <InfoRow 
-                          icon={<PaymentIcon />} 
-                          label="Tổng giảm" 
-                          value={selectedRoom.discount_amount ? `${Number(selectedRoom.discount_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
-                        />
-                        <InfoRow 
-                          icon={<PaymentIcon />} 
-                          label="Tổng giá cuối" 
-                          value={selectedRoom.total_amount ? `${Number(selectedRoom.total_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
-                        />
+                        icon={<PaymentIcon />} 
+                        label="Tiền đặt cọc" 
+                        value={selectedRoom.deposit_amount ? `${Number(selectedRoom.deposit_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<PaymentIcon />} 
+                        label="Tổng gốc" 
+                        value={selectedRoom.raw_total ? `${Number(selectedRoom.raw_total).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<PaymentIcon />} 
+                        label="Tổng giảm" 
+                        value={selectedRoom.discount_amount ? `${Number(selectedRoom.discount_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                      />
+                      <InfoRow 
+                        icon={<PaymentIcon />} 
+                        label="Tổng giá cuối" 
+                        value={selectedRoom.total_amount ? `${Number(selectedRoom.total_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                      />
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              {/* Guest Information Card - Only for booked rooms */}
               {mapStatusToUI(selectedRoom.status) === 'da_dat' && (
                 <Card className="info-card guest-info-card">
                   <CardContent>
@@ -570,11 +692,6 @@ const OrderRoom: React.FC = () => {
                           selectedRoom.guest_gender === 'female' ? 'Nữ' : 
                           selectedRoom.guest_gender === 'other' ? 'Không xác định' : 'N/A'
                         } 
-                      />
-                      <InfoRow 
-                        icon={<InfoIcon />} 
-                        label="Email" 
-                        value={selectedRoom.guest_email || 'N/A'} 
                       />
                       <InfoRow 
                         icon={<ContactPhoneIcon />} 
@@ -606,7 +723,6 @@ const OrderRoom: React.FC = () => {
                 </Card>
               )}
 
-              {/* Amenities Card */}
               <Card className="info-card amenities-card">
                 <CardContent>
                   <div className="card-header">
@@ -650,6 +766,25 @@ const OrderRoom: React.FC = () => {
         </DialogContent>
         
         <DialogActions className="dialog-actions-enhanced">
+          {selectedRoom && mapStatusToUI(selectedRoom.status) === 'trong' && (
+            <Button
+              onClick={() => handleBookRoom(selectedRoom)}
+              variant="contained"
+              sx={{ backgroundColor: '#4CAF50', color: 'white', mr: 1, '&:hover': { backgroundColor: '#2E7D32' } }}
+            >
+              Đặt phòng
+            </Button>
+          )}
+          {selectedRoom && (mapStatusToUI(selectedRoom.status) === 'trong' || mapStatusToUI(selectedRoom.status) === 'dang_sua') && (
+            <Button
+              onClick={() => handleOpenEditDialog(selectedRoom)}
+              variant="contained"
+              sx={{ backgroundColor: '#FACC15', color: '#2c3e50', mr: 1, '&:hover': { backgroundColor: '#E0B800' } }}
+              startIcon={<EditIcon />}
+            >
+              Sửa
+            </Button>
+          )}
           <Button 
             onClick={handleCloseDialog} 
             variant="contained" 
@@ -660,7 +795,135 @@ const OrderRoom: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      <BookingForm open={openBooking} onClose={handleCloseBooking} roomNumber={bookingRoom} />
+      <Dialog
+        open={openEditDialog}
+        onClose={handleCloseEditDialog}
+        maxWidth="sm"
+        fullWidth
+        className="room-edit-dialog"
+      >
+        <DialogTitle className="dialog-header">
+          <div className="dialog-title-content">
+            <EditIcon className="dialog-title-icon" />
+            <span>Sửa thông tin phòng {editRoom.room_number}</span>
+          </div>
+        </DialogTitle>
+        <DialogContent className="dialog-content-enhanced">
+          <Paper elevation={4} className="edit-form-container">
+            <Typography variant="h6" className="edit-form-title">
+              Cập nhật thông tin phòng
+            </Typography>
+            <Divider className="edit-form-divider" />
+            <Box className="edit-form-content" sx={{ mt: 3 }}>
+              <TextField
+                label="Số phòng"
+                name="room_number"
+                value={editRoom.room_number || ''}
+                onChange={handleEditChange}
+                fullWidth
+                variant="outlined"
+                className="edit-form-input"
+                error={!!validationErrors.room_number}
+                helperText={validationErrors.room_number}
+                InputProps={{
+                  startAdornment: (
+                    <HomeIcon sx={{ mr: 1, color: '#4a90e2' }} />
+                  ),
+                }}
+              />
+              <FormControl fullWidth className="edit-form-input" error={!!validationErrors.status}>
+                <InputLabel id="status-label">Trạng thái</InputLabel>
+                <Select
+                  labelId="status-label"
+                  name="status"
+                  value={editRoom.status || ''}
+                  onChange={handleStatusChange}
+                  label="Trạng thái"
+                  MenuProps={{
+                    PaperProps: {
+                      sx: { borderRadius: 2, boxShadow: 2 },
+                    },
+                  }}
+                >
+                  <MenuItem value="available">Trống</MenuItem>
+                  <MenuItem value="maintenance">Đang sửa</MenuItem>
+                </Select>
+                {validationErrors.status && (
+                  <Typography color="error" variant="caption">
+                    {validationErrors.status}
+                  </Typography>
+                )}
+              </FormControl>
+              <FormControl fullWidth className="edit-form-input" error={!!validationErrors.room_type_id}>
+                <InputLabel id="room-type-label">Loại phòng</InputLabel>
+                <Select
+                  labelId="room-type-label"
+                  name="room_type_id"
+                  value={editRoom.room_type_id || ''}
+                  onChange={handleStatusChange}
+                  label="Loại phòng"
+                  MenuProps={{
+                    PaperProps: {
+                      sx: { borderRadius: 2, boxShadow: 2 },
+                    },
+                  }}
+                >
+                  {roomTypes.map((type) => (
+                    <MenuItem key={type.id} value={type.id}>
+                      {type.name} ({type.code})
+                    </MenuItem>
+                  ))}
+                </Select>
+                {validationErrors.room_type_id && (
+                  <Typography color="error" variant="caption">
+                    {validationErrors.room_type_id}
+                  </Typography>
+                )}
+              </FormControl>
+            </Box>
+          </Paper>
+        </DialogContent>
+        <DialogActions className="dialog-actions-enhanced">
+          <Button
+            onClick={handleEditRoom}
+            variant="contained"
+            className="edit-form-save-button"
+            disabled={loading}
+          >
+            Lưu
+          </Button>
+          <Button
+            onClick={handleCloseEditDialog}
+            variant="contained"
+            className="edit-form-cancel-button"
+            disabled={loading}
+          >
+            Hủy
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <BookingForm 
+        open={openBooking} 
+        onClose={handleCloseBooking} 
+        roomNumber={bookingRoom.roomNumber} 
+        roomId={bookingRoom.roomId} 
+      />
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

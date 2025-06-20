@@ -1,5 +1,3 @@
-/* OrderRoom.css - Complete CSS file */
-
 .order-room-wrapper {
   width: 100%;
   max-width: 100%;
@@ -119,45 +117,45 @@
 
 .order-room-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
   margin-bottom: 20px;
 }
 
 /* Card Layout - Split design */
 .order-room-card {
   position: relative;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   background: white;
   transition: all 0.3s ease;
   overflow: hidden;
-  min-height: 120px;
+  min-height: 100px;
   display: flex;
   cursor: pointer;
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .order-room-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Left Section - Dark colors */
 .order-room-left-section {
-  width: 120px;
+  width: 80px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 15px;
+  padding: 10px;
   position: relative;
 }
 
 /* Right Section - Light colors */
 .order-room-right-section {
   flex: 1;
-  padding: 15px;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -193,20 +191,20 @@
 .order-room-status-label {
   background: rgba(255, 255, 255, 0.2);
   color: white;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 10px;
+  padding: 3px 6px;
+  border-radius: 10px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .order-room-number {
   color: white;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   text-align: center;
 }
 
@@ -219,36 +217,36 @@
 
 .order-room-icon svg,
 .order-room-icon .MuiSvgIcon-root {
-  font-size: 24px;
+  font-size: 18px;
 }
 
 /* Right section elements */
 .order-room-view-button {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
   background: rgba(255, 255, 255, 0.9);
   border: none;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .order-room-view-button:hover {
   background: white;
   transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
 
 .order-room-view-button svg {
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   color: #666;
 }
 
@@ -257,20 +255,20 @@
   flex-direction: column;
   justify-content: center;
   flex: 1;
-  padding-right: 40px;
+  padding-right: 30px;
 }
 
 .order-room-status-text {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   color: #2c3e50;
   text-align: center;
 }
 
 .order-room-date-time {
-  font-size: 14px;
+  font-size: 12px;
   color: #555;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   font-weight: 500;
 }
 
@@ -278,7 +276,7 @@
   font-size: 16px;
   font-weight: 600;
   color: #2c3e50;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -286,11 +284,13 @@
 
 .order-room-countdown {
   font-family: 'Courier New', monospace;
-  font-size: 14px;
+  font-size: 12px;
   color: #666;
   font-weight: 600;
   letter-spacing: 1px;
+  font-style: italic; /* Chữ nghiêng */
 }
+
 
 /* No data message */
 .order-room-no-data {
@@ -304,19 +304,21 @@
 }
 
 /* Dialog Styles */
-.room-details-dialog .MuiDialog-paper {
+.room-details-dialog .MuiDialog-paper,
+.room-edit-dialog .MuiDialog-paper {
   max-width: 1200px;
   width: 90%;
   max-height: 90vh;
 }
 
 .dialog-header {
-  background: linear-gradient(135deg, #1A2A44, #1A2A44);
-  color: white;
+  color: black;
   padding: 20px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background: linear-gradient(135deg, #3498db, #2c3e50);
+  color: white;
 }
 
 .dialog-title-content {
@@ -556,7 +558,128 @@
   background: linear-gradient(135deg, #c0392b, #a93226);
 }
 
+/* Edit Form Styles */
+.edit-form-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #ffffff, #f8f9fa);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.edit-form-title {
+  color: #2c3e50;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.edit-form-divider {
+  margin: 16px 0;
+  border-color: #e0e0e0;
+}
+
+.edit-form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.edit-form-input {
+  background: #fff;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.edit-form-input .MuiOutlinedInput-root {
+  border-radius: 8px;
+}
+
+.edit-form-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #3498db;
+}
+
+.edit-form-input .Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #3498db;
+  border-width: 2px;
+}
+
+.edit-form-input .MuiInputLabel-root {
+  color: #666;
+  font-weight: 500;
+}
+
+.edit-form-input .MuiInputLabel-root.Mui-focused {
+  color: #3498db;
+}
+
+.edit-form-save-button {
+  background: linear-gradient(135deg, #4CAF50, #2E7D32);
+  color: white;
+  padding: 10px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.edit-form-save-button:hover {
+  background: linear-gradient(135deg, #2E7D32, #1B5E20);
+  transform: translateY(-1px);
+}
+
+.edit-form-save-button.Mui-disabled {
+  background: #ccc;
+  color: #666;
+}
+
+.edit-form-cancel-button {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  padding: 10px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.edit-form-cancel-button:hover {
+  background: linear-gradient(135deg, #c0392b, #a93226);
+  transform: translateY(-1px);
+}
+
+.edit-form-cancel-button.Mui-disabled {
+  background: #ccc;
+  color: #666;
+}
+
+/* Edit Dialog Specific Styles */
+.room-edit-dialog .MuiDialog-paper {
+  max-width: 600px;
+  width: 90%;
+}
+
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .order-room-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .order-room-card {
+    min-height: 90px;
+  }
+  
+  .order-room-left-section {
+    width: 70px;
+    padding: 8px;
+  }
+  
+  .order-room-number {
+    font-size: 18px;
+  }
+  
+  .order-room-icon svg,
+  .order-room-icon .MuiSvgIcon-root {
+    font-size: 16px;
+  }
+}
+
 @media (max-width: 768px) {
   .order-room-wrapper {
     padding: 15px;
@@ -567,21 +690,26 @@
   }
   
   .order-room-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
   
   .order-room-card {
-    min-height: 100px;
+    min-height: 80px;
   }
   
   .order-room-left-section {
-    width: 100px;
-    padding: 10px;
+    width: 60px;
+    padding: 6px;
   }
   
   .order-room-number {
-    font-size: 20px;
+    font-size: 16px;
+  }
+  
+  .order-room-icon svg,
+  .order-room-icon .MuiSvgIcon-root {
+    font-size: 14px;
   }
   
   .info-grid-enhanced {
@@ -592,7 +720,8 @@
     grid-template-columns: 1fr;
   }
   
-  .room-details-dialog .MuiDialog-paper {
+  .room-details-dialog .MuiDialog-paper,
+  .room-edit-dialog .MuiDialog-paper {
     width: 95%;
     margin: 16px;
   }
@@ -607,11 +736,19 @@
     width: 100%;
   }
   
+  .order-room-grid {
+    grid-template-columns: 1fr;
+  }
+  
   .dialog-header {
     padding: 16px;
   }
   
   .dialog-content-enhanced {
+    padding: 16px;
+  }
+  
+  .edit-form-container {
     padding: 16px;
   }
 }
@@ -656,7 +793,8 @@
 /* Focus styles for accessibility */
 .order-room-card:focus,
 .order-room-view-button:focus,
-.order-room-filter:focus {
+.order-room-filter:focus,
+.edit-form-input:focus-within {
   outline: 2px solid #3498db;
   outline-offset: 2px;
 }
