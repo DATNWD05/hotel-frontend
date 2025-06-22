@@ -346,40 +346,15 @@ const BookingForm: React.FC<BookingFormProps> = ({ open, onClose, roomNumber, ro
                 size="small"
               />
             </div>
+            
             <div className="form-group">
               <TextField
-                name="raw_total"
-                label="Tổng gốc"
-                type="number"
-                required
-                value={bookingData.raw_total}
-                onChange={handleBookingChange}
-                InputProps={{ endAdornment: <span className="currency">VND</span> }}
-                className="booking-textfield"
-                size="small"
-              />
-            </div>
-            <div className="form-group">
-              <TextField
-                name="discount_amount"
-                label="Tiền giảm giá"
-                type="number"
-                value={bookingData.discount_amount}
-                onChange={handleBookingChange}
-                InputProps={{ endAdornment: <span className="currency">VND</span> }}
-                className="booking-textfield"
-                size="small"
-              />
-            </div>
-            <div className="form-group">
-              <TextField
-                name="total_amount"
-                label="Tổng giá cuối"
-                type="number"
+                label="Nội Dung"
+                type="name"
                 required
                 value={bookingData.total_amount}
                 onChange={handleBookingChange}
-                InputProps={{ endAdornment: <span className="currency">VND</span> }}
+                InputProps={{ endAdornment: <span className="currency"></span> }}
                 className="booking-textfield"
                 size="small"
               />

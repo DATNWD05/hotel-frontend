@@ -4,55 +4,79 @@
   margin: 0 auto;
   padding: 20px;
   background: #f0f2f5;
+  font-family: 'Arial', sans-serif;
 }
 
-.detail-booking-wrapper .detail-booking-title {
+.detail-booking-title {
   margin-bottom: 30px;
 }
 
-.detail-booking-wrapper .detail-booking-header-content {
+.detail-booking-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.detail-booking-wrapper .detail-booking-header-content h2 {
+.detail-booking-header-content h2 {
   font-size: 24px;
   color: #2c3e50;
+  margin: 0;
 }
 
-.detail-booking-wrapper .container {
-  max-width: 12000px;
+.card-group {
+  max-width: 100%;
+  margin: 0 auto;
+  margin-bottom: 30px;
+}
+
+.top-section {
+  margin-bottom: 30px;
+}
+
+.bottom-section {
+  margin-top: 30px;
+}
+
+.container {
+  max-width: 100%;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 30px;
-  margin-bottom: 30px;
 }
 
-.detail-booking-wrapper .card {
+.card {
   background: white;
   border-radius: 16px;
-  padding: 30px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  padding: 20px 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  position: relative;
 }
 
-.detail-booking-wrapper .card:hover {
+.card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
-.detail-booking-wrapper .card-header {
+.card-header {
   display: flex;
   align-items: center;
-  margin-bottom: 25px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid #f0f0f0;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0e0e0;
 }
 
-.detail-booking-wrapper .card-icon {
+.amenities-header {
+  display: flex;
+  align-items: center;
+  margin: 10px 0 5px;
+  padding: 10px;
+  border-bottom: 1px solid #d0d0d0;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.card-icon {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -64,36 +88,46 @@
   color: white;
 }
 
-.detail-booking-wrapper .room-info .card-icon {
+.room-info .card-icon {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.detail-booking-wrapper .booking-info .card-icon {
+.booking-info .card-icon {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
-.detail-booking-wrapper .customer-info .card-icon {
+.services-info .card-icon {
+  background: linear-gradient(135deg, #ff9a8b 0%, #ff6a88 100%);
+}
+
+.customer-info .card-icon {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 }
 
-.detail-booking-wrapper .card-title {
+.amenities-header .card-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.card-title {
   font-size: 20px;
   font-weight: 600;
   color: #2c3e50;
+  margin: 0;
 }
 
-.detail-booking-wrapper .info-grid {
+.info-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
 }
 
-.detail-booking-wrapper .info-item {
+.info-item {
   display: flex;
   flex-direction: column;
 }
 
-.detail-booking-wrapper .info-label {
+.info-label {
   font-size: 12px;
   font-weight: 500;
   color: #7f8c8d;
@@ -102,7 +136,7 @@
   margin-bottom: 5px;
 }
 
-.detail-booking-wrapper .info-value {
+.info-value {
   font-size: 15px;
   font-weight: 600;
   color: #2c3e50;
@@ -110,9 +144,10 @@
   background: #f8f9fa;
   border-radius: 8px;
   border-left: 4px solid #3498db;
+  word-break: break-word;
 }
 
-.detail-booking-wrapper .status-badge {
+.status-badge {
   display: inline-block;
   padding: 6px 12px;
   border-radius: 20px;
@@ -121,55 +156,73 @@
   text-transform: uppercase;
 }
 
-.detail-booking-wrapper .status-new {
+.status-new {
   background: #d4edda;
   color: #155724;
 }
 
-.detail-booking-wrapper .status-pending {
+.status-pending {
   background: #fff3cd;
   color: #856404;
 }
 
-.detail-booking-wrapper .status-vip {
+.status-vip {
   background: #f8d7da;
   color: #721c24;
 }
 
-.detail-booking-wrapper .price-highlight {
+.price-highlight {
   font-size: 18px;
   font-weight: 700;
   color: #e74c3c;
 }
 
-.detail-booking-wrapper .customer-card {
+.customer-card {
   grid-column: 1 / -1;
-  margin-top: 10px;
 }
 
-.detail-booking-wrapper .customer-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-.detail-booking-wrapper .detail-booking-code {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 15px;
-  border-radius: 12px;
-  text-align: center;
+.table-container {
+  overflow-x: auto;
   margin-bottom: 20px;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 1px;
 }
 
-.detail-booking-wrapper .edit-button {
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.info-table th,
+.info-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  min-width: 120px;
+}
+
+.info-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  color: #2c3e50;
+  white-space: nowrap;
+}
+
+.info-table td {
+  background-color: #fff;
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
   margin-top: 20px;
+}
+
+.add-button {
   padding: 8px 16px;
-  background: #ebb70e;
-  color: rgb(238, 17, 17);
+  background: #27ae60;
+  color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -178,11 +231,61 @@
   transition: background 0.2s ease;
 }
 
-.detail-booking-wrapper .edit-button:hover {
+.add-button:hover {
+  background: #219653;
+}
+
+.edit-button {
+  padding: 8px 16px;
+  background: #ebb70e;
+  color: #2c3e50;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.edit-button:hover {
   background: #2980b9;
 }
 
-.detail-booking-wrapper .detail-booking-loading-container {
+.view-amenities-button {
+  padding: 6px 12px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.2s ease;
+}
+
+.view-amenities-button:hover {
+  background: #2980b9;
+}
+
+.amenities-section {
+  padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+.amenities-section.active {
+  max-height: 300px; /* Điều chỉnh độ cao tối đa tùy ý */
+}
+
+.amenities-table {
+  margin-top: 10px;
+}
+
+.detail-booking-loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -190,7 +293,7 @@
   padding: 20px;
 }
 
-.detail-booking-wrapper .detail-booking-error-message {
+.detail-booking-error-message {
   text-align: center;
   padding: 10px;
   color: #d32f2f;
@@ -200,14 +303,14 @@
   margin-bottom: 20px;
 }
 
-.detail-booking-wrapper .detail-booking-no-data {
+.detail-booking-no-data {
   text-align: center;
   padding: 20px;
   color: #666;
   font-size: 16px;
 }
 
-.detail-booking-wrapper .detail-booking-back-button {
+.detail-booking-back-button {
   padding: 8px 16px;
   border: 1px solid #1976d2;
   background-color: white;
@@ -218,25 +321,43 @@
   transition: background-color 0.2s ease;
 }
 
-.detail-booking-wrapper .detail-booking-back-button:hover {
+.detail-booking-back-button:hover {
   background-color: #e3f2fd;
 }
 
 @media (max-width: 768px) {
-  .detail-booking-wrapper .container {
+  .container {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
-  .detail-booking-wrapper .info-grid {
+
+  .info-grid {
     grid-template-columns: 1fr;
   }
-  
-  .detail-booking-wrapper .customer-grid {
-    grid-template-columns: 1fr;
+
+  .card {
+    padding: 15px 20px;
   }
-  
-  .detail-booking-wrapper .card {
-    padding: 20px;
+
+  .info-table th,
+  .info-table td {
+    padding: 8px;
+    font-size: 14px;
+    min-width: 100px;
+  }
+
+  .button-group {
+    flex-direction: column;
+  }
+
+  .add-button,
+  .edit-button,
+  .view-amenities-button {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .amenities-section {
+    padding: 10px;
   }
 }

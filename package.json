@@ -13,10 +13,9 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
+    "@hookform/resolvers": "^5.1.1",
     "@iconify/react": "^6.0.0",
-    "@mui/icons-material": "^7.1.1",
-    "@mui/material": "^7.1.1",
-    "@mui/x-data-grid": "^8.4.0",
+    "@mui/icons-material": "^7.1.2",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
     "bootstrap": "^5.3.6",
@@ -32,8 +31,9 @@
     "react": "^19.1.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.1.0",
-    "react-hook-form": "^7.56.4",
-    "react-router-dom": "^7.6.0"
+    "react-hook-form": "^7.58.1",
+    "react-router-dom": "^7.6.0",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

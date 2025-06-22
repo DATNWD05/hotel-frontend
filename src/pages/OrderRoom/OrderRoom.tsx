@@ -19,6 +19,7 @@ import {
   Alert,
   Box,
   Paper,
+  SelectChangeEvent,
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PersonIcon from '@mui/icons-material/Person';
@@ -61,6 +62,12 @@ interface RoomType {
       quantity: number;
     };
   }>;
+}
+
+interface SimpleRoomType {
+  id: number;
+  name: string;
+  code: string;
 }
 
 interface Creator {
@@ -163,6 +170,9 @@ const OrderRoom: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [roomTypes, setRoomTypes] = useState<SimpleRoomType[]>([]);
+  const [roomTypesLoading, setRoomTypesLoading] = useState<boolean>(true);
+  const [roomTypesError, setRoomTypesError] = useState<string | null>(null);
 
   const fetchRooms = async () => {
     try {
@@ -241,8 +251,37 @@ const OrderRoom: React.FC = () => {
     }
   };
 
+  const fetchRoomTypes = async () => {
+    try {
+      setRoomTypesLoading(true);
+      setRoomTypesError(null);
+      const response = await api.get('/room-types');
+
+      if (response.status === 200) {
+        const data: RoomType[] = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+        const simplifiedRoomTypes: SimpleRoomType[] = data.map((rt) => ({
+          id: rt.id,
+          name: rt.name,
+          code: rt.code,
+        }));
+        setRoomTypes(simplifiedRoomTypes);
+      } else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải danh sách loại phòng';
+      setRoomTypesError(errorMessage);
+      setSnackbarOpen(true);
+      setSnackbarMessage(errorMessage);
+      console.error('Lỗi khi tải danh sách loại phòng:', errorMessage);
+    } finally {
+      setRoomTypesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchRooms();
+    fetchRoomTypes();
   }, []);
 
   useEffect(() => {
@@ -314,10 +353,13 @@ const OrderRoom: React.FC = () => {
     });
   };
 
-  const handleStatusChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
-    const { name, value } = e.target;
+  const handleStatusChange = (event: SelectChangeEvent<string | number>) => {
+    const { name, value } = event.target;
     if (name) {
-      setEditRoom((prev) => ({ ...prev, [name]: value }));
+      setEditRoom((prev) => ({
+        ...prev,
+        [name]: name === 'room_type_id' ? Number(value) : value,
+      }));
       setValidationErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[name as keyof ValidationErrors];
@@ -336,8 +378,8 @@ const OrderRoom: React.FC = () => {
     if (!['available', 'maintenance'].includes(data.status || '')) {
       errors.status = 'Trạng thái không hợp lệ';
     }
-    if (!data.room_type_id || data.room_type_id <= 0) {
-      errors.room_type_id = 'Loại phòng không được để trống';
+    if (!data.room_type_id || data.room_type_id <= 0 || !roomTypes.some((rt) => rt.id === data.room_type_id)) {
+      errors.room_type_id = 'Loại phòng không hợp lệ';
     }
     return errors;
   };
@@ -385,7 +427,8 @@ const OrderRoom: React.FC = () => {
     setSnackbarMessage('');
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status?: string) => {
+    if (!status) return 'Không xác định';
     const uiStatus = mapStatusToUI(status);
     switch (uiStatus) {
       case 'trong': return 'Trống';
@@ -405,7 +448,6 @@ const OrderRoom: React.FC = () => {
     });
   };
 
-
   const InfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | number }) => (
     <div className="info-row">
       <div className="info-row-icon">{icon}</div>
@@ -416,22 +458,15 @@ const OrderRoom: React.FC = () => {
     </div>
   );
 
-  // Simulated room types (replace with API call if available)
-  const roomTypes = [
-    { id: 1, name: 'Standard', code: 'STD' },
-    { id: 2, name: 'Deluxe', code: 'DLX' },
-    { id: 3, name: 'Suite', code: 'SUT' },
-  ];
-
-  if (loading && !snackbarOpen) {
+  if (loading || roomTypesLoading) {
     return <Typography align="center" sx={{ mt: 4 }}>Đang tải dữ liệu...</Typography>;
   }
 
-  if (error && !snackbarOpen) {
+  if (error || roomTypesError) {
     return (
       <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-        <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>
-        <Button variant="contained" onClick={fetchRooms}>Thử lại</Button>
+        <Typography color="error" sx={{ mb: 2 }}>{error || roomTypesError}</Typography>
+        <Button variant="contained" onClick={() => { fetchRooms(); fetchRoomTypes(); }}>Thử lại</Button>
       </div>
     );
   }
@@ -445,7 +480,6 @@ const OrderRoom: React.FC = () => {
           </h2>
         </div>
       </div>
-
       <div className="order-room-filter-bar">
         <Button
           className={`order-room-filter-tat_ca ${statusFilter === 'all' ? 'active' : ''}`}
@@ -551,12 +585,12 @@ const OrderRoom: React.FC = () => {
         <DialogTitle className="dialog-header">
           <div className="dialog-title-content">
             <HomeIcon className="dialog-title-icon" />
-            <span>Chi tiết phòng {selectedRoom?.room_number}</span>
+            <span>Chi tiết phòng {selectedRoom?.room_number ?? 'N/A'}</span>
           </div>
         </DialogTitle>
         
         <DialogContent className="dialog-content-enhanced">
-          {selectedRoom && (
+          {selectedRoom ? (
             <div className="room-details-container">
               <Card className="info-card room-info-card">
                 <CardContent>
@@ -617,17 +651,17 @@ const OrderRoom: React.FC = () => {
                       <InfoRow 
                         icon={<PersonIcon />} 
                         label="Người đặt phòng" 
-                        value={selectedRoom.creator_name || 'N/A'} 
+                        value={selectedRoom.creator_name ?? 'N/A'} 
                       />
                       <InfoRow 
                         icon={<CalendarTodayIcon />} 
                         label="Ngày nhận phòng" 
-                        value={formatDate(selectedRoom.check_in_date) || 'N/A'} 
+                        value={formatDate(selectedRoom.check_in_date)} 
                       />
                       <InfoRow 
                         icon={<CalendarTodayIcon />} 
                         label="Ngày trả phòng" 
-                        value={formatDate(selectedRoom.check_out_date) || 'N/A'} 
+                        value={formatDate(selectedRoom.check_out_date)} 
                       />
                       <InfoRow 
                         icon={<InfoIcon />} 
@@ -677,12 +711,12 @@ const OrderRoom: React.FC = () => {
                       <InfoRow 
                         icon={<InfoIcon />} 
                         label="Số CCCD" 
-                        value={selectedRoom.guest_id_number || 'N/A'} 
+                        value={selectedRoom.guest_id_number ?? 'N/A'} 
                       />
                       <InfoRow 
                         icon={<PersonIcon />} 
                         label="Tên" 
-                        value={selectedRoom.guest_name || 'N/A'} 
+                        value={selectedRoom.guest_name ?? 'N/A'} 
                       />
                       <InfoRow 
                         icon={<InfoIcon />} 
@@ -696,27 +730,27 @@ const OrderRoom: React.FC = () => {
                       <InfoRow 
                         icon={<ContactPhoneIcon />} 
                         label="Số điện thoại" 
-                        value={selectedRoom.guest_phone || 'N/A'} 
+                        value={selectedRoom.guest_phone ?? 'N/A'} 
                       />
                       <InfoRow 
                         icon={<CalendarTodayIcon />} 
                         label="Ngày sinh" 
-                        value={formatDate(selectedRoom.guest_date_of_birth) || 'N/A'} 
+                        value={formatDate(selectedRoom.guest_date_of_birth)} 
                       />
                       <InfoRow 
                         icon={<InfoIcon />} 
                         label="Quốc tịch" 
-                        value={selectedRoom.guest_country || 'N/A'} 
+                        value={selectedRoom.guest_country ?? 'N/A'} 
                       />
                       <InfoRow 
                         icon={<HomeIcon />} 
                         label="Địa chỉ" 
-                        value={selectedRoom.guest_address || 'N/A'} 
+                        value={selectedRoom.guest_address ?? 'N/A'} 
                       />
                       <InfoRow 
                         icon={<InfoIcon />} 
                         label="Ghi chú" 
-                        value={selectedRoom.guest_note || 'N/A'} 
+                        value={selectedRoom.guest_note ?? 'N/A'} 
                       />
                     </div>
                   </CardContent>
@@ -727,11 +761,11 @@ const OrderRoom: React.FC = () => {
                 <CardContent>
                   <div className="card-header">
                     <StarIcon className="card-icon" />
-                    <Typography variant="h6" className="card-title">Tiện nghi</Typography>
+                    <Typography variant="h6" className="card-title">Tiện ích</Typography>
                   </div>
                   <Divider className="card-divider" />
                   <div className="amenities-grid">
-                    {selectedRoom.room_type.amenities && selectedRoom.room_type.amenities.length > 0 ? (
+                    {selectedRoom?.room_type?.amenities && selectedRoom.room_type.amenities.length > 0 ? (
                       selectedRoom.room_type.amenities.map((amenity) => (
                         <div key={amenity.id} className="amenity-item">
                           <div className="amenity-header">
@@ -755,18 +789,20 @@ const OrderRoom: React.FC = () => {
                       ))
                     ) : (
                       <div className="no-amenities">
-                        <Typography>Không có tiện nghi nào.</Typography>
+                        <Typography>Không có tiện ích nào.</Typography>
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
             </div>
+          ) : (
+            <Typography align="center" sx={{ mt: 4 }}>Không có phòng được chọn.</Typography>
           )}
         </DialogContent>
         
         <DialogActions className="dialog-actions-enhanced">
-          {selectedRoom && mapStatusToUI(selectedRoom.status) === 'trong' && (
+          {selectedRoom?.status === 'available' && (
             <Button
               onClick={() => handleBookRoom(selectedRoom)}
               variant="contained"
@@ -775,7 +811,7 @@ const OrderRoom: React.FC = () => {
               Đặt phòng
             </Button>
           )}
-          {selectedRoom && (mapStatusToUI(selectedRoom.status) === 'trong' || mapStatusToUI(selectedRoom.status) === 'dang_sua') && (
+          {selectedRoom && (selectedRoom.status === 'available' || selectedRoom.status === 'maintenance') && (
             <Button
               onClick={() => handleOpenEditDialog(selectedRoom)}
               variant="contained"
@@ -867,6 +903,7 @@ const OrderRoom: React.FC = () => {
                       sx: { borderRadius: 2, boxShadow: 2 },
                     },
                   }}
+                  disabled={roomTypesLoading || !!roomTypesError}
                 >
                   {roomTypes.map((type) => (
                     <MenuItem key={type.id} value={type.id}>
@@ -888,7 +925,7 @@ const OrderRoom: React.FC = () => {
             onClick={handleEditRoom}
             variant="contained"
             className="edit-form-save-button"
-            disabled={loading}
+            disabled={loading || roomTypesLoading}
           >
             Lưu
           </Button>
@@ -896,7 +933,7 @@ const OrderRoom: React.FC = () => {
             onClick={handleCloseEditDialog}
             variant="contained"
             className="edit-form-cancel-button"
-            disabled={loading}
+            disabled={loading || roomTypesLoading}
           >
             Hủy
           </Button>
