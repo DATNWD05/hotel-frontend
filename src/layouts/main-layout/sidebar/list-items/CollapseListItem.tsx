@@ -1,4 +1,5 @@
-import { useState } from 'react';
+// src/layouts/main-layout/sidebar/list-items/CollapseListItem.tsx
+import React, { useState } from 'react';
 import { MenuItem } from '../../../../routes/sitemap';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
@@ -9,11 +10,22 @@ import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
 import IconifyIcon from '../../../../components/base/IconifyIcon';
 
-const CollapseListItem = ({ subheader, active, items, icon }: MenuItem) => {
-  const [open, setOpen] = useState(false);
+interface CollapseListItemProps extends MenuItem {
+  active: boolean;
+  collapsed: boolean;
+}
+
+export default function CollapseListItem({
+  subheader,
+  active,
+  items,
+  icon,
+  collapsed,
+}: CollapseListItemProps) {
+  const [open, setOpen] = useState(active);
 
   const handleClick = () => {
-    setOpen(!open);
+    if (!collapsed) setOpen((prev) => !prev);
   };
 
   return (
@@ -21,84 +33,109 @@ const CollapseListItem = ({ subheader, active, items, icon }: MenuItem) => {
       <ListItemButton
         onClick={handleClick}
         sx={{
+          display: 'flex',
+          alignItems: 'center',
           py: 1.5,
-          px: 3,
+          px: collapsed ? 1 : 2,
           borderRadius: 2,
-          bgcolor: active ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
+          bgcolor: active ? 'rgba(255,215,0,0.2)' : 'transparent',
           color: '#fff',
           '&:hover': {
-            bgcolor: 'rgba(255, 255, 255, 0.1)',
+            bgcolor: 'rgba(255,255,255,0.1)',
             transform: 'translateX(4px)',
             transition: 'all 0.2s ease',
+          },
+          // Icon
+          '& .MuiListItemIcon-root': {
+            minWidth: 0,
+            justifyContent: 'center',
+            color: active ? '#FFD700' : '#fff',
+            '& svg': {
+              fontSize: '1.8rem', // tăng kích thước icon
+              transition: 'transform 0.1s ease',
+            },
+            '&:hover svg': {
+              transform: 'scale(1.1)',
+            },
+          },
+          // Header text
+          '& .MuiListItemText-root': {
+            ml: collapsed ? 0 : 2,
+            '& .MuiTypography-body1': {
+              fontSize: '1rem',                // tăng cỡ chữ
+              color: active ? '#FFD700' : '#fff',// chắc chắn màu vàng khi active
+              fontWeight: active ? 600 : 400,
+              lineHeight: 1.2,
+            },
           },
         }}
       >
         <ListItemIcon>
-          {icon && (
-            <IconifyIcon
-              icon={icon}
-              sx={{
-                color: active ? '#FFD700' : '#fff',
-              }}
-            />
-          )}
+          {icon && <IconifyIcon icon={icon} />}
         </ListItemIcon>
-        <ListItemText
-          primary={subheader}
-          sx={{
-            '& .MuiListItemText-primary': {
-              fontWeight: active ? 600 : 400,
-              fontSize: '0.95rem',
+
+        {!collapsed && (
+          <ListItemText
+            primary={subheader}
+            primaryTypographyProps={{
+              variant: 'body1',
+            }}
+          />
+        )}
+
+        {!collapsed && (
+          <IconifyIcon
+            icon="iconamoon:arrow-down-2-duotone"
+            sx={{
               color: active ? '#FFD700' : '#fff',
-            },
-          }}
-        />
-        <IconifyIcon
-          icon="iconamoon:arrow-down-2-duotone"
-          sx={{
-            color: active ? '#FFD700' : '#fff',
-            transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.3s ease',
-          }}
-        />
+              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
+              ml: 'auto',
+              fontSize: '1.3rem', // tăng kích thước mũi tên
+              transition: 'transform 0.3s ease',
+            }}
+          />
+        )}
       </ListItemButton>
 
-      <Collapse in={open} timeout="auto" unmountOnExit>
-        <List component="div" disablePadding>
-          {items?.map((route) => (
-            <ListItemButton
-              key={route.pathName}
-              component={Link}
-              href={route.path}
-              sx={{
-                ml: 4,
-                py: 1,
-                borderRadius: 2,
-                bgcolor: route.active ? 'rgba(255, 215, 0, 0.15)' : 'transparent',
-                color: '#fff',
-                '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.1)',
-                  transform: 'translateX(4px)',
-                },
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <ListItemText
-                primary={route.name}
+      {!collapsed && (
+        <Collapse in={open} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {items?.map((route) => (
+              <ListItemButton
+                key={route.pathName}
+                component={Link}
+                href={route.path}
                 sx={{
-                  '& .MuiListItemText-primary': {
-                    fontSize: '0.9rem',
-                    fontWeight: route.active ? 500 : 400,
-                    color: route.active ? '#FFD700' : '#fff',
+                  ml: 2,
+                  py: 1,
+                  borderRadius: 2,
+                  bgcolor: route.active ? 'rgba(255,215,0,0.15)' : 'transparent',
+                  color: '#fff',
+                  '&:hover': {
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    transform: 'translateX(4px)',
+                  },
+                  transition: 'all 0.2s ease',
+                  '& .MuiListItemText-root': {
+                    '& .MuiTypography-body1': {
+                      fontSize: '1rem',
+                      fontWeight: route.active ? 500 : 400,
+                      color: route.active ? '#FFD700' : '#fff',
+                    },
                   },
                 }}
-              />
-            </ListItemButton>
-          ))}
-        </List>
-      </Collapse>
+              >
+                <ListItemText
+                  primary={route.name}
+                  primaryTypographyProps={{
+                    variant: 'body1',
+                  }}
+                />
+              </ListItemButton>
+            ))}
+          </List>
+        </Collapse>
+      )}
     </Box>
   );
-};
-
-export default CollapseListItem;
+}

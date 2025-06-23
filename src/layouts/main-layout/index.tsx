@@ -1,44 +1,34 @@
-import { useState } from "react";
-import type { PropsWithChildren } from "react";
-import Stack from "@mui/material/Stack";
-import Sidebar from "./sidebar";
-import Topbar from "./topbar";
-// import Footer from "./footer";
-import { Box } from "@mui/material";
-import { Outlet } from "react-router-dom";
+import React, { useState } from 'react';
+import type { PropsWithChildren } from 'react';
+import { Box } from '@mui/material';
+import Sidebar from './sidebar';
+import Topbar from './topbar';
+import { Outlet } from 'react-router-dom';
 
-//Tổng hợp của thanh menu
-
-const MainLayout = ({ children }: PropsWithChildren) => {
+export default function MainLayout({ children }: PropsWithChildren) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+
+  const handleToggleSidebar = () => {
+    setCollapsed(prev => !prev);
+  };
 
   return (
     <Box sx={{ display: 'flex', width: '100vw', minHeight: '100vh' }}>
-    <Sidebar
-      mobileOpen={mobileOpen}
-      setMobileOpen={setMobileOpen}
-      setIsClosing={setIsClosing}
-    />
-
-    <Stack
-      component="main"                                      
-      direction="column"
-      flexGrow={1}
-      width="100%"
-      px={3}
-    >
-      <Topbar
-        isClosing={isClosing}
+      {/* Bạn không còn cần isClosing nữa */}
+      <Sidebar
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
+        collapsed={collapsed}
       />
-      <Outlet />
-      {children}
-      {/* <Footer /> */}
-    </Stack>
-  </Box>
-  );
-};
 
-export default MainLayout;
+      <Box component="main" sx={{ flexGrow: 1, overflow: 'auto', bgcolor: 'grey.100' }}>
+        <Topbar onToggleSidebar={handleToggleSidebar} />
+        <Box sx={{ p: 3 }}>
+          <Outlet />
+          {children}
+        </Box>
+      </Box>
+    </Box>
+  );
+}

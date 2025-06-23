@@ -122,7 +122,7 @@ const RoomList: React.FC = () => {
           sx={{ minWidth: 120 }}
         >
           <MenuItem value="all">Tất cả</MenuItem>
-          {roomTypes.map(rt => (
+          {roomTypes.map(rt => (    
             <MenuItem key={rt.id} value={rt.id}>{rt.name}</MenuItem>
           ))}
         </Select>
