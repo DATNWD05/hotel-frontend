@@ -11,10 +11,16 @@ const ListItem = ({ subheader, icon, path, active }: MenuItem) => {
       component={Link}
       href={path}
       sx={{
-        mb: 2.5,
-        bgcolor: active ? 'primary.main' : null,
+        mb: 1,
+        py: 1.5,
+        px: 3,
+        borderRadius: 2,
+        bgcolor: active ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
+        color: '#fff',
         '&:hover': {
-          bgcolor: active ? 'primary.main' : null,
+          bgcolor: 'rgba(255, 255, 255, 0.1)',
+          transform: 'translateX(4px)',
+          transition: 'all 0.2s ease',
         },
       }}
     >
@@ -24,7 +30,7 @@ const ListItem = ({ subheader, icon, path, active }: MenuItem) => {
             icon={icon}
             fontSize="h4.fontSize"
             sx={{
-              color: active ? 'info.light' : null,
+              color: active ? '#FFD700' : '#fff',
             }}
           />
         )}
@@ -33,7 +39,9 @@ const ListItem = ({ subheader, icon, path, active }: MenuItem) => {
         primary={subheader}
         sx={{
           '& .MuiListItemText-primary': {
-            color: active ? 'info.light' : null,
+            fontWeight: active ? 600 : 400,
+            fontSize: '0.95rem',
+            color: active ? '#FFD700' : '#fff',
           },
         }}
       />

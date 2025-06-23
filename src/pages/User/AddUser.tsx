@@ -13,7 +13,7 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
 import axios from "axios";
 import "../../css/User.css";
@@ -73,18 +73,17 @@ const AddUser: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
 
   useEffect(() => {
-  api.get("/departments")
-    .then((res) => setDepartments(res.data.data))
-    .catch(() => setError("Không thể tải danh sách phòng ban"));
+    api.get("/departments")
+      .then((res) => setDepartments(res.data.data))
+      .catch(() => setError("Không thể tải danh sách phòng ban"));
 
-  api.get("/role")
-    .then((res) => {
-      console.log("Role API response:", res.data);
-      setRoles(res.data.roles);
-    })
-    .catch(() => setError("Không thể tải danh sách vai trò"));
-}, []);
-
+    api.get("/role")
+      .then((res) => {
+        console.log("Role API response:", res.data);
+        setRoles(res.data.roles);
+      })
+      .catch(() => setError("Không thể tải danh sách vai trò"));
+  }, []);
 
   const validateForm = (data: FormData): ValidationErrors => {
     const errs: ValidationErrors = {};
@@ -115,11 +114,11 @@ const AddUser: React.FC = () => {
     if (!data.status) errs.status = "Vui lòng chọn trạng thái";
     else if (!["active", "not_active", "pending"].includes(data.status))
       errs.status = "Trạng thái không hợp lệ";
-   if (!data.role_id) {
-  errs.role_id = "Vui lòng chọn vai trò";
-} else if (!roles.some((r) => String(r.id) === data.role_id)) {
-  errs.role_id = "Vai trò không hợp lệ";
-}
+    if (!data.role_id) {
+      errs.role_id = "Vui lòng chọn vai trò";
+    } else if (!roles.some((r) => String(r.id) === data.role_id)) {
+      errs.role_id = "Vai trò không hợp lệ";
+    }
     if (!data.password.trim()) errs.password = "Mật khẩu không được để trống";
     if (!data.cccd.trim()) errs.cccd = "CCCD không được để trống";
     else if (!/^[0-9]+$/.test(data.cccd))
@@ -207,255 +206,262 @@ const AddUser: React.FC = () => {
   ];
 
   return (
-    <div className="add-user-wrapper">
-      <Typography variant="h4" className="add-user-title" gutterBottom>
-        Thêm Nhân Viên Mới
-      </Typography>
+    <div className="user-wrapper">
+      <div className="user-title">
+        <div className="user-header-content">
+          <h2>
+            Add New <b>User</b>
+          </h2>
+        </div>
+      </div>
 
       {loading ? (
-        <Box className="loading-container">
+        <div className="user-loading-container">
           <CircularProgress />
           <Typography>Đang xử lý...</Typography>
-        </Box>
+        </div>
       ) : (
-        <Box
-          component="form"
-          className="add-user-form"
-          noValidate
-          autoComplete="off"
-        >
-          <Box className="form-row">
-            <TextField
-              label="Họ tên"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              fullWidth
-              variant="outlined"
-              error={!!errors.name}
-              helperText={errors.name}
-              className="form-input"
-            />
-            <TextField
-              label="Email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              fullWidth
-              variant="outlined"
-              error={!!errors.email}
-              helperText={errors.email}
-              className="form-input"
-            />
-          </Box>
-          <Box className="form-row">
-            <TextField
-              label="Số điện thoại"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              fullWidth
-              variant="outlined"
-              error={!!errors.phone}
-              helperText={errors.phone}
-              className="form-input"
-            />
-            <TextField
-              label="Ngày sinh"
-              name="birthday"
-              type="date"
-              value={formData.birthday}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              variant="outlined"
-              error={!!errors.birthday}
-              helperText={errors.birthday}
-              className="form-input"
-            />
-          </Box>
-          <Box className="form-row">
-            <FormControl
-              fullWidth
-              variant="outlined"
-              error={!!errors.gender}
-              className="form-input"
-            >
-              <InputLabel>Giới tính</InputLabel>
-              <Select
-                name="gender"
-                value={formData.gender}
-                onChange={handleSelectChange}
-                label="Giới tính"
+        <div className="user-detail-container">
+          <h3>Thông tin nhân viên</h3>
+          <Box display="flex" flexDirection="column" gap={2}>
+            <Box display="flex" gap={2}>
+              <TextField
+                label="Họ tên"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!errors.name}
+                helperText={errors.name}
+              />
+              <TextField
+                label="Email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!errors.email}
+                helperText={errors.email}
+              />
+            </Box>
+            <Box display="flex" gap={2}>
+              <TextField
+                label="Số điện thoại"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!errors.phone}
+                helperText={errors.phone}
+              />
+              <TextField
+                label="Ngày sinh"
+                name="birthday"
+                type="date"
+                value={formData.birthday}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!errors.birthday}
+                helperText={errors.birthday}
+              />
+            </Box>
+            <Box display="flex" gap={2}>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                error={!!errors.gender}
+                size="small"
               >
-                <MenuItem value="Nam">Nam</MenuItem>
-                <MenuItem value="Nữ">Nữ</MenuItem>
-                <MenuItem value="Khác">Khác</MenuItem>
-              </Select>
-              {errors.gender && (
-                <Typography color="error" variant="caption">
-                  {errors.gender}
-                </Typography>
-              )}
-            </FormControl>
-            <TextField
-              label="CCCD"
-              name="cccd"
-              value={formData.cccd}
-              onChange={handleChange}
-              fullWidth
-              variant="outlined"
-              error={!!errors.cccd}
-              helperText={errors.cccd}
-              className="form-input"
-            />
-          </Box>
-          <TextField
-            label="Địa chỉ"
-            name="address"
-            value={formData.address}
-            onChange={handleChange}
-            fullWidth
-            variant="outlined"
-            error={!!errors.address}
-            helperText={errors.address}
-            className="form-input"
-            multiline
-            rows={2}
-          />
-          <Box className="form-row">
-            <TextField
-              label="Ngày vào làm"
-              name="hire_date"
-              type="date"
-              value={formData.hire_date}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              fullWidth
-              variant="outlined"
-              error={!!errors.hire_date}
-              helperText={errors.hire_date}
-              className="form-input"
-            />
-            <FormControl
-              fullWidth
-              variant="outlined"
-              error={!!errors.department_id}
-              className="form-input"
-            >
-              <InputLabel>Phòng ban</InputLabel>
-              <Select
-                name="department_id"
-                value={formData.department_id}
-                onChange={handleSelectChange}
-                label="Phòng ban"
+                <InputLabel>Giới tính</InputLabel>
+                <Select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleSelectChange}
+                  label="Giới tính"
+                >
+                  <MenuItem value="Nam">Nam</MenuItem>
+                  <MenuItem value="Nữ">Nữ</MenuItem>
+                  <MenuItem value="Khác">Khác</MenuItem>
+                </Select>
+                {errors.gender && (
+                  <Typography color="error" variant="caption">
+                    {errors.gender}
+                  </Typography>
+                )}
+              </FormControl>
+              <TextField
+                label="CCCD"
+                name="cccd"
+                value={formData.cccd}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!errors.cccd}
+                helperText={errors.cccd}
+              />
+            </Box>
+            <Box display="flex" gap={2}>
+              <TextField
+                label="Địa chỉ"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                size="small"
+                multiline
+                rows={2}
+                error={!!errors.address}
+                helperText={errors.address}
+              />
+            </Box>
+            <Box display="flex" gap={2}>
+              <TextField
+                label="Ngày vào làm"
+                name="hire_date"
+                type="date"
+                value={formData.hire_date}
+                onChange={handleChange}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!errors.hire_date}
+                helperText={errors.hire_date}
+              />
+              <FormControl
+                fullWidth
+                variant="outlined"
+                error={!!errors.department_id}
+                size="small"
               >
-                <MenuItem value="">-- Không chọn --</MenuItem>
-                {departments.map((dept) => (
-                  <MenuItem key={dept.id} value={String(dept.id)}>
-                    {dept.name}
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.department_id && (
-                <Typography color="error" variant="caption">
-                  {errors.department_id}
-                </Typography>
-              )}
-            </FormControl>
-          </Box>
-          <Box className="form-row">
-            <FormControl
-              fullWidth
-              variant="outlined"
-              error={!!errors.status}
-              className="form-input"
-            >
-              <InputLabel>Trạng thái</InputLabel>
-              <Select
-                name="status"
-                value={formData.status}
-                onChange={handleSelectChange}
-                label="Trạng thái"
-              >
-                {statusOptions.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </Select>
-              {errors.status && (
-                <Typography color="error" variant="caption">
-                  {errors.status}
-                </Typography>
-              )}
-            </FormControl>
-            <FormControl
-              fullWidth
-              variant="outlined"
-              error={!!errors.role_id}
-              className="form-input"
-            >
-              <InputLabel>Vai trò</InputLabel>
-              <Select
-                name="role_id"
-                value={formData.role_id}
-                onChange={handleSelectChange}
-                label="Vai trò"
-              >
-                <MenuItem value="">-- Không chọn --</MenuItem>
-                {Array.isArray(roles) &&
-                  roles.map((role) => (
-                    <MenuItem key={role.id} value={String(role.id)}>
-                      {role.name}
+                <InputLabel>Phòng ban</InputLabel>
+                <Select
+                  name="department_id"
+                  value={formData.department_id}
+                  onChange={handleSelectChange}
+                  label="Phòng ban"
+                >
+                  <MenuItem value="">-- Không chọn --</MenuItem>
+                  {departments.map((dept) => (
+                    <MenuItem key={dept.id} value={String(dept.id)}>
+                      {dept.name}
                     </MenuItem>
                   ))}
-              </Select>
-              {errors.role_id && (
-                <Typography color="error" variant="caption">
-                  {errors.role_id}
-                </Typography>
-              )}
-            </FormControl>
-          </Box>
-          <TextField
-            label="Mật khẩu"
-            name="password"
-            type="password"
-            value={formData.password}
-            onChange={handleChange}
-            fullWidth
-            variant="outlined"
-            error={!!errors.password}
-            helperText={errors.password}
-            className="form-input"
-          />
-          <Box className="form-actions">
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSave}
-              disabled={loading}
-              size="large"
-            >
-              {loading ? <CircularProgress size={24} /> : "Lưu"}
-            </Button>
-            <Button
-              variant="outlined"
-              color="secondary"
-              onClick={handleCancel}
-              disabled={loading}
-              size="large"
-            >
-              Hủy
-            </Button>
+                </Select>
+                {errors.department_id && (
+                  <Typography color="error" variant="caption">
+                    {errors.department_id}
+                  </Typography>
+                )}
+              </FormControl>
+            </Box>
+            <Box display="flex" gap={2}>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                error={!!errors.status}
+                size="small"
+              >
+                <InputLabel>Trạng thái</InputLabel>
+                <Select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleSelectChange}
+                  label="Trạng thái"
+                >
+                  {statusOptions.map((opt) => (
+                    <MenuItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {errors.status && (
+                  <Typography color="error" variant="caption">
+                    {errors.status}
+                  </Typography>
+                )}
+              </FormControl>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                error={!!errors.role_id}
+                size="small"
+              >
+                <InputLabel>Vai trò</InputLabel>
+                <Select
+                  name="role_id"
+                  value={formData.role_id}
+                  onChange={handleSelectChange}
+                  label="Vai trò"
+                >
+                  <MenuItem value="">-- Không chọn --</MenuItem>
+                  {Array.isArray(roles) &&
+                    roles.map((role) => (
+                      <MenuItem key={role.id} value={String(role.id)}>
+                        {role.name}
+                      </MenuItem>
+                    ))}
+                </Select>
+                {errors.role_id && (
+                  <Typography color="error" variant="caption">
+                    {errors.role_id}
+                  </Typography>
+                )}
+              </FormControl>
+            </Box>
+            <Box display="flex" gap={2}>
+              <TextField
+                label="Mật khẩu"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!errors.password}
+                helperText={errors.password}
+              />
+            </Box>
+            <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSave}
+                disabled={loading}
+              >
+                {loading ? <CircularProgress size={24} /> : "Lưu"}
+              </Button>
+              <Button
+                variant="outlined"
+                className="user-btn-cancel"
+                color="secondary"
+                onClick={handleCancel}
+                disabled={loading}
+                component={Link}
+                to="/user"
+              >
+                Hủy
+              </Button>
+            </Box>
           </Box>
           {error && (
-            <Typography color="error" className="error-message" mt={2}>
+            <Typography color="error" className="user-error-message" mt={2}>
               {error}
             </Typography>
           )}
-        </Box>
+        </div>
       )}
 
       <Snackbar
@@ -466,7 +472,7 @@ const AddUser: React.FC = () => {
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity="success"
+          severity={snackbarMessage.includes("thành công") ? "success" : "error"}
           sx={{ width: "100%" }}
         >
           {snackbarMessage}

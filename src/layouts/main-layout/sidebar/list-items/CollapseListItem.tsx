@@ -17,14 +17,28 @@ const CollapseListItem = ({ subheader, active, items, icon }: MenuItem) => {
   };
 
   return (
-    <Box sx={{ pb: 1.5 }}>
-      <ListItemButton onClick={handleClick}>
+    <Box sx={{ pb: 1 }}>
+      <ListItemButton
+        onClick={handleClick}
+        sx={{
+          py: 1.5,
+          px: 3,
+          borderRadius: 2,
+          bgcolor: active ? 'rgba(255, 215, 0, 0.2)' : 'transparent',
+          color: '#fff',
+          '&:hover': {
+            bgcolor: 'rgba(255, 255, 255, 0.1)',
+            transform: 'translateX(4px)',
+            transition: 'all 0.2s ease',
+          },
+        }}
+      >
         <ListItemIcon>
           {icon && (
             <IconifyIcon
               icon={icon}
               sx={{
-                color: active ? 'text.primary' : null,
+                color: active ? '#FFD700' : '#fff',
               }}
             />
           )}
@@ -33,41 +47,54 @@ const CollapseListItem = ({ subheader, active, items, icon }: MenuItem) => {
           primary={subheader}
           sx={{
             '& .MuiListItemText-primary': {
-              color: active ? 'text.primary' : null,
+              fontWeight: active ? 600 : 400,
+              fontSize: '0.95rem',
+              color: active ? '#FFD700' : '#fff',
             },
           }}
         />
         <IconifyIcon
           icon="iconamoon:arrow-down-2-duotone"
           sx={{
-            color: active ? 'text.primary' : 'text.disabled',
+            color: active ? '#FFD700' : '#fff',
             transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-            transition: 'transform 0.2s ease-in-out',
+            transition: 'transform 0.3s ease',
           }}
         />
       </ListItemButton>
 
       <Collapse in={open} timeout="auto" unmountOnExit>
         <List component="div" disablePadding>
-          {items?.map((route) => {
-            return (
-              <ListItemButton
-                key={route.pathName}
-                component={Link}
-                href={route.path}
-                sx={{ ml: 2.25, bgcolor: route.active ? 'info.main' : null }}
-              >
-                <ListItemText
-                  primary={route.name}
-                  sx={{
-                    '& .MuiListItemText-primary': {
-                      color: 'text.primary',
-                    },
-                  }}
-                />
-              </ListItemButton>
-            );
-          })}
+          {items?.map((route) => (
+            <ListItemButton
+              key={route.pathName}
+              component={Link}
+              href={route.path}
+              sx={{
+                ml: 4,
+                py: 1,
+                borderRadius: 2,
+                bgcolor: route.active ? 'rgba(255, 215, 0, 0.15)' : 'transparent',
+                color: '#fff',
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.1)',
+                  transform: 'translateX(4px)',
+                },
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <ListItemText
+                primary={route.name}
+                sx={{
+                  '& .MuiListItemText-primary': {
+                    fontSize: '0.9rem',
+                    fontWeight: route.active ? 500 : 400,
+                    color: route.active ? '#FFD700' : '#fff',
+                  },
+                }}
+              />
+            </ListItemButton>
+          ))}
         </List>
       </Collapse>
     </Box>

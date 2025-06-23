@@ -106,28 +106,6 @@ const AddRole: React.FC = () => {
           <h2>
             Add New <b>Role</b>
           </h2>
-          <Box>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleSave}
-              disabled={loading}
-              sx={{ mr: 1 }}
-            >
-              Lưu
-            </Button>
-            <Button
-              variant="outlined"
-              className="role-btn-cancel"
-              color="secondary"
-              onClick={handleCancel}
-              disabled={loading}
-              component={Link}
-              to="/role"
-            >
-              Hủy
-            </Button>
-          </Box>
         </div>
       </div>
 
@@ -167,6 +145,27 @@ const AddRole: React.FC = () => {
                 error={!!validationErrors.description}
                 helperText={validationErrors.description}
               />
+            </Box>
+            <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSave}
+                disabled={loading}
+              >
+                Lưu
+              </Button>
+              <Button
+                variant="outlined"
+                className="role-btn-cancel"
+                color="secondary"
+                onClick={handleCancel}
+                disabled={loading}
+                component={Link}
+                to="/role"
+              >
+                Hủy
+              </Button>
             </Box>
           </Box>
         </div>

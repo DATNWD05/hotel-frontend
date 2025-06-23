@@ -19,9 +19,16 @@ export interface MenuItem {
 
 const sitemap: MenuItem[] = [
   {
-    id: 'oderRoom',
-    subheader: 'Đặt Phòng',
+    id: 'Room',
+    subheader: 'Phòng',
     path: '/',
+    icon: 'material-symbols:hotel',
+    active: true,
+  },
+  {
+    id: 'listbookings',
+    subheader: 'Đặt Phòng',
+    path: '/listbookings',
     icon: 'material-symbols:hotel',
     active: true,
   },
@@ -75,7 +82,7 @@ const sitemap: MenuItem[] = [
   {
     id: 'finance',
     subheader: 'Tài chính',
-    path: '/',
+    path: '/finance',
     icon: 'mdi:finance',
   },
   {
@@ -96,9 +103,9 @@ const sitemap: MenuItem[] = [
     ]
   },
   {
-    id: 'report',
-    subheader: 'Báo cáo',
-    path: '#!',
+    id: 'statistics',
+    subheader: 'Thống kê',
+    path: '/statistics',
     icon: 'material-symbols:analytics-outline',
   },
   {
