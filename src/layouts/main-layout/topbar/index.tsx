@@ -1,93 +1,52 @@
-import Link from '@mui/material/Link';
-import Stack from '@mui/material/Stack';
-import Badge from '@mui/material/Badge';
-import Toolbar from '@mui/material/Toolbar';
-import TextField from '@mui/material/TextField';
-import ButtonBase from '@mui/material/ButtonBase';
-import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
-import IconifyIcon from "../../../components/base/IconifyIcon";
+import React from 'react';
+import { Box, IconButton, Paper } from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+
 import LanguageSelect from './LanguageSelect';
 import ProfileMenu from './ProfileMenu';
-import Image from '../../../components/base/Image';
-import LogoImg from 'assets/images/logo.png';
-
-//Thanh tìm kiếmkiếm
 
 interface TopbarProps {
-  isClosing: boolean;
-  mobileOpen: boolean;
-  setMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onToggleSidebar: () => void;
 }
 
-const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
-  const handleDrawerToggle = () => {
-    if (!isClosing) {
-      setMobileOpen(!mobileOpen);
-    }
-  };
-
+export default function Topbar({ onToggleSidebar }: TopbarProps) {
   return (
-    <Stack
-      py={3.5}
-      alignItems="center"
-      justifyContent="space-between"
-      bgcolor="transparent"
-      zIndex={1200}
+    <Paper
+      component="header"
+      elevation={3}
+      square
+      sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        px: 3,
+        py: 1.5,
+        borderBottom: theme => `1px solid ${theme.palette.divider}`,
+        bgcolor: 'white',
+      }}
     >
-      <Stack spacing={{ xs: 2, sm: 3 }} alignItems="center">
-        <ButtonBase
-          component={Link}
-          href="/"
-          disableRipple
-          sx={{ lineHeight: 0, display: { xs: 'none', sm: 'block', lg: 'none' } }}
-        >
-          <Image src={LogoImg} alt="logo" height={40} width={40} />
-        </ButtonBase>
+      {/* Nút toggle sidebar */}
+      <IconButton size="large" onClick={onToggleSidebar}>
+        <MenuIcon />
+      </IconButton>
 
-        <Toolbar sx={{ display: { xm: 'block', lg: 'none' } }}>
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            onClick={handleDrawerToggle}
-          >
-            <IconifyIcon icon="ic:baseline-menu" />
-          </IconButton>
-        </Toolbar>
-
-        <Toolbar sx={{ ml: -1.5, display: { xm: 'block', md: 'none' } }}>
-          <IconButton size="large" edge="start" color="inherit" aria-label="search">
-            <IconifyIcon icon="eva:search-fill" />
-          </IconButton>
-        </Toolbar>
-
-        <TextField
-          variant="filled"
-          placeholder="Search"
-          sx={{ width: 340, display: { xs: 'none', md: 'flex' } }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <IconifyIcon icon="eva:search-fill" />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Stack>
-
-      <Stack spacing={{ xs: 1, sm: 2 }} alignItems="center">
-        <LanguageSelect />
+      {/* Các control bên phải */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <IconButton size="large">
-          <Badge badgeContent={2} color="error">
-            <IconifyIcon icon="ic:outline-notifications-none" />
-          </Badge>
+          <NotificationsNoneIcon />
         </IconButton>
+        <IconButton size="large">
+          <DarkModeOutlinedIcon />
+        </IconButton>
+        <IconButton size="large">
+          <InfoOutlinedIcon />
+        </IconButton>
+        <LanguageSelect />
         <ProfileMenu />
-      </Stack>
-    </Stack>
+      </Box>
+    </Paper>
   );
-};
-
-export default Topbar;
+}
