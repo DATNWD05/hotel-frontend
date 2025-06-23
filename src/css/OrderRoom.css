@@ -33,6 +33,7 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 30px;
+  align-items: center;
 }
 
 .order-room-filter {
@@ -113,6 +114,25 @@
 .order-room-filter-dang_sua.active {
   opacity: 0.9;
   transform: scale(1.05);
+}
+
+.order-room-filter-book {
+  background: linear-gradient(135deg, #4CAF50, #2E7D32);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  min-width: 100px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.order-room-filter-book:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .order-room-grid {
@@ -291,7 +311,6 @@
   font-style: italic; /* Chữ nghiêng */
 }
 
-
 /* No data message */
 .order-room-no-data {
   color: #666;
@@ -356,6 +375,7 @@
 .card-header {
   display: flex;
   align-items: center;
+  color: #1976d2;
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -730,10 +750,13 @@
 @media (max-width: 480px) {
   .order-room-filter-bar {
     flex-direction: column;
+    align-items: stretch;
   }
   
-  .order-room-filter {
+  .order-room-filter,
+  .order-room-filter-book {
     width: 100%;
+    margin-left: 0 !important;
   }
   
   .order-room-grid {
@@ -794,6 +817,7 @@
 .order-room-card:focus,
 .order-room-view-button:focus,
 .order-room-filter:focus,
+.order-room-filter-book:focus,
 .edit-form-input:focus-within {
   outline: 2px solid #3498db;
   outline-offset: 2px;
