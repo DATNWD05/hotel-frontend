@@ -13,11 +13,19 @@
   text-align: center;
   margin-bottom: 2rem;
 }
-
+.booking-header  {
+    background: linear-gradient(135deg, #1A2A44, #1A2A44);
+    color: white;
+    padding: 20px 24px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 .booking-title {
   font-size: 2rem;
   font-weight: bold;
-  color: #1e293b;
+  color: #f0a505;
   margin-bottom: 0.5rem;
 }
 
