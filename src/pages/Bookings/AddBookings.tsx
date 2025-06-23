@@ -17,8 +17,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import "../../css/AddBookings.css";
-import { useNavigate } from "react-router-dom";
 import api from "../../api/axios";
+import { useNavigate } from "react-router-dom";
 
 interface Customer {
   cccd: string;
@@ -49,6 +49,18 @@ interface Service {
   price: number;
 }
 
+interface Promotion {
+  id: number;
+  code: string;
+  description: string;
+  discount_type: "percent" | "amount";
+  discount_value: number;
+  start_date: string;
+  end_date: string;
+  status: string;
+  is_active: boolean;
+}
+
 interface BookingData {
   customer: Customer;
   rooms: Room[];
@@ -56,6 +68,7 @@ interface BookingData {
   checkInDate: string;
   checkOutDate: string;
   depositAmount: number;
+  promotion_code?: string | null; // Đổi thành string
 }
 
 interface ValidationErrors {
@@ -122,6 +135,7 @@ export default function HotelBooking() {
     checkInDate: "",
     checkOutDate: "",
     depositAmount: 0,
+    promotion_code: null,
   });
 
   const [activeTab, setActiveTab] = useState("customer");
@@ -140,17 +154,19 @@ export default function HotelBooking() {
   const [roomNumbers, setRoomNumbers] = useState<{ [key: string]: RoomNumber[] }>({});
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [availableServices, setAvailableServices] = useState<{ [key: string]: AvailableService[] }>({});
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        const [roomTypesRes, roomsRes, serviceCategoriesRes, servicesRes] = await Promise.all([
+        const [roomTypesRes, roomsRes, serviceCategoriesRes, servicesRes, promotionsRes] = await Promise.all([
           api.get("/room-types"),
           api.get("/rooms"),
           api.get("/service-categories"),
           api.get("/service"),
+          api.get("/promotions"),
         ]);
 
         let typesData = roomTypesRes.data;
@@ -212,6 +228,17 @@ export default function HotelBooking() {
         } else {
           throw new Error("Dữ liệu từ /service không hợp lệ");
         }
+
+        let promotionsData = promotionsRes.data;
+        if (promotionsData && typeof promotionsData === "object" && "data" in promotionsData) {
+          promotionsData = promotionsData.data;
+        }
+        if (Array.isArray(promotionsData)) {
+          const activePromotions = promotionsData.filter((promo: Promotion) => promo.is_active && promo.status === "active");
+          setPromotions(activePromotions);
+        } else {
+          throw new Error("Dữ liệu từ /promotions không hợp lệ");
+        }
       } catch (error: any) {
         setErrorMessage("Lỗi khi tải dữ liệu: " + (error.response?.data?.message || error.message));
       } finally {
@@ -236,21 +263,19 @@ export default function HotelBooking() {
     return regex.test(value);
   };
 
-
   const validateCustomerField = (field: keyof Customer, value: string) => {
     const errors = { ...validationErrors };
 
     switch (field) {
       case "cccd":
-          if (!value.trim()) {
-            errors.customer.cccd = "Vui lòng nhập số CCCD/CMND";
-          } else if (!validateCCCD(value)) {
-            errors.customer.cccd = "CCCD phải gồm 12 chữ số và bắt đầu bằng số 0";
-          } else {
-            delete errors.customer.cccd;
-          }
-          break;
-
+        if (!value.trim()) {
+          errors.customer.cccd = "Vui lòng nhập số CCCD/CMND";
+        } else if (!validateCCCD(value)) {
+          errors.customer.cccd = "CCCD phải gồm 12 chữ số và bắt đầu bằng số 0";
+        } else {
+          delete errors.customer.cccd;
+        }
+        break;
       case "name":
         if (!value.trim()) {
           errors.customer.name = "Vui lòng nhập họ và tên";
@@ -347,12 +372,12 @@ export default function HotelBooking() {
         }
         break;
       case "depositAmount":
-      if (value && Number(value) > 0 && Number(value) < 100000) {
-        errors.booking.depositAmount = "Số tiền đặt cọc tối thiểu là 100,000 VNĐ";
-      } else {
-        delete errors.booking.depositAmount;
-      }
-      break;
+        if (value && Number(value) > 0 && Number(value) < 100000) {
+          errors.booking.depositAmount = "Số tiền đặt cọc tối thiểu là 100,000 VNĐ";
+        } else {
+          delete errors.booking.depositAmount;
+        }
+        break;
     }
 
     if (bookingData.checkInDate && bookingData.checkOutDate) {
@@ -455,7 +480,7 @@ export default function HotelBooking() {
     return 0;
   };
 
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     const roomTotal = bookingData.rooms.reduce((sum, room) => {
       return room.price && room.number ? sum + room.price * calculateNights() : sum;
     }, 0);
@@ -463,6 +488,27 @@ export default function HotelBooking() {
       return service.price && service.quantity ? sum + service.price * service.quantity : sum;
     }, 0);
     return roomTotal + serviceTotal;
+  };
+
+  const calculateDiscount = () => {
+    if (!bookingData.promotion_code) return 0;
+
+    const selectedPromotion = promotions.find((promo) => promo.code === bookingData.promotion_code);
+    if (!selectedPromotion) return 0;
+
+    const subtotal = calculateSubtotal();
+    if (selectedPromotion.discount_type === "percent") {
+      return (subtotal * selectedPromotion.discount_value) / 100;
+    } else if (selectedPromotion.discount_type === "amount") {
+      return selectedPromotion.discount_value;
+    }
+    return 0;
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const discount = calculateDiscount();
+    return Math.max(0, subtotal - discount);
   };
 
   const handleCustomerChange = (field: keyof Customer, value: string) => {
@@ -483,6 +529,14 @@ export default function HotelBooking() {
 
     markFieldAsTouched(`booking.${field}`);
     validateBookingField(field, value);
+  };
+
+  const handlePromotionChange = (value: string) => {
+    const selectedPromotion = promotions.find((promo) => promo.id.toString() === value);
+    setBookingData((prev) => ({
+      ...prev,
+      promotion_code: selectedPromotion ? selectedPromotion.code : null, // Sử dụng code thay vì id
+    }));
   };
 
   const handleRoomChange = (roomId: string, field: keyof Room, value: string) => {
@@ -659,7 +713,6 @@ export default function HotelBooking() {
     setIsSubmitting(true);
     setErrorMessage("");
     try {
-      // Chuẩn bị payload cho đặt phòng
       const validRoomIds = bookingData.rooms
         .filter((room) => room.number && roomNumbers[room.type]?.some((rn) => rn.room_number === room.number))
         .map((room) => {
@@ -689,18 +742,16 @@ export default function HotelBooking() {
         check_in_date: bookingData.checkInDate,
         check_out_date: bookingData.checkOutDate,
         deposit_amount: bookingData.depositAmount,
-        total_amount: totalAmount > 0 ? totalAmount : 100000, // Giá trị tối thiểu
+        total_amount: totalAmount > 0 ? totalAmount : 100000,
+        promotion_code: bookingData.promotion_code, // Gửi promotion_code trực tiếp
       };
 
       console.log("Booking payload:", JSON.stringify(apiData, null, 2));
 
-      // Gửi yêu cầu tạo đặt phòng
       const bookingRes = await api.post("/bookings", apiData);
 
-      // Log response để kiểm tra
       console.log("Booking response:", JSON.stringify(bookingRes.data, null, 2));
 
-      // Kiểm tra response hợp lệ
       const bookingResponseData = bookingRes.data;
       if (!bookingResponseData || (!bookingResponseData.id && !bookingResponseData.data?.id)) {
         throw new Error("Response không hợp lệ: Không tìm thấy booking ID");
@@ -709,7 +760,6 @@ export default function HotelBooking() {
       const bookingId = bookingResponseData.id || bookingResponseData.data.id;
       console.log("Tạo đặt phòng thành công, ID:", bookingId);
 
-      // Thêm dịch vụ nếu có
       if (bookingData.services.length > 0) {
         const servicesPayload = bookingData.services
           .filter((service) => service.serviceId !== 0)
@@ -722,6 +772,12 @@ export default function HotelBooking() {
           console.log("Thêm dịch vụ thành công:", servicesPayload);
         }
       }
+
+      // Bỏ bước apply-promotion vì đã gửi promotion_code trong payload
+      // if (bookingData.promotion_code) {
+      //   await api.post(`/bookings/${bookingId}/apply-promotion`, { promotion_id: bookingData.promotion_code });
+      //   console.log("Áp dụng khuyến mãi thành công, Promotion ID:", bookingData.promotion_code);
+      // }
 
       setSubmitStatus("success");
       setTimeout(() => navigate("/"), 2000);
@@ -738,6 +794,8 @@ export default function HotelBooking() {
         errorMsg = error.response.data.message;
         if (errorMsg.toLowerCase().includes("cccd")) {
           errorMsg = "Số CCCD/CMND đã tồn tại. Vui lòng kiểm tra lại.";
+        } else if (errorMsg.includes("promotion")) {
+          errorMsg = "Lỗi áp dụng khuyến mãi. Vui lòng kiểm tra mã khuyến mãi hoặc liên hệ admin.";
         }
       } else if (error.message) {
         errorMsg = error.message;
@@ -821,11 +879,6 @@ export default function HotelBooking() {
   return (
     <div className="booking-container">
       <div className="booking-wrapper">
-        {/* <div className="booking-header">
-          <h1 className="booking-title">Đặt Phòng Khách Sạn</h1>
-          <p className="booking-subtitle">Điền thông tin để hoàn tất đặt phòng của bạn</p>
-        </div> */}
-
         {submitStatus && (
           <div className={`alert ${submitStatus === "success" ? "alert-success" : "alert-error"}`}>
             {submitStatus === "success" ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
@@ -1064,13 +1117,15 @@ export default function HotelBooking() {
                             placeholder="0"
                             className={`form-input form-input-small ${validationErrors.booking.depositAmount ? "error" : ""}`}
                             value={bookingData.depositAmount}
-                            onChange={(e) => handleBookingChange("depositAmount", e.target.value === "" ? "" : Number(e.target.value))}
+                            onChange={(e) =>
+                              handleBookingChange("depositAmount", e.target.value === "" ? "" : Number(e.target.value))
+                            }
                             onBlur={() => markFieldAsTouched("booking.depositAmount")}
                           />
                         </div>
                         {touchedFields["booking.depositAmount"] && validationErrors.booking.depositAmount && (
-                        <ErrorMessage message={validationErrors.booking.depositAmount} />
-                      )}
+                          <ErrorMessage message={validationErrors.booking.depositAmount} />
+                        )}
                       </div>
                     </div>
 
@@ -1329,6 +1384,28 @@ export default function HotelBooking() {
                     <span>Tiền đặt cọc:</span>
                     <span>{bookingData.depositAmount.toLocaleString()} VNĐ</span>
                   </div>
+                  <div className="form-group">
+                    <label className="form-label">Khuyến mãi</label>
+                    <CustomSelect
+                      id="promotion"
+                      value={bookingData.promotion_code || ""}
+                      onChange={handlePromotionChange}
+                      options={[
+                        { value: "", label: "Không áp dụng khuyến mãi" },
+                        ...promotions.map((promo) => ({
+                          value: promo.id.toString(),
+                          label: `${promo.code} - ${promo.description} (${promo.discount_type === "percent" ? `${promo.discount_value}%` : `${promo.discount_value.toLocaleString()} VNĐ`})`,
+                        })),
+                      ]}
+                      placeholder="Chọn khuyến mãi"
+                    />
+                  </div>
+                  {bookingData.promotion_code && (
+                    <div className="summary-row">
+                      <span>Giảm giá:</span>
+                      <span>-{calculateDiscount().toLocaleString()} VNĐ</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="summary-divider"></div>
@@ -1355,7 +1432,8 @@ export default function HotelBooking() {
                         (room, index) =>
                           room.type && room.number && (
                             <div key={room.id} style={{ marginBottom: "0.25rem" }}>
-                              {index + 1}. {roomTypes.find((rt) => rt.id.toString() === room.type)?.name} (Phòng {room.number}) x {calculateNights()} đêm ={" "}
+                              {index + 1}. {roomTypes.find((rt) => rt.id.toString() === room.type)?.name} (Phòng{" "}
+                              {room.number}) x {calculateNights()} đêm ={" "}
                               {(room.price * calculateNights()).toLocaleString()} VNĐ
                             </div>
                           ),
@@ -1374,7 +1452,7 @@ export default function HotelBooking() {
                         (service, index) =>
                           service.name && (
                             <div key={service.id} style={{ marginBottom: "0.25rem" }}>
-                              {index + 1}. {service.name} x{service.quantity} ={" "}
+                              {index + 1}. {service.name} x {service.quantity} ={" "}
                               {(service.price * service.quantity).toLocaleString()} VNĐ
                             </div>
                           ),
@@ -1384,7 +1462,11 @@ export default function HotelBooking() {
                 )}
 
                 <div className="mt-4">
-                  <button onClick={handleSubmit} disabled={isSubmitting || loadingData} className="btn btn-primary btn-full mb-4">
+                  <button
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || loadingData}
+                    className="btn btn-primary btn-full mb-4"
+                  >
                     {isSubmitting ? (
                       <>
                         <div className="spinner"></div>
@@ -1397,7 +1479,11 @@ export default function HotelBooking() {
                       </>
                     )}
                   </button>
-                  <button onClick={() => navigate("/")} className="btn btn-outline btn-full" aria-label="Hủy bỏ đặt phòng">
+                  <button
+                    onClick={() => navigate("/")}
+                    className="btn btn-outline btn-full"
+                    aria-label="Hủy bỏ đặt phòng"
+                  >
                     Hủy bỏ
                   </button>
                 </div>
