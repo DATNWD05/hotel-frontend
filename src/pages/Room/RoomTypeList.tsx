@@ -31,7 +31,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import '../../css/service.css';
 
 interface Amenity {
@@ -130,7 +130,7 @@ const RoomTypesList: React.FC = () => {
         setLastPage(roomTypesResponse.data.meta?.last_page || 1);
         setAllAmenities(amenitiesResponse.data.data || []);
       } catch (err) {
-        const errorMessage = err instanceof Error ? `Không thể tải dữ liệu: ${err.message}` : 'Lỗi không xác định';
+        const errorMessage = (err as AxiosError)?.message || 'Lỗi không xác định';
         setError(errorMessage);
       } finally {
         setLoading(false);
@@ -213,7 +213,7 @@ const RoomTypesList: React.FC = () => {
         throw new Error('Không thể cập nhật loại phòng');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật loại phòng';
+      const errorMessage = (err as AxiosError)?.message || 'Đã xảy ra lỗi khi cập nhật loại phòng';
       setEditError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
@@ -271,7 +271,7 @@ const RoomTypesList: React.FC = () => {
         throw new Error('Không thể xóa loại phòng');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? `Không thể xóa loại phòng: ${err.message}` : 'Lỗi không xác định';
+      const errorMessage = (err as AxiosError)?.message || 'Lỗi không xác định';
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
@@ -322,7 +322,7 @@ const RoomTypesList: React.FC = () => {
 
         if (response.status === 200) {
           const updatedRoomType = response.data.data; // Dữ liệu amenities đã cập nhật từ backend
-          setSelectedAmenities(updatedRoomType.map(a => a.id)); // Cập nhật danh sách ID
+          setSelectedAmenities(updatedRoomType.map((a: Amenity) => a.id)); // Cập nhật danh sách ID
           setRoomTypes((prev) =>
             prev.map((rt) =>
               rt.id === editFormData.id ? { ...rt, amenities: updatedRoomType } : rt
@@ -336,9 +336,10 @@ const RoomTypesList: React.FC = () => {
           throw new Error(`Yêu cầu thất bại với mã: ${response.status}`);
         }
       } catch (err) {
-        const errorMessage = err.response
-          ? `Không thể cập nhật tiện nghi: ${JSON.stringify(err.response.data) || err.response.statusText} (Mã: ${err.response.status})`
-          : `Không thể cập nhật tiện nghi: ${err.message || 'Lỗi không xác định'}`;
+        const error = err as AxiosError;
+        const errorMessage = error.response
+          ? `Không thể cập nhật tiện nghi: ${JSON.stringify(error.response.data) || error.response.statusText} (Mã: ${error.response.status})`
+          : `Không thể cập nhật tiện nghi: ${error.message || 'Lỗi không xác định'}`;
         setError(errorMessage);
         setSnackbarMessage(errorMessage);
         setSnackbarOpen(true);
