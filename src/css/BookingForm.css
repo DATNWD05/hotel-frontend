@@ -1,0 +1,356 @@
+/* Booking Dialog */
+.booking-dialog .MuiDialog-paper {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden;
+  max-width: 900px !important;
+  max-height: 90vh !important;
+  width: 90vw !important;
+  background: #f8f9fa !important;
+}
+
+/* Header with Stepper */
+.booking-header {
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+  color: white;
+  padding: 20px 24px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.close-button {
+  position: absolute !important;
+  top: 12px !important;
+  right: 12px !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  transition: all 0.3s ease !important;
+}
+
+.close-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  transform: scale(1.1);
+}
+
+/* Stepper */
+.stepper-container {
+  position: relative;
+}
+
+.stepper-container h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #e74c3c;
+}
+
+.stepper-container p {
+  margin: 8px 0 16px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.custom-stepper {
+  background: transparent !important;
+}
+
+.custom-stepper .MuiStepConnector-root {
+  top: 20px !important;
+  left: calc(-50% + 20px) !important;
+  right: calc(50% + 20px) !important;
+}
+
+.custom-stepper .MuiStepConnector-line {
+  height: 3px !important;
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.custom-stepper .MuiStepConnector-root.Mui-active .MuiStepConnector-line,
+.custom-stepper .MuiStepConnector-root.Mui-completed .MuiStepConnector-line {
+  background: #4CAF50 !important;
+}
+
+.custom-step {
+  cursor: pointer !important;
+}
+
+.step-icon {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  border: 2px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.step-icon.active {
+  background: #4CAF50 !important;
+  color: white !important;
+  border-color: white !important;
+}
+
+.step-icon.completed {
+  background: rgba(255, 255, 255, 0.9) !important;
+  color: #4CAF50 !important;
+}
+
+.custom-step-label .MuiStepLabel-label {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-weight: 500 !important;
+  margin-top: 8px !important;
+}
+
+.custom-step-label.Mui-active .MuiStepLabel-label {
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.custom-step-label.Mui-completed .MuiStepLabel-label {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Content Area */
+.booking-content {
+  padding: 24px !important;
+  background: #f8f9fa !important;
+  max-height: calc(90vh - 200px) !important;
+  overflow-y: auto !important;
+}
+
+.step-content {
+  animation: slideInUp 0.4s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Booking Form Container */
+.booking-form-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Customer and Deposit Containers */
+.customer-form-container,
+.deposit-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.section-header h3::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: #4CAF50;
+  border-radius: 2px;
+  margin-right: 8px;
+}
+
+/* Booking Sections */
+.booking-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Grid Layouts */
+.booking-grid,
+.customer-grid,
+.deposit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+/* Text Fields */
+.booking-textfield {
+  width: 100% !important;
+}
+
+.booking-textfield .MuiOutlinedInput-root {
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+.booking-textfield .MuiOutlinedInput-root:hover {
+  background: white !important;
+}
+
+.booking-textfield .MuiOutlinedInput-root.Mui-focused {
+  background: white !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.booking-textfield .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #4CAF50 !important;
+}
+
+.booking-textfield .MuiInputLabel-root.Mui-focused {
+  color: #4CAF50 !important;
+}
+
+.booking-textfield .MuiOutlinedInput-input {
+  padding: 12px !important;
+  font-size: 14px !important;
+}
+
+.booking-textfield .MuiInputLabel-root {
+  font-weight: 500 !important;
+  color: #666 !important;
+}
+
+/* Currency Addon */
+.currency {
+  color: #666;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 4px 8px;
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+/* Action Buttons */
+.booking-actions {
+  padding: 20px 24px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.back-btn {
+  color: #666 !important;
+  border-color: #ccc !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+}
+
+.back-btn:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.next-btn {
+  background: linear-gradient(135deg, #4CAF50, #2E7D32) !important;
+  color: white !important;
+  padding: 10px 20px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+}
+
+.next-btn:hover {
+  background: linear-gradient(135deg, #2E7D32, #1B5E20) !important;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .booking-dialog .MuiDialog-paper {
+    width: 95vw !important;
+    margin: 16px !important;
+  }
+
+  .booking-header {
+    padding: 16px;
+  }
+
+  .stepper-container h2 {
+    font-size: 20px;
+  }
+
+  .booking-content {
+    padding: 16px !important;
+  }
+
+  .booking-section {
+    padding: 16px;
+  }
+
+  .booking-grid,
+  .customer-grid,
+  .deposit-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-stepper .MuiStepLabel-label {
+    display: none !important;
+  }
+
+  .step-icon {
+    width: 36px !important;
+    height: 36px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .booking-header {
+    padding: 12px;
+  }
+
+  .stepper-container h2 {
+    font-size: 18px;
+  }
+
+  .stepper-container p {
+    font-size: 12px;
+  }
+
+  .booking-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .back-btn,
+  .next-btn {
+    width: 100%;
+    padding: 10px !important;
+  }
+}

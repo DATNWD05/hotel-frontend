@@ -3,7 +3,7 @@ import MainLayout from "./layouts/main-layout";
 import Login from "./components/auth/Login";
 import User from "./pages/User/User";
 import AddUser from "./pages/User/AddUser";
-import Dashboard from "./pages/Dashboard";
+import Dashboard from "./pages/OrderRoom/OrderRoom";
 import AddPromotion from "./pages/Promotion/AddPromotion";
 import Promotions from "./pages/Promotion/Promotions";
 import RoleBasedRoute from "./routes/helpers/RoleBasedRoute";
@@ -22,9 +22,13 @@ import RoomTypesList from "./pages/Room/RoomTypeList";
 import AddRoomType from "./pages/Room/AddRoomType";
 import Amenities from "./pages/Room/Amenities";
 import AmenitiesAdd from "./pages/Room/AmenitiesAdd";
-import Service from "./pages/Services/Service";
 import AmenitiesCategoryList from "./pages/Room/Amenities_Category";
 import AddAmenityCategory from "./pages/Room/AddAmenitiesCaregory";
+import ListBookings from "./pages/Bookings/ListBookings";
+import AddBookings from "./pages/Bookings/AddBookings";
+import DetailBookings from "./pages/Bookings/DetailBookings";
+import Statistics from "./pages/Statistics/Statistics";
+import Service from "./pages/Services/service";
 
 function App() {
   return (
@@ -36,6 +40,13 @@ function App() {
         <Route path="user" element={<ProtectedRoute><RoleBasedRoute allowedRoleIds={[1]}><User /></RoleBasedRoute></ProtectedRoute>}/>
 
         <Route path="user/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddUser /></RoleBasedRoute>} />
+
+        <Route path="/listbookings" element={<RoleBasedRoute allowedRoleIds={[1]}><ListBookings /></RoleBasedRoute>} />
+        <Route path="/listbookings/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddBookings /></RoleBasedRoute>} />
+        <Route path="/listbookings/detail/:id" element={<RoleBasedRoute allowedRoleIds={[1]}><DetailBookings /></RoleBasedRoute>} />
+
+        <Route path="/statistics" element={<RoleBasedRoute allowedRoleIds={[1]}><Statistics /></RoleBasedRoute>} />
+
 
         <Route path="customer" element={<RoleBasedRoute allowedRoleIds={[1]}><Customer /></RoleBasedRoute>} />
         <Route path="customer/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddCustomer

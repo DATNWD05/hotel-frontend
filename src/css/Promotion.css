@@ -23,6 +23,27 @@
   color: #d93025;
 }
 
+.promotion-filter-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.promotion-filter-btn {
+  padding: 6px 12px;
+  border-radius: 4px;
+  text-transform: none;
+  font-weight: 500;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.promotion-filter-btn.active {
+  font-weight: 600;
+  transform: scale(1.05);
+}
+
 .promotion-title .promotion-btn-add {
   background: #4318FF;
   color: #fff;
@@ -39,7 +60,7 @@
 }
 
 .promotion-title .promotion-btn-add:hover {
-  background: #4318FF;
+  background: #3700b3;
   transform: translateY(-1px);
 }
 
@@ -108,6 +129,9 @@
 
 .promotion-detail-container {
   padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .promotion-detail-container h3 {
@@ -164,4 +188,9 @@
 .promotion-dialog {
   border-radius: 8px;
   padding: 16px;
+}
+
+.promotion-search-input {
+  background: #fff;
+  border-radius: 4px;
 }
