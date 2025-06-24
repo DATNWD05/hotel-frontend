@@ -59,7 +59,14 @@ export default function Statistics() {
 
   // Fetch tất cả API
   useEffect(() => {
-    const api = axios.create({ baseURL: "/api/statistics" });
+    const api = axios.create({ baseURL: "http://localhost:8000/api/statistics" });
+    api.interceptors.request.use((config) => {
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
 
     Promise.all([
       api.get<{ total_revenue: number }>("/total-revenue"),
