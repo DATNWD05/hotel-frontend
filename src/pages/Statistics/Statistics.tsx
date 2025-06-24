@@ -71,7 +71,7 @@ export default function Statistics() {
       api.get<BookingTotal[]>("/total-per-booking"),
       api.get<CustRevenue[]>("/revenue-by-customer"),
       api.get<RoomRevenue[]>("/revenue-by-room"),
-      api.get<TopCustomer[]>("/top-frequent-customers"),
+      api.get<TopCustomer[]>("/top-customers"),
     ])
       .then(
         ([
