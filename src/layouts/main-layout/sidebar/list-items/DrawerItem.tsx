@@ -23,59 +23,64 @@ export default function DrawerItem({
 
   return (
     <ListItemButton
-  component={RouterLink}
-  to={path}
-  selected={active}
-  sx={{
-    mb: 1,
-    py: 1.5,
-    px: collapsed ? 1 : 2, // chỉnh lề 
-    borderRadius: 2,
-    bgcolor: active ? theme.palette.action.selected : 'transparent',
-    color: '#fff',
+      component={RouterLink}
+      to={path}
+      selected={active}
+      sx={{
+        mb: 1,
+        py: 1.5,
+        px: collapsed ? 1 : 2,
+        borderRadius: 2,
 
-    // Tăng kích thước icon
-    '& .MuiListItemIcon-root': {
-      minWidth: 0,
-      justifyContent: 'center',
-      color: active ? '#FFD700' : '#fff',
-      '& svg': {
-        fontSize: '1.8rem', // tăng kích thước icon
-        transition: 'transform 0.3s ease', // thêm hiệu ứng chuyển động
-      },
-    },
+        // chỉ đổi nền khi selected, giữ icon/text trắng
+        '&.Mui-selected': {
+          bgcolor: '#FFB300',
+        },
+        '&.Mui-selected:hover': {
+          bgcolor: '#FFB300',
+        },
 
-    // Tăng kích thước chữ
-    '& .MuiListItemText-root': {
-      ml: collapsed ? 0 : 2,
-      '& .MuiTypography-body1': {    // để match variant body1 bên dưới
-        fontSize: '1rem', // tăng kích thước chữ
-        fontWeight: active ? 600 : 400, // đậm chữ nếu active
-        color: active ? '#FFD700' : '#fff',
-      },
-    },
+        // chung icon và text luôn trắng
+        color: '#fff',
+        '& .MuiListItemIcon-root, & .MuiListItemText-root': {
+          color: '#fff !important',
+        },
 
-    '&:hover': {
-      bgcolor: theme.palette.action.hover,
-      transform: 'translateX(4px)',
-      transition: 'all 0.2s ease',
-    },
-  }}
->
-  <ListItemIcon>
-    <IconifyIcon icon={icon} />
-  </ListItemIcon>
+        // tăng kích thước icon
+        '& .MuiListItemIcon-root svg': {
+          fontSize: '1.8rem',
+          transition: 'transform 0.2s ease',
+        },
 
-  {!collapsed && (
-    <ListItemText
-      primary={label}
-      primaryTypographyProps={{
-        variant: 'body1',             // body1 để hook style lên đúng selector trên
-        fontWeight: active ? 600 : 400,
-        color: active ? '#FFD700' : '#fff',
+        // tăng kích thước chữ và ép trắng
+        '& .MuiListItemText-root .MuiTypography-body1': {
+          fontSize: '1rem',
+          fontWeight: active ? 600 : 400,
+          lineHeight: 1.2,
+          color: '#fff !important',
+        },
+
+        '&:hover': {
+          bgcolor: theme.palette.action.hover,
+          transform: 'translateX(4px)',
+          transition: 'all 0.2s ease',
+        },
       }}
-    />
-  )}
-</ListItemButton>
+    >
+      <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center' }}>
+        <IconifyIcon icon={icon} />
+      </ListItemIcon>
+
+      {!collapsed && (
+        <ListItemText
+          primary={label}
+          primaryTypographyProps={{
+            variant: 'body1',
+            // màu này thường bị CSS override, nên mình cũng set ở sx bên trên
+            color: '#fff',
+          }}
+        />
+      )}
+    </ListItemButton>
   );
 }

@@ -1,6 +1,6 @@
 // src/layouts/main-layout/sidebar/list-items/CollapseListItem.tsx
 import React, { useState } from 'react';
-import { MenuItem } from '../../../../routes/sitemap';
+import { MenuItem, SubMenuItem } from '../../../../routes/sitemap';
 import Box from '@mui/material/Box';
 import Link from '@mui/material/Link';
 import List from '@mui/material/List';
@@ -18,19 +18,21 @@ interface CollapseListItemProps extends MenuItem {
 export default function CollapseListItem({
   subheader,
   active,
-  items,
+  items = [],
   icon,
   collapsed,
 }: CollapseListItemProps) {
   const [open, setOpen] = useState(active);
-
   const handleClick = () => {
-    if (!collapsed) setOpen((prev) => !prev);
+    if (!collapsed) setOpen(o => !o);
   };
 
   return (
     <Box sx={{ pb: 1 }}>
+      {/* HEADER */}
       <ListItemButton
+        disableRipple
+        selected={active}
         onClick={handleClick}
         sx={{
           display: 'flex',
@@ -38,99 +40,95 @@ export default function CollapseListItem({
           py: 1.5,
           px: collapsed ? 1 : 2,
           borderRadius: 2,
-          bgcolor: active ? 'rgba(255,215,0,0.2)' : 'transparent',
           color: '#fff',
-          '&:hover': {
-            bgcolor: 'rgba(255,255,255,0.1)',
-            transform: 'translateX(4px)',
-            transition: 'all 0.2s ease',
+
+          // Active header: vàng đậm, chữ/icon trắng
+          '&.Mui-selected': {
+            bgcolor: '#FFB300',
+            '& .MuiListItemIcon-root, & .MuiListItemText-root .MuiTypography-root': {
+              color: '#fff !important',
+            },
+            // tắt hover trên header khi active
+            '&:hover': { bgcolor: '#FFB300' },
           },
-          // Icon
+
+          // bỏ hover nền cho header khi chưa active
+          '&:hover': {
+            bgcolor: 'inherit',
+            transform: 'none',
+          },
+
+          // icon
           '& .MuiListItemIcon-root': {
             minWidth: 0,
             justifyContent: 'center',
-            color: active ? '#FFD700' : '#fff',
-            '& svg': {
-              fontSize: '1.8rem', // tăng kích thước icon
-              transition: 'transform 0.1s ease',
-            },
-            '&:hover svg': {
-              transform: 'scale(1.1)',
-            },
+            color: '#fff',
+            '& svg': { fontSize: '1.8rem' },
           },
-          // Header text
-          '& .MuiListItemText-root': {
+          // header text
+          '& .MuiListItemText-root .MuiTypography-root': {
+            fontSize: '1rem',
+            fontWeight: active ? 600 : 400,
+            color: '#fff',
             ml: collapsed ? 0 : 2,
-            '& .MuiTypography-body1': {
-              fontSize: '1rem',                // tăng cỡ chữ
-              color: active ? '#FFD700' : '#fff',// chắc chắn màu vàng khi active
-              fontWeight: active ? 600 : 400,
-              lineHeight: 1.2,
-            },
           },
         }}
       >
         <ListItemIcon>
           {icon && <IconifyIcon icon={icon} />}
         </ListItemIcon>
-
         {!collapsed && (
-          <ListItemText
-            primary={subheader}
-            primaryTypographyProps={{
-              variant: 'body1',
-            }}
-          />
+          <ListItemText primary={subheader} primaryTypographyProps={{ variant: 'body1' }} />
         )}
-
-        {!collapsed && (
+        {!collapsed && items.length > 0 && (
           <IconifyIcon
-            icon="iconamoon:arrow-down-2-duotone"
-            sx={{
-              color: active ? '#FFD700' : '#fff',
-              transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-              ml: 'auto',
-              fontSize: '1.3rem', // tăng kích thước mũi tên
-              transition: 'transform 0.3s ease',
-            }}
+            icon={open ? 'iconamoon:arrow-up-2-duotone' : 'iconamoon:arrow-down-2-duotone'}
+            sx={{ color: '#fff', ml: 'auto', fontSize: '1.3rem' }}
           />
         )}
       </ListItemButton>
 
-      {!collapsed && (
+      {/* SUB-ITEMS */}
+      {!collapsed && items.length > 0 && (
         <Collapse in={open} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
-            {items?.map((route) => (
+            {(items as SubMenuItem[]).map(route => (
               <ListItemButton
                 key={route.pathName}
                 component={Link}
                 href={route.path}
+                disableRipple
+                selected={!!route.active}
                 sx={{
                   ml: 2,
                   py: 1,
                   borderRadius: 2,
-                  bgcolor: route.active ? 'rgba(255,215,0,0.15)' : 'transparent',
                   color: '#fff',
-                  '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                    transform: 'translateX(4px)',
-                  },
-                  transition: 'all 0.2s ease',
-                  '& .MuiListItemText-root': {
-                    '& .MuiTypography-body1': {
-                      fontSize: '1rem',
-                      fontWeight: route.active ? 500 : 400,
-                      color: route.active ? '#FFD700' : '#fff',
+
+                  // Active sub-item: chỉ chữ vàng, giữ nền sidebar
+                  '&.Mui-selected': {
+                    bgcolor: 'inherit !important',
+                    '& .MuiListItemText-root .MuiTypography-root': {
+                      color: 'fff !important',
+                      fontWeight: 500,
                     },
+                  },
+
+                  // bỏ hover
+                  '&:hover': {
+                    bgcolor: 'inherit !important',
+                    transform: 'none',
+                  },
+
+                  // sub-item text
+                  '& .MuiListItemText-root .MuiTypography-root': {
+                    fontSize: '0.95rem',
+                    fontWeight: route.active ? 500 : 400,
+                    color: route.active ? '#FFB500' : '#fff',
                   },
                 }}
               >
-                <ListItemText
-                  primary={route.name}
-                  primaryTypographyProps={{
-                    variant: 'body1',
-                  }}
-                />
+                <ListItemText primary={route.name} primaryTypographyProps={{ variant: 'body2' }} />
               </ListItemButton>
             ))}
           </List>
