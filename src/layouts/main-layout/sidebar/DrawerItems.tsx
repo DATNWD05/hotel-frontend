@@ -1,6 +1,6 @@
 // src/layouts/main-layout/sidebar/DrawerItems.tsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import Link from '@mui/material/Link';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
@@ -13,31 +13,36 @@ import DrawerItem from './list-items/DrawerItem';
 import Image from '../../../components/base/Image';
 import IconifyIcon from '../../../components/base/IconifyIcon';
 import LogoImg from '../../../assets/images/logo.png';
-import sitemap from '../../../routes/sitemap';
+import sitemap, { MenuItem, SubMenuItem } from '../../../routes/sitemap';
 import { fontFamily } from '../../../theme/typography';
 
-interface DrawerItemsProps {
-  currentPath: string;
-  collapsed: boolean;
-}
-
-export default function DrawerItems({ currentPath, collapsed }: DrawerItemsProps) {
+export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
-  const getFilteredMenu = () => {
-    const userJson = localStorage.getItem('user');
-    if (!userJson) return [];
-    const roleId = JSON.parse(userJson).role_id;
-    return roleId === 2
-      ? sitemap.filter(item => item.id === 'oderRoom' || item.id === 'authentication')
-      : sitemap;
-  };
+  // Bật cờ active cho từng route và item con dựa trên current URL (pathname)
+  const processedMenu = React.useMemo<MenuItem[]>(() => {
+    return sitemap.map(route => {
+      const isParentActive =
+        route.path === pathname ||
+        !!route.items?.some(item => item.path === pathname);
 
-  const filteredMenu = getFilteredMenu();
+      const items = route.items?.map((item: SubMenuItem) => ({
+        ...item,
+        active: item.path === pathname,
+      }));
+
+      return {
+        ...route,
+        active: isParentActive,
+        items,
+      };
+    });
+  }, [pathname]);
 
   return (
     <>
-      {/* Logo & Title */}
+      {/* Logo */}
       <Stack
         pt={4}
         pb={3}
@@ -70,50 +75,47 @@ export default function DrawerItems({ currentPath, collapsed }: DrawerItemsProps
             sx={{ mr: collapsed ? 0 : 1.5 }}
           />
           {!collapsed && (
-            <Box>
-              <Typography
-                variant="h4"
-                color="#FFD700"
-                textTransform="uppercase"
-                letterSpacing={1.5}
-                fontFamily={fontFamily.poppins}
-                fontWeight={700}
-              >
-                Hotel Hobilo
-              </Typography>
-            </Box>
+            <Typography
+              variant="h4"
+              color="#FFD700"
+              textTransform="uppercase"
+              letterSpacing={1.5}
+              fontFamily={fontFamily.poppins}
+              fontWeight={700}
+            >
+              Hotel Hobilo
+            </Typography>
           )}
         </ButtonBase>
       </Stack>
 
-      {/* Menu List */}
+      {/* Menu */}
       <List component="nav" sx={{ mt: 3, mb: 10, px: collapsed ? 0 : 2 }}>
-        {filteredMenu.map(route =>
-          route.items ? (
+        {processedMenu.map(route =>
+          route.items && route.items.length > 0 ? (
             <CollapseListItem
               key={route.id}
-              {...route}
-              active={
-                route.path === currentPath ||
-                route.items.some(item => item.path === currentPath)
-              }
+              id={route.id}
+              subheader={route.subheader}
+              icon={route.icon!}
+              items={route.items}
+              active={route.active!}
               collapsed={collapsed}
             />
           ) : (
             <DrawerItem
               key={route.id}
               label={route.subheader}
-              // fallback '' nếu route.icon undefined
-              icon={route.icon ?? ''}
+              icon={route.icon!}
               path={route.path}
-              active={route.path === currentPath}
+              active={!!route.active}
               collapsed={collapsed}
             />
           )
         )}
       </List>
 
-      {/* Logout Button */}
+      {/* Logout */}
       <Box mt="auto" px={collapsed ? 1 : 3} pb={4} textAlign={collapsed ? 'center' : 'left'}>
         <Button
           variant="contained"
@@ -131,12 +133,7 @@ export default function DrawerItems({ currentPath, collapsed }: DrawerItemsProps
             borderRadius: 2,
             py: 1.5,
             px: collapsed ? 1 : undefined,
-            minWidth: collapsed ? 'auto' : undefined,
-            '&:hover': {
-              bgcolor: '#E6C200',
-              transform: 'translateY(-2px)',
-              boxShadow: '0 4px 12px rgba(255, 215, 0, 0.3)',
-            },
+            '&:hover': { bgcolor: '#E6C200', transform: 'translateY(-2px)' },
             transition: 'all 0.3s ease',
           }}
         >
