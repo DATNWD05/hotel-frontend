@@ -1,253 +1,221 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import {
-      Paper,
       Typography,
-      Box,
       TextField,
-      FormControl,
-      InputLabel,
+      Box,
       Select,
       MenuItem,
+      InputLabel,
+      FormControl,
       Button,
+      CircularProgress,
+      Snackbar,
+      Alert,
 } from '@mui/material';
-import { SelectChangeEvent } from '@mui/material/Select';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import api from '../../api/axios';
+import '../../css/Promotion.css';
 
-interface ApiRoom {
+interface RoomType {
+      id: number;
+      name: string;
+}
+
+interface Room {
       id: number;
       room_number: string;
-      status: 'ready' | 'closed';
-      floor: number;
-      area?: string;
+      room_type_id: number;
+      status: 'available' | 'booked' | 'cleaning' | 'maintenance';
       note?: string;
 }
 
-interface RoomForm {
-      id: number;
-      name: string;
-      status: 'ready' | 'closed';
-      floor: number;
-      area: string;
-      note: string;
+interface ValidationErrors {
+      room_number?: string;
 }
 
-const floorOptions = [1, 2, 3, 4, 5];
-const areaOptions = ['Phòng Riêng', 'Phòng Gia Đình', 'President','VIP'];
-
-const STORAGE_KEY = 'rooms_data';
-
-async function loadAllRooms(): Promise<ApiRoom[]> {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-            return JSON.parse(stored) as ApiRoom[];
-      }
-      // first time: fetch db.json and seed
-      const res = await fetch(`http://localhost:3000/rooms/:id`);
-      const json = (await res.json()) as { rooms: ApiRoom[] };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(json.rooms));
-      return json.rooms;
-}
-
-async function loadRoom(id: number): Promise<ApiRoom | undefined> {
-      const rooms = await loadAllRooms();
-      return rooms.find(r => r.id === id);
-}
-
-async function saveRoom(updated: ApiRoom): Promise<void> {
-      const rooms = await loadAllRooms();
-      const idx = rooms.findIndex(r => r.id === updated.id);
-      if (idx >= 0) {
-            rooms[idx] = updated;
-      } else {
-            rooms.push(updated);
-      }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(rooms));
-}
-
-const RoomView: React.FC = () => {
-      const { id } = useParams<{ id: string }>();
+const RoomEdit: React.FC = () => {
+      const { id } = useParams();
       const navigate = useNavigate();
-      const roomId = Number(id);
-
-      const [formData, setFormData] = useState<RoomForm>({
-            id: roomId,
-            name: '',
-            status: 'ready',
-            floor: 1,
-            area: '',
-            note: '',
+      const [room, setRoom] = useState<Room | null>(null);
+      const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
+      const [loading, setLoading] = useState<boolean>(false);
+      const [saving, setSaving] = useState<boolean>(false);
+      const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+      const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+            open: false,
+            message: '',
+            severity: 'success',
       });
-      const [loading, setLoading] = useState(true);
-      const [saving, setSaving] = useState(false);
-      const [error, setError] = useState<string | null>(null);
 
       useEffect(() => {
-            loadRoom(roomId)
-                  .then(room => {
-                        if (!room) throw new Error('Không tìm thấy phòng');
-                        setFormData({
-                              id: room.id,
-                              name: room.room_number,
-                              status: room.status,
-                              floor: room.floor,
-                              area: room.area ?? '',
-                              note: room.note ?? '',
-                        });
+            setLoading(true);
+            Promise.all([
+                  api.get(`/rooms/${id}`),
+                  api.get('/room-types')
+            ])
+                  .then(([roomRes, typesRes]) => {
+                        setRoom(roomRes.data.data);
+                        setRoomTypes(typesRes.data.data);
                   })
-                  .catch((err: unknown) => {
-                        const msg = err instanceof Error ? err.message : String(err);
-                        setError(msg);
+                  .catch(() => {
+                        setSnackbar({ open: true, message: 'Không lấy được dữ liệu phòng', severity: 'error' });
                   })
                   .finally(() => setLoading(false));
-      }, [roomId]);
+      }, [id]);
 
-      const handleInputChange = (
-            e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      ) => {
-            const { name, value } = e.target;
-            setFormData(prev => ({ ...prev, [name]: value }));
+      const validate = (data: Room): ValidationErrors => {
+            const errs: ValidationErrors = {};
+            if (!data.room_number.trim()) errs.room_number = 'Số phòng không được để trống';
+            return errs;
       };
 
-      const handleStatusChange = (e: SelectChangeEvent<'ready' | 'closed'>) => {
-            setFormData(prev => ({ ...prev, status: e.target.value }));
-      };
-      const handleFloorChange = (e: SelectChangeEvent<string>) => {
-            setFormData(prev => ({ ...prev, floor: Number(e.target.value) }));
-      };
-      const handleAreaChange = (e: SelectChangeEvent<string>) => {
-            setFormData(prev => ({ ...prev, area: e.target.value }));
+      const handleChange = <K extends keyof Room>(field: K, value: Room[K]) => {
+            if (!room) return;
+            const updated = { ...room, [field]: value };
+            setRoom(updated);
+            setValidationErrors(validate(updated));
       };
 
-      const handleSubmit = async (e: React.FormEvent) => {
-            e.preventDefault();
-            setSaving(true);
-            setError(null);
-
-            const updated: ApiRoom = {
-                  id: formData.id,
-                  room_number: formData.name,
-                  status: formData.status,
-                  floor: formData.floor,
-                  area: formData.area,
-                  note: formData.note,
-            };
-
-            try {
-                  await saveRoom(updated);
-                  navigate('/room');
-            } catch (err: unknown) {
-                  const msg = err instanceof Error ? err.message : String(err);
-                  setError(msg || 'Lưu thất bại');
-            } finally {
-                  setSaving(false);
+      const handleSave = () => {
+            if (!room) return;
+            const errs = validate(room);
+            if (Object.keys(errs).length) {
+                  setValidationErrors(errs);
+                  return;
             }
+            setSaving(true);
+            api.put(`/rooms/${room.id}`, {
+                  room_number: room.room_number,
+                  room_type_id: room.room_type_id,
+                  status: room.status,
+                  note: room.note,
+            })
+                  .then(() => {
+                        setSnackbar({ open: true, message: 'Cập nhật phòng thành công', severity: 'success' });
+                        setTimeout(() => navigate('/rooms'), 2000);
+                  })
+                  .catch(() => {
+                        setSnackbar({ open: true, message: 'Lỗi khi cập nhật phòng', severity: 'error' });
+                  })
+                  .finally(() => setSaving(false));
       };
 
-      if (loading) return <Typography>Đang tải...</Typography>;
+      const handleCancel = () => navigate('/rooms');
+
+      const handleSnackbarClose = () => {
+            setSnackbar(prev => ({ ...prev, open: false }));
+      };
 
       return (
-            <Paper sx={{ p: 4, borderRadius: 2 }}>
-                  <Typography variant="h5" mb={3}>
-                        Chỉnh sửa Phòng #{formData.id}
-                  </Typography>
+            <div className="promotion-wrapper">
+                  <div className="promotion-title">
+                        <div className="promotion-header-content">
+                              <h2>
+                                    Edit <b>Room</b>
+                              </h2>
+                              <Box className="promotion-form-buttons">
+                                    <Button
+                                          variant="contained"
+                                          color="primary"
+                                          onClick={handleSave}
+                                          disabled={saving}
+                                          sx={{ mr: 1 }}
+                                    >
+                                          {saving ? <CircularProgress size={24} /> : 'Lưu'}
+                                    </Button>
+                                    <Button
+                                          variant="outlined"
+                                          className="promotion-btn-cancel"
+                                          color="secondary"
+                                          onClick={handleCancel}
+                                          disabled={saving}
+                                          component={Link}
+                                          to="/rooms"
+                                    >
+                                          Hủy
+                                    </Button>
+                              </Box>
+                        </div>
+                  </div>
 
-                  {error && (
-                        <Typography color="error" mb={2}>
-                              {error}
+                  {loading ? (
+                        <div className="promotion-loading-container">
+                              <CircularProgress />
+                              <Typography>Đang xử lý...</Typography>
+                        </div>
+                  ) : room ? (
+                        <div className="promotion-detail-container">
+                              <h3>Thông tin phòng</h3>
+                              <Box display="flex" flexDirection="column" gap={2}>
+                                    <Box display="flex" gap={2}>
+                                          <TextField
+                                                label="Số phòng"
+                                                value={room.room_number}
+                                                onChange={e => handleChange('room_number', e.target.value)}
+                                                fullWidth
+                                                variant="outlined"
+                                                size="small"
+                                                error={!!validationErrors.room_number}
+                                                helperText={validationErrors.room_number}
+                                          />
+                                          <FormControl fullWidth variant="outlined" size="small">
+                                                <InputLabel>Loại phòng</InputLabel>
+                                                <Select
+                                                      value={room.room_type_id}
+                                                      label="Loại phòng"
+                                                      onChange={e => handleChange('room_type_id', Number(e.target.value))}
+                                                >
+                                                      {roomTypes.map(rt => (
+                                                            <MenuItem key={rt.id} value={rt.id}>{rt.name}</MenuItem>
+                                                      ))}
+                                                </Select>
+                                          </FormControl>
+                                    </Box>
+                                    <Box display="flex" gap={2}>
+                                          <FormControl fullWidth variant="outlined" size="small">
+                                                <InputLabel>Trạng thái</InputLabel>
+                                                <Select
+                                                      value={room.status}
+                                                      label="Trạng thái"
+                                                      onChange={e => handleChange('status', e.target.value as Room['status'])}
+                                                >
+                                                      <MenuItem value="available">Phòng trống</MenuItem>
+                                                      <MenuItem value="booked">Đã đặt</MenuItem>
+                                                      <MenuItem value="cleaning">Đang dọn</MenuItem>
+                                                      <MenuItem value="maintenance">Bảo trì</MenuItem>
+                                                </Select>
+                                          </FormControl>
+                                          <TextField
+                                                label="Ghi chú"
+                                                value={room.note || ''}
+                                                multiline
+                                                minRows={2}
+                                                onChange={e => handleChange('note', e.target.value)}
+                                                fullWidth
+                                                variant="outlined"
+                                                size="small"
+                                          />
+                                    </Box>
+                              </Box>
+                        </div>
+                  ) : (
+                        <Typography color="error" className="promotion-error-message">
+                              Không tìm thấy thông tin phòng
                         </Typography>
                   )}
 
-                  <Box
-                        component="form"
-                        onSubmit={handleSubmit}
-                        display="grid"
-                        gridTemplateColumns="1fr 1fr"
-                        gap={3}
+                  <Snackbar
+                        open={snackbar.open}
+                        autoHideDuration={3000}
+                        onClose={handleSnackbarClose}
+                        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
                   >
-                        <TextField
-                              label="Tên phòng"
-                              name="name"
-                              required
-                              fullWidth
-                              value={formData.name}
-                              onChange={handleInputChange}
-                        />
-
-                        <FormControl fullWidth required>
-                              <InputLabel id="status-label">Trạng thái</InputLabel>
-                              <Select
-                                    labelId="status-label"
-                                    label="Trạng thái"
-                                    value={formData.status}
-                                    onChange={handleStatusChange}
-                              >
-                                    <MenuItem value="ready">Sẵn sàng</MenuItem>
-                                    <MenuItem value="closed">Đóng phòng</MenuItem>
-                              </Select>
-                        </FormControl>
-
-                        <FormControl fullWidth>
-                              <InputLabel id="floor-label">Tầng</InputLabel>
-                              <Select
-                                    labelId="floor-label"
-                                    label="Tầng"
-                                    value={String(formData.floor)}
-                                    onChange={handleFloorChange}
-                              >
-                                    {floorOptions.map(f => (
-                                          <MenuItem key={f} value={String(f)}>
-                                                {f}
-                                          </MenuItem>
-                                    ))}
-                              </Select>
-                        </FormControl>
-
-                        <FormControl fullWidth>
-                              <InputLabel id="area-label">Khu vực</InputLabel>
-                              <Select
-                                    labelId="area-label"
-                                    label="Khu vực"
-                                    value={formData.area}
-                                    onChange={handleAreaChange}
-                              >
-                                    {areaOptions.map(a => (
-                                          <MenuItem key={a} value={a}>
-                                                {a}
-                                          </MenuItem>
-                                    ))}
-                              </Select>
-                        </FormControl>
-
-                        <TextField
-                              label="Ghi chú"
-                              name="note"
-                              multiline
-                              rows={4}
-                              fullWidth
-                              value={formData.note}
-                              onChange={handleInputChange}
-                              sx={{ gridColumn: 'span 2' }}
-                        />
-
-                        <Box
-                              sx={{
-                                    gridColumn: 'span 2',
-                                    display: 'flex',
-                                    gap: 2,
-                                    justifyContent: 'flex-start',
-                                    mt: 2,
-                              }}
-                        >
-                              <Button variant="contained" type="submit" disabled={saving}>
-                                    {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
-                              </Button>
-                              <Button variant="outlined" type='primary' onClick={() => navigate(-1)}>
-                                    Quay lại
-                              </Button>
-                        </Box>
-                  </Box>
-            </Paper>
+                        <Alert severity={snackbar.severity} onClose={handleSnackbarClose}>
+                              {snackbar.message}
+                        </Alert>
+                  </Snackbar>
+            </div>
       );
 };
 
-export default RoomView;
+export default RoomEdit;

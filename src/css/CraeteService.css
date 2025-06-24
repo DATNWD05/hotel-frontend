@@ -1,187 +1,311 @@
 /* CreateService.css */
 
-/* Container for the entire component */
-.create-service-container {
-  min-height: 100vh; /* Full viewport height */
-  width: 1100px; /* Full viewport width */
+/* Main wrapper for the Create Service page */
+.create-service-wrapper {
+  padding: 20px;
+  width: 100%; /* Full width */
+  background-color: #f5f5f5;
+  min-height: calc(100vh - 64px); /* Adjust based on header height */
+  box-sizing: border-box;
+}
+
+/* Title section styling */
+.create-service-title {
   display: flex;
-  flex-direction: column;
-  align-items: stretch; /* Stretch children to full width */
-  /* padding: 2rem; */
-  background-color: #f9fafb;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  box-sizing: border-box; /* Ensure padding doesn't cause overflow */
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 16px;
+  width: 100%; /* Full width */
+  box-sizing: border-box;
 }
 
-/* Header styling (if added) */
-.app-header {
-  /* width: 100%; */
-  padding: 1rem;
-  background-color: #1f2937;
-  color: #ffffff;
-  text-align: center;
-  margin-bottom: 2rem;
+.create-service-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
-.app-header h1 {
-  font-size: 1.5rem;
+.create-service-header-content h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1976d2;
   margin: 0;
 }
 
-.app-header nav a {
-  color: #93c5fd;
-  text-decoration: none;
-  margin: 0 1rem;
-  font-size: 0.9rem;
+.create-service-header-content h2 b {
+  font-weight: 700;
+  color: red; /* Matches MUI primary color */
 }
 
-.app-header nav a:hover {
-  text-decoration: underline;
+/* Button group styling */
+.create-service-form-buttons {
+  display: flex;
+  gap: 8px;
 }
 
-/* Title styling */
-.create-service-title {
-  font-size: 1.8rem;
-  font-weight: 600;
-  color: #1f2937;
-  text-align: center;
-  margin-bottom: 1.5rem;
+/* Cancel button styling */
+.create-service-btn-cancel {
+  color: #d32f2f !important; /* Matches MUI secondary color */
+  border-color: #d32f2f !important;
 }
 
-/* Message styling (success, error, loading) */
-.message {
-  padding: 1rem;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
-  text-align: center;
-  width: 100%; /* Full width of container */
+.create-service-btn-cancel:hover {
+  background-color: rgba(211, 47, 47, 0.04) !important;
 }
 
-/* Form styling */
-.create-service-form {
+/* Loading container styling */
+.create-service-loading-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  width: calc(100% - 250px); /* Adjust based on sidebar width (e.g., 250px) */
-  min-width: 300px; /* Minimum width to avoid cramped look */
-  max-width: 800px; /* Maximum width for readability */
-  margin-left: auto; /* Push to the right, assuming sidebar is on the left */
-  margin-right: auto; /* Center if no sidebar context */
-}
-
-/* Label styling */
-.form-label {
-  display: block;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 0.5rem;
-}
-
-/* Input and select styling */
-.form-input,
-.form-select,
-.form-textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  color: #1f2937;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
   background-color: #ffffff;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #ec4899; /* Pink border on focus */
-  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2); /* Pink glow */
-}
-
-/* Textarea specific styling */
-.form-textarea {
-  resize: vertical;
-  min-height: 100px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%; /* Full width */
 }
 
 /* Error message styling */
-.form-error {
-  color: #ef4444;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
+.create-service-error-message {
+  text-align: center;
+  padding: 16px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%; /* Full width */
 }
 
-/* Button styling */
-.form-button {
-  padding: 0.75rem 1.5rem;
-  background-color: #3b82f6;
-  color: #ffffff;
+/* Detail container styling */
+.create-service-detail-container {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 16px;
+  width: 100%; /* Full width */
+  box-sizing: border-box;
+}
+
+.create-service-detail-container h3 {
+  font-size: 20px;
   font-weight: 500;
-  font-size: 0.9rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  align-self: center;
-  margin-top: 1rem;
+  color: #333333;
+  margin-bottom: 16px;
 }
 
-.form-button:hover {
-  background-color: #2563eb;
-  transform: translateY(-1px);
+/* Form field styling (enhances MUI components) */
+.create-service-detail-container .MuiTextField-root,
+.create-service-detail-container .MuiFormControl-root {
+  background-color: #fafafa;
+  border-radius: 4px;
+  width: 100%; /* Ensure fields take full width */
 }
 
-.form-button:active {
-  transform: translateY(0);
+.create-service-detail-container .MuiTextField-root .MuiOutlinedInput-root,
+.create-service-detail-container .MuiFormControl-root .MuiOutlinedInput-root {
+  transition: all 0.3s ease;
 }
 
-.form-button:disabled {
-  background-color: #9ca3af;
-  cursor: not-allowed;
-  transform: none;
+.create-service-detail-container .MuiTextField-root .MuiOutlinedInput-root:hover,
+.create-service-detail-container .MuiFormControl-root .MuiOutlinedInput-root:hover {
+  background-color: #f0f0f0;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-  .create-service-container {
-    padding: 1.5rem;
+.create-service-detail-container .MuiTextField-root .MuiInputLabel-root,
+.create-service-detail-container .MuiFormControl-root .MuiInputLabel-root {
+  color: #666666;
+  font-size: 14px;
+}
+
+.create-service-detail-container .MuiTextField-root .MuiInputBase-input,
+.create-service-detail-container .MuiFormControl-root .MuiInputBase-input {
+  color: #333333;
+  font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .create-service-wrapper {
+    padding: 16px;
   }
 
   .create-service-title {
-    font-size: 1.5rem;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .app-header h1 {
-    font-size: 1.3rem;
+  .create-service-header-content {
+    flex-direction: column;
+    gap: 16px;
   }
 
-  .create-service-form {
-    width: 100%; /* Full width on mobile */
-    min-width: 0; /* Remove min-width on mobile */
-  }
-
-  .form-button {
+  .create-service-form-buttons {
     width: 100%;
+    justify-content: flex-end;
+  }
+
+  .create-service-detail-container {
+    padding: 16px;
+  }
+
+  .create-service-detail-container .MuiBox-root {
+    flex-direction: column;
+    gap: 16px;
   }
 }
+/* AddServiceCategory.css */
 
-/* Accessibility improvements */
-.form-input[aria-invalid="true"],
-.form-select[aria-invalid="true"],
-.form-textarea[aria-invalid="true"] {
-  border-color: #ef4444;
+/* Main wrapper for the Add Service Category page - matches CreateService */
+.add-service-category-wrapper {
+  padding: 20px;
+  width: 100%; /* Full width, same as CreateService */
+  background-color: #f5f5f5; /* Consistent background */
+  min-height: calc(100vh - 64px); /* Matches CreateService for full height minus header */
+  box-sizing: border-box;
 }
 
-.form-label::after {
-  content: '*';
-  color: #ef4444;
-  margin-left: 0.25rem;
-  display: inline-block;
+/* Title section styling - identical to CreateService */
+.add-service-category-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 16px;
+  width: 100%; /* Full width */
+  box-sizing: border-box;
 }
 
-.form-textarea + .form-label::after {
-  content: none; /* Description is optional */
+.add-service-category-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.add-service-category-header-content h2 {
+  font-size: 24px;
+  font-weight: 500;
+  color: #1976d2;
+  margin: 0;
+}
+
+.add-service-category-header-content h2 b {
+  font-weight: 700;
+  color: #d32f2f; /* Matches MUI primary color, same as CreateService */
+}
+
+/* Button group styling - matches CreateService */
+.add-service-category-form-buttons {
+  display: flex;
+  gap: 8px; /* Consistent button spacing */
+}
+
+/* Cancel button styling - identical to CreateService */
+.add-service-category-btn-cancel {
+  color: #d32f2f !important; /* Matches MUI secondary color */
+  border-color: #d32f2f !important;
+}
+
+.add-service-category-btn-cancel:hover {
+  background-color: rgba(211, 47, 47, 0.04) !important; /* Hover effect matches CreateService */
+}
+
+/* Loading container styling - matches CreateService */
+.add-service-category-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%; /* Full width */
+}
+
+/* Error message styling - matches CreateService */
+.add-service-category-error-message {
+  text-align: center;
+  padding: 16px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%; /* Full width */
+}
+
+/* Detail container styling - matches CreateService */
+.add-service-category-detail-container {
+  background-color: #ffffff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 16px;
+  width: 100%; /* Full width */
+  box-sizing: border-box;
+}
+
+.add-service-category-detail-container h3 {
+  font-size: 20px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 16px; /* Consistent header spacing */
+}
+
+/* Form field styling (enhances MUI components) - matches CreateService */
+.add-service-category-detail-container .MuiTextField-root {
+  background-color: #fafafa; /* Light background for fields */
+  border-radius: 4px;
+  width: 100%; /* Full width for fields */
+}
+
+.add-service-category-detail-container .MuiTextField-root .MuiOutlinedInput-root {
+  transition: all 0.3s ease; /* Smooth hover transition */
+}
+
+.add-service-category-detail-container .MuiTextField-root .MuiOutlinedInput-root:hover {
+  background-color: #f0f0f0; /* Hover effect matches CreateService */
+}
+
+.add-service-category-detail-container .MuiTextField-root .MuiInputLabel-root {
+  color: #666666;
+  font-size: 14px; /* Consistent label styling */
+}
+
+.add-service-category-detail-container .MuiTextField-root .MuiInputBase-input {
+  color: #333333;
+  font-size: 14px; /* Consistent input text styling */
+}
+
+/* Responsive adjustments - matches CreateService */
+@media (max-width: 600px) {
+  .add-service-category-wrapper {
+    padding: 16px; /* Reduced padding for mobile */
+  }
+
+  .add-service-category-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .add-service-category-header-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .add-service-category-form-buttons {
+    width: 100%;
+    justify-content: flex-end; /* Button alignment matches CreateService */
+  }
+
+  .add-service-category-detail-container {
+    padding: 16px; /* Reduced padding for mobile */
+  }
+
+  .add-service-category-detail-container .MuiBox-root {
+    flex-direction: column;
+    gap: 16px; /* Consistent field spacing on mobile */
+  }
 }

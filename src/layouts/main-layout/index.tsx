@@ -1,11 +1,15 @@
+// src/layouts/main-layout/index.tsx
 import React, { useState } from 'react';
-import type { PropsWithChildren } from 'react';
 import { Box } from '@mui/material';
 import Sidebar from './sidebar';
 import Topbar from './topbar';
 import { Outlet } from 'react-router-dom';
 
-export default function MainLayout({ children }: PropsWithChildren) {
+const SIDEBAR_WIDTH = 280;
+const COLLAPSED_WIDTH = 72;
+const TOPBAR_HEIGHT = 64; // Phù hợp với py=1.5, px=3, font-size mặc định
+
+export default function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -14,19 +18,34 @@ export default function MainLayout({ children }: PropsWithChildren) {
   };
 
   return (
-    <Box sx={{ display: 'flex', width: '100vw', minHeight: '100vh' }}>
-      {/* Bạn không còn cần isClosing nữa */}
+    <Box sx={{ display: 'flex', width: '100vw', height: '100vh' }}>
       <Sidebar
         mobileOpen={mobileOpen}
         setMobileOpen={setMobileOpen}
         collapsed={collapsed}
       />
 
-      <Box component="main" sx={{ flexGrow: 1, overflow: 'auto', bgcolor: 'grey.100' }}>
-        <Topbar onToggleSidebar={handleToggleSidebar} />
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          // Scroll nội dung ở đây
+          overflowY: 'auto',
+        }}
+      >
+        <Topbar
+          onToggleSidebar={handleToggleSidebar}
+          collapsed={collapsed}
+          sidebarWidth={collapsed ? COLLAPSED_WIDTH : SIDEBAR_WIDTH}
+          height={TOPBAR_HEIGHT}
+        />
+
+        {/* Spacer để đẩy nội dung xuống tránh bị che */}
+        <Box sx={{ height: TOPBAR_HEIGHT }} />
+
+        {/* Nội dung trang */}
         <Box sx={{ p: 3 }}>
           <Outlet />
-          {children}
         </Box>
       </Box>
     </Box>
