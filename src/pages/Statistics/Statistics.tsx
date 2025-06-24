@@ -77,7 +77,7 @@ export default function Statistics() {
       api.get<MonthCount[]>("/bookings-by-month"),
       api.get<BookingTotal[]>("/total-per-booking"),
       api.get<CustRevenue[]>("/revenue-by-customer"),
-      // api.get<RoomRevenue[]>("/revenue-by-room"),
+      api.get<RoomRevenue[]>("/revenue-by-room"),
       api.get<TopCustomer[]>("/top-customers"),
     ])
       .then(
@@ -90,7 +90,7 @@ export default function Statistics() {
           { data: monthsFromApi },
           { data: perBk },
           { data: byCust },
-          // { data: byRoom },
+          { data: byRoom },
           { data: topCust },
         ]) => {
           setTotalRevenue(tRev.total_revenue);
@@ -106,7 +106,7 @@ export default function Statistics() {
 
           setTotalPerBooking(perBk);
           setRevByCustomer(byCust);
-          // setRevByRoom(byRoom);
+          setRevByRoom(byRoom);
           setTopCustomers(topCust);
         }
       )
