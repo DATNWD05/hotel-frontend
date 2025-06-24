@@ -33,6 +33,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import BookingForm from './BookingForm';
 import '../../css/OrderRoom.css';
 import api from '../../api/axios';
+import { Link } from 'react-router-dom';
 
 interface RoomType {
   id: number;
@@ -316,10 +317,7 @@ const OrderRoom: React.FC = () => {
     setSelectedRoom(null);
   };
 
-  const handleBookRoom = (room: Room) => {
-    setBookingRoom({ roomNumber: room.room_number, roomId: room.id });
-    setOpenBooking(true);
-  };
+ 
 
   const handleCloseBooking = () => {
     setOpenBooking(false);
@@ -509,6 +507,14 @@ const OrderRoom: React.FC = () => {
         >
           Đang sửa
         </Button>
+        <Link to="/listbookings/add">
+        <Button
+          className="order-room-filter-book"
+          sx={{ backgroundColor: '#4CAF50', color: 'white', ml: 'auto', '&:hover': { backgroundColor: '#2E7D32' } }}
+        >
+          Đặt phòng
+        </Button>
+        </Link>
       </div>
 
       {filteredRooms.length === 0 ? (
@@ -803,13 +809,14 @@ const OrderRoom: React.FC = () => {
         
         <DialogActions className="dialog-actions-enhanced">
           {selectedRoom?.status === 'available' && (
-            <Button
-              onClick={() => handleBookRoom(selectedRoom)}
-              variant="contained"
-              sx={{ backgroundColor: '#4CAF50', color: 'white', mr: 1, '&:hover': { backgroundColor: '#2E7D32' } }}
-            >
-              Đặt phòng
-            </Button>
+            <Link to="/listbookings/add">
+        <Button
+          className="order-room-filter-book"
+          sx={{ backgroundColor: '#4CAF50', color: 'white', ml: 'auto', '&:hover': { backgroundColor: '#2E7D32' } }}
+        >
+          Đặt phòng
+        </Button>
+        </Link>
           )}
           {selectedRoom && (selectedRoom.status === 'available' || selectedRoom.status === 'maintenance') && (
             <Button

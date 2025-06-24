@@ -39,19 +39,24 @@ const sitemap: MenuItem[] = [
     active: true,
     items: [
       {
-        name: 'Loại Phòng',
-        pathName: 'roomtype',
+        name: 'Danh sách Phòng',
+        pathName: 'rooms',
         path: '/rooms',
       },
       {
-        name: 'Tầng',
-        pathName: 'floor',
-        path: '/room/floor',
+        name: 'Loại Phòng',
+        pathName: 'room_types',
+        path: '/room-types',
       },
       {
-        name: 'Cài Đặt Giá',
-        pathName: 'price',
-        path: '/room/price',
+        name: 'Tiện nghi phòng',
+        pathName: 'room_amenities',
+        path: '/amenities',
+      },
+      {
+        name: 'Danh mục Tiện nghi',
+        pathName: 'amenity-categories',
+        path: '/amenity-categories',
       },
     ],
   },

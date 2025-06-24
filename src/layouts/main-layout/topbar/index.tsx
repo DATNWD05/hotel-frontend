@@ -1,5 +1,6 @@
+// src/layouts/main-layout/topbar/index.tsx
 import React from 'react';
-import { Box, IconButton, Paper } from '@mui/material';
+import { Box, IconButton, Paper, useTheme } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
@@ -10,22 +11,32 @@ import ProfileMenu from './ProfileMenu';
 
 interface TopbarProps {
   onToggleSidebar: () => void;
+  collapsed: boolean;
+  sidebarWidth: number;
+  height: number;
 }
 
-export default function Topbar({ onToggleSidebar }: TopbarProps) {
+export default function Topbar({ onToggleSidebar, sidebarWidth, height }: TopbarProps) {
+  const theme = useTheme();
+
   return (
     <Paper
       component="header"
       elevation={3}
       square
       sx={{
+        position: 'fixed',
+        top: 0,
+        left: sidebarWidth,
+        right: 0,
+        height: height,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         px: 3,
-        py: 1.5,
-        borderBottom: theme => `1px solid ${theme.palette.divider}`,
+        borderBottom: `1px solid ${theme.palette.divider}`,
         bgcolor: 'white',
+        zIndex: theme.zIndex.appBar,
       }}
     >
       {/* Nút toggle sidebar */}
