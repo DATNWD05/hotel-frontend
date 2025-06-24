@@ -59,7 +59,14 @@ export default function Statistics() {
 
   // Fetch tất cả API
   useEffect(() => {
-    const api = axios.create({ baseURL: "/api/statistics" });
+    const api = axios.create({ baseURL: "http://localhost:8000/api/statistics" });
+    api.interceptors.request.use((config) => {
+      const token = localStorage.getItem("auth_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
 
     Promise.all([
       api.get<{ total_revenue: number }>("/total-revenue"),
@@ -70,8 +77,8 @@ export default function Statistics() {
       api.get<MonthCount[]>("/bookings-by-month"),
       api.get<BookingTotal[]>("/total-per-booking"),
       api.get<CustRevenue[]>("/revenue-by-customer"),
-      api.get<RoomRevenue[]>("/revenue-by-room"),
-      api.get<TopCustomer[]>("/top-frequent-customers"),
+      // api.get<RoomRevenue[]>("/revenue-by-room"),
+      api.get<TopCustomer[]>("/top-customers"),
     ])
       .then(
         ([
@@ -83,7 +90,7 @@ export default function Statistics() {
           { data: monthsFromApi },
           { data: perBk },
           { data: byCust },
-          { data: byRoom },
+          // { data: byRoom },
           { data: topCust },
         ]) => {
           setTotalRevenue(tRev.total_revenue);
@@ -99,7 +106,7 @@ export default function Statistics() {
 
           setTotalPerBooking(perBk);
           setRevByCustomer(byCust);
-          setRevByRoom(byRoom);
+          // setRevByRoom(byRoom);
           setTopCustomers(topCust);
         }
       )
@@ -252,31 +259,31 @@ export default function Statistics() {
 
   // Dữ liệu KPI cards
   const kpis = [
-  {
-    icon: <AttachMoneyIcon />,
-    title: "Tổng Doanh Thu",
-    value: `$${(totalRevenue ?? 0).toLocaleString()}`,
-    color: "#E53935",
-  },
-  {
-    icon: <HotelIcon />,
-    title: "Tỷ Lệ Lấp Đầy",
-    value: `${occupancyRate ?? 0}%`,
-    color: "#6A1B9A",
-  },
-  {
-    icon: <AccessTimeIcon />,
-    title: "Thời Gian TB",
-    value: `${avgStayDays ?? 0} ngày`,
-    color: "#1565C0",
-  },
-  {
-    icon: <BlockIcon />,
-    title: "Tỷ Lệ Hủy Phòng",
-    value: `${cancellationRate ?? 0}%`,
-    color: "#F9A825",
-  },
-];
+    {
+      icon: <AttachMoneyIcon />,
+      title: "Tổng Doanh Thu",
+      value: `$${(totalRevenue ?? 0).toLocaleString()}`,
+      color: "#E53935",
+    },
+    {
+      icon: <HotelIcon />,
+      title: "Tỷ Lệ Lấp Đầy",
+      value: `${occupancyRate ?? 0}%`,
+      color: "#6A1B9A",
+    },
+    {
+      icon: <AccessTimeIcon />,
+      title: "Thời Gian TB",
+      value: `${avgStayDays ?? 0} ngày`,
+      color: "#1565C0",
+    },
+    {
+      icon: <BlockIcon />,
+      title: "Tỷ Lệ Hủy Phòng",
+      value: `${cancellationRate ?? 0}%`,
+      color: "#F9A825",
+    },
+  ];
 
   return (
     <Box
