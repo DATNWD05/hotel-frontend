@@ -576,7 +576,7 @@ const Amenities: React.FC = () => {
             </Typography>
           ) : (
             <>
-              <TableContainer component={Paper} className="promotions-table-container">
+              <TableContainer component={Paper} className="promotions-table-container" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
                 <Table className="promotions-table" sx={{ width: '100%' }}>
                   <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
                     <TableRow>
@@ -584,12 +584,10 @@ const Amenities: React.FC = () => {
                       <TableCell><b>Nhóm</b></TableCell>
                       <TableCell><b>Mã</b></TableCell>
                       <TableCell><b>Tên</b></TableCell>
-                      <TableCell><b>Mô tả</b></TableCell>
-                      <TableCell><b>Biểu tượng</b></TableCell>
                       <TableCell><b>Giá</b></TableCell>
                       <TableCell><b>Số lượng mặc định</b></TableCell>
                       <TableCell><b>Trạng thái</b></TableCell>
-                      <TableCell align="center"><b>Hành động</b></TableCell>
+                      <TableCell align="center" sx={{ width: '150px' }}><b>Hành động</b></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -600,14 +598,6 @@ const Amenities: React.FC = () => {
                           <TableCell>{amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</TableCell>
                           <TableCell>{amenity.code}</TableCell>
                           <TableCell>{amenity.name}</TableCell>
-                          <TableCell>{amenity.description}</TableCell>
-                          <TableCell>
-                            {amenity.icon ? (
-                              <img src={amenity.icon} alt={amenity.name} width="24" />
-                            ) : (
-                              'Không có'
-                            )}
-                          </TableCell>
                           <TableCell>{amenity.price.toLocaleString('vi-VN')} đ</TableCell>
                           <TableCell>{amenity.default_quantity}</TableCell>
                           <TableCell>
@@ -615,14 +605,15 @@ const Amenities: React.FC = () => {
                               {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
                             </span>
                           </TableCell>
-                          <TableCell align="center">
-                            <Box display="flex" justifyContent="center" gap={1}>
+                          <TableCell align="center" sx={{ width: '150px', padding: '8px' }}>
+                            <Box display="flex" justifyContent="center" gap={1} sx={{ flexWrap: 'wrap' }}>
                               <IconButton
                                 title={selectedAmenityId === amenity.id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
                                 onClick={() => handleViewDetails(amenity.id)}
                                 sx={{
                                   color: '#1976d2',
                                   bgcolor: '#e3f2fd',
+                                  padding: '6px',
                                   '&:hover': {
                                     bgcolor: '#bbdefb',
                                     boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)',
@@ -630,7 +621,7 @@ const Amenities: React.FC = () => {
                                   transition: 'all 0.2s ease-in-out',
                                 }}
                               >
-                                {selectedAmenityId === amenity.id ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                                {selectedAmenityId === amenity.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
                               </IconButton>
                               <IconButton
                                 title="Chỉnh sửa tiện ích"
@@ -638,6 +629,7 @@ const Amenities: React.FC = () => {
                                 sx={{
                                   color: '#FACC15',
                                   bgcolor: '#fef9c3',
+                                  padding: '6px',
                                   '&:hover': {
                                     bgcolor: '#fff9c4',
                                     boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)',
@@ -645,7 +637,7 @@ const Amenities: React.FC = () => {
                                   transition: 'all 0.2s ease-in-out',
                                 }}
                               >
-                                <EditIcon />
+                                <EditIcon fontSize="small" />
                               </IconButton>
                               <IconButton
                                 title="Xóa tiện ích"
@@ -653,6 +645,7 @@ const Amenities: React.FC = () => {
                                 sx={{
                                   color: '#d32f2f',
                                   bgcolor: '#ffebee',
+                                  padding: '6px',
                                   '&:hover': {
                                     bgcolor: '#ffcdd2',
                                     boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)',
@@ -660,13 +653,13 @@ const Amenities: React.FC = () => {
                                   transition: 'all 0.2s ease-in-out',
                                 }}
                               >
-                                <DeleteIcon />
+                                <DeleteIcon fontSize="small" />
                               </IconButton>
                             </Box>
                           </TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell colSpan={10} style={{ padding: 0 }}>
+                          <TableCell colSpan={8} style={{ padding: 0 }}>
                             <Collapse in={selectedAmenityId === amenity.id}>
                               <div className="promotion-detail-container">
                                 {editAmenityId === amenity.id && editFormData ? (
@@ -787,29 +780,27 @@ const Amenities: React.FC = () => {
                                     <Typography variant="h6" gutterBottom>
                                       Thông tin Tiện ích
                                     </Typography>
-                                    <Table className="promotion-detail-table">
-                                      <TableBody>
-                                        <TableRow>
-                                          <TableCell><strong>ID:</strong> {amenity.id}</TableCell>
-                                          <TableCell><strong>Nhóm:</strong> {amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell><strong>Mã:</strong> {amenity.code}</TableCell>
-                                          <TableCell><strong>Tên:</strong> {amenity.name}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell colSpan={2}><strong>Mô tả:</strong> {amenity.description}</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell><strong>Biểu tượng:</strong> {amenity.icon ? <img src={amenity.icon} alt={amenity.name} width="24" /> : 'Không có'}</TableCell>
-                                          <TableCell><strong>Giá:</strong> {amenity.price.toLocaleString('vi-VN')} đ</TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell><strong>Số lượng mặc định:</strong> {amenity.default_quantity}</TableCell>
-                                          <TableCell><strong>Trạng thái:</strong> {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}</TableCell>
-                                        </TableRow>
-                                      </TableBody>
-                                    </Table>
+                                    <div className="promotion-detail-content">
+                                      <div className="detail-row">
+                                        <div className="detail-item"><strong>ID:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.id}</span></div>
+                                        <div className="detail-item"><strong>Nhóm:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</span></div>
+                                      </div>
+                                      <div className="detail-row">
+                                        <div className="detail-item"><strong>Mã:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.code}</span></div>
+                                        <div className="detail-item"><strong>Tên:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.name}</span></div>
+                                      </div>
+                                      <div className="detail-row">
+                                        <div className="detail-item" style={{ gridColumn: '1 / span 2' }}><strong>Mô tả:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.description}</span></div>
+                                      </div>
+                                      <div className="detail-row">
+                                        <div className="detail-item"><strong>Biểu tượng:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.icon ? <img src={amenity.icon} alt={amenity.name} width="24" /> : 'Không có'}</span></div>
+                                        <div className="detail-item"><strong>Giá:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.price.toLocaleString('vi-VN')} đ</span></div>
+                                      </div>
+                                      <div className="detail-row">
+                                        <div className="detail-item"><strong>Số lượng mặc định:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.default_quantity}</span></div>
+                                        <div className="detail-item"><strong>Trạng thái:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}</span></div>
+                                      </div>
+                                    </div>
                                   </Box>
                                 )}
                               </div>

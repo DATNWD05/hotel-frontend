@@ -34,15 +34,10 @@ const sitemap: MenuItem[] = [
   },
   {
     id: 'room',
-    subheader: 'Phòng',
+    subheader: 'Quản lý Phòng',
     icon: 'mdi:door',
     active: true,
     items: [
-      {
-        name: 'Danh sách Phòng',
-        pathName: 'rooms',
-        path: '/rooms',
-      },
       {
         name: 'Loại Phòng',
         pathName: 'room_types',
