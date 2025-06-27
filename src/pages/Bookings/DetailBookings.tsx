@@ -150,14 +150,17 @@ const DetailBookings: React.FC = () => {
           raw_total: data.raw_total || '0.00',
           discount_amount: data.discount_amount || '0.00',
           total_amount: data.total_amount || '0.00',
-          status: ['Pending', 'Confirmed', 'Checked_in', 'Checked_out', 'Cancelled'].includes(data.status) ? data.status : 'Cancelled',
+          status: ['Pending', 'Confirmed', 'Checked-in', 'Checked-out', 'Cancelled'].includes(data.status) ? data.status : 'Cancelled',
           customer: data.customer || null,
           rooms: data.rooms || [],
           services: data.services || [],
         };
         setBooking(bookingData);
         // Khởi tạo trạng thái hiển thị tiện nghi cho từng phòng
-        const initialShowAmenities = data.rooms.reduce((acc, room) => ({ ...acc, [room.id]: false }), {});
+        const initialShowAmenities = data.rooms.reduce(
+          (acc: { [key: number]: boolean }, room: Room) => ({ ...acc, [room.id]: false }),
+          {} as { [key: number]: boolean }
+        );
         setShowAmenities(initialShowAmenities);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);

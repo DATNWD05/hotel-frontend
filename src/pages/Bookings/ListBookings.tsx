@@ -21,14 +21,58 @@ import {
   Menu,
   Chip,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-import { SearchIcon } from "lucide-react";
+import AppsIcon from "@mui/icons-material/Apps";
+import HighlightOffIcon from "@mui/icons-material/HighlightOff";
+import { CheckIcon, SearchIcon } from "lucide-react";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
+
+interface CheckinInfo {
+  booking_id: number;
+  status: string;
+  check_in_date: string;
+  check_out_date: string;
+  deposit_amount: number;
+  total_amount: number;
+  raw_total: number;
+  discount_amount: number;
+  created_by: string | null;
+  customer: {
+    name: string;
+    gender: string;
+    email: string;
+    phone: string;
+    cccd: string;
+    nationality: string;
+    address: string;
+  };
+  rooms: {
+    room_number: string;
+    status: string;
+    image: string | null;
+    rate: number;
+    type: {
+      name: string;
+      max_occupancy: number;
+      amenities: { name: string; icon: string; quantity: number }[];
+    };
+  }[];
+  services: {
+    name: string;
+    description: string;
+    price: number;
+    quantity: number;
+  }[];
+}
 
 interface Customer {
   id: number;
@@ -130,9 +174,9 @@ const getBookingStatus = (
       return { status: "Chờ xác nhận", color: "#FFA500" };
     case "confirmed":
       return { status: "Đã xác nhận", color: "#388E3C" };
-    case "checked_in":
+    case "checked-in":
       return { status: "Đã nhận phòng", color: "#1A73E8" };
-    case "checked_out":
+    case "checked-out":
       return { status: "Đã trả phòng", color: "#757575" };
     case "cancelled":
       return { status: "Đã hủy", color: "#D32F2F" };
@@ -150,8 +194,86 @@ const ListBookings: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(
+    null
+  );
+  const [actionAnchorEl, setActionAnchorEl] = useState<null | HTMLElement>(
+    null
+  );
+  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(
+    null
+  );
+  const [openCheckinDialog, setOpenCheckinDialog] = useState(false);
+  const [checkinInfo, setCheckinInfo] = useState<CheckinInfo | null>(null);
+
   const navigate = useNavigate();
+
+  const handleCancelBooking = async (bookingId: number) => {
+    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn đặt phòng này không?"))
+      return;
+
+    try {
+      await api.post(`/bookings/${bookingId}/cancel`);
+      await fetchAllBookings(); // Load lại danh sách
+      setSnackbarOpen(true);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      setError("Hủy đặt phòng thất bại");
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleCheckinDialog = async (bookingId: number) => {
+    try {
+      const res = await api.get(`/check-in/${bookingId}`);
+      setCheckinInfo(res.data);
+      setOpenCheckinDialog(true);
+    } catch (err) {
+      console.error("Lỗi lấy thông tin check-in", err);
+    }
+  };
+
+  // Fetch check-in info and open dialog
+  const handleOpenCheckinDialog = async () => {
+    try {
+      const response = await api.get(`/check-in/${selectedBookingId}`);
+      if (response.status === 200) {
+        setCheckinInfo(response.data); // Lưu thông tin chi tiết
+        setOpenCheckinDialog(true); // Mở Dialog
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      setError("Không thể tải thông tin check-in");
+      setSnackbarOpen(true);
+    } finally {
+      handleCloseActionMenu();
+    }
+  };
+
+  const handleCloseActionMenu = () => {
+    setActionAnchorEl(null);
+  };
+
+  const handleCloseCheckinDialog = () => {
+    setOpenCheckinDialog(false);
+    setSelectedBookingId(null);
+  };
+
+  const handleCheckinConfirm = async () => {
+    if (!selectedBookingId) return;
+
+    try {
+      await api.post(`/check-in/${selectedBookingId}`); // Đảm bảo API này tồn tại
+      await fetchAllBookings(); // Tải lại danh sách
+      setSnackbarOpen(true);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      setError("Check-in thất bại");
+      setSnackbarOpen(true);
+    } finally {
+      handleCloseCheckinDialog();
+    }
+  };
 
   const fetchAllBookings = async () => {
     try {
@@ -193,8 +315,8 @@ const ListBookings: React.FC = () => {
           status: [
             "Pending",
             "Confirmed",
-            "Checked_in",
-            "Checked_out",
+            "Checked-in",
+            "Checked-out",
             "Cancelled",
           ].includes(item.status)
             ? item.status
@@ -376,32 +498,57 @@ const ListBookings: React.FC = () => {
               onClose={handleFilterClose}
               anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
               transformOrigin={{ vertical: "top", horizontal: "left" }}
-              sx={{ "& .MuiPaper-root": { borderRadius: "8px", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)" } }}
+              sx={{
+                "& .MuiPaper-root": {
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                },
+              }}
             >
               {statusOptions.map((option) => (
                 <MenuItem
                   key={option}
                   onClick={() => handleFilterSelect(option)}
                   selected={statusFilters.includes(option)}
-                  sx={{ "&:hover": { bgcolor: "#f0f0f0" }, "&.Mui-selected": { bgcolor: "#e0f7fa", "&:hover": { bgcolor: "#b2ebf2" } } }}
+                  sx={{
+                    "&:hover": { bgcolor: "#f0f0f0" },
+                    "&.Mui-selected": {
+                      bgcolor: "#e0f7fa",
+                      "&:hover": { bgcolor: "#b2ebf2" },
+                    },
+                  }}
                 >
                   <Typography variant="body2">{option}</Typography>
                 </MenuItem>
               ))}
             </Menu>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, alignItems: "center" }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 0.5,
+                alignItems: "center",
+              }}
+            >
               {statusFilters.length > 0 && (
                 <Chip
                   label={`Trạng thái: ${statusFilters.length} đã chọn`}
                   onDelete={() => setStatusFilters([])}
                   onClick={handleFilterClick}
-                  sx={{ bgcolor: "#e0f7fa", color: "#00796b", fontWeight: "bold", height: "28px", cursor: "pointer", "& .MuiChip-deleteIcon": { color: "#00796b" } }}
+                  sx={{
+                    bgcolor: "#e0f7fa",
+                    color: "#00796b",
+                    fontWeight: "bold",
+                    height: "28px",
+                    cursor: "pointer",
+                    "& .MuiChip-deleteIcon": { color: "#00796b" },
+                  }}
                 />
               )}
             </Box>
             <Button
               component={Link}
-              to="/promotions/add"
+              to="/listbookings/add"
               variant="contained"
               sx={{
                 backgroundColor: "#4318FF",
@@ -497,16 +644,46 @@ const ListBookings: React.FC = () => {
                             sx={{
                               color: "#1976d2",
                               bgcolor: "#e3f2fd",
-                              "&:hover": {
-                                bgcolor: "#bbdefb",
-                                boxShadow: "0 2px 6px rgba(25, 118, 210, 0.4)",
-                              },
-                              transition: "all 0.2s ease-in-out",
+                              "&:hover": { bgcolor: "#bbdefb" },
                             }}
                             onClick={() => handleViewDetail(booking.id)}
                           >
                             <VisibilityIcon fontSize="small" />
                           </IconButton>
+
+                          {["Chờ xác nhận", "Đã xác nhận"].includes(
+                            getBookingStatus(booking.status).status
+                          ) && (
+                            <IconButton
+                              title="Xác nhận Check-in"
+                              onClick={() => handleCheckinDialog(booking.id)}
+                              sx={{
+                                ml: 1,
+                                color: "#4caf50",
+                                bgcolor: "#e8f5e9",
+                                "&:hover": { bgcolor: "#c8e6c9" },
+                              }}
+                            >
+                              <AppsIcon fontSize="small" />{" "}
+                              {/* Icon 4 chấm như bạn mong muốn */}
+                            </IconButton>
+                          )}
+                          {["Chờ xác nhận", "Đã xác nhận"].includes(
+                            getBookingStatus(booking.status).status
+                          ) && (
+                            <IconButton
+                              title="Hủy đặt phòng"
+                              onClick={() => handleCancelBooking(booking.id)}
+                              sx={{
+                                ml: 1,
+                                color: "#d32f2f",
+                                bgcolor: "#fbe9e7",
+                                "&:hover": { bgcolor: "#ffcdd2" },
+                              }}
+                            >
+                              <HighlightOffIcon fontSize="small" />
+                            </IconButton>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -532,6 +709,151 @@ const ListBookings: React.FC = () => {
           {error}
         </Alert>
       </Snackbar>
+      <Menu
+        anchorEl={actionAnchorEl}
+        open={Boolean(actionAnchorEl)}
+        onClose={handleCloseActionMenu}
+      >
+        <MenuItem onClick={handleOpenCheckinDialog}>
+          <span style={{ marginRight: 8 }}>
+            <CheckIcon />
+          </span>{" "}
+          Xác nhận Check-in
+        </MenuItem>
+      </Menu>
+
+      <Dialog
+        open={openCheckinDialog}
+        onClose={handleCloseCheckinDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 600,
+            fontSize: "25px",
+            color: "#4318FF", // Tùy chọn: màu tím nổi bật
+            mb: 2,
+          }}
+        >
+          🧾 Thông tin Check-in
+        </DialogTitle>
+        <DialogContent dividers sx={{ px: 4, py: 3 }}>
+          {checkinInfo ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {/* 2 CỘT CHÍNH */}
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                {/* THÔNG TIN KHÁCH HÀNG */}
+                <Box sx={{ flex: 1, minWidth: "280px" }}>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>
+                    🧑‍💼 Thông tin khách hàng
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>Họ tên:</b> {checkinInfo.customer.name}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>CCCD:</b> {checkinInfo.customer.cccd}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>Email:</b> {checkinInfo.customer.email}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>SĐT:</b> {checkinInfo.customer.phone}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>Quốc tịch:</b> {checkinInfo.customer.nationality}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>Địa chỉ:</b> {checkinInfo.customer.address}
+                  </Typography>
+                </Box>
+
+                {/* THÔNG TIN ĐẶT PHÒNG */}
+                <Box sx={{ flex: 1, minWidth: "280px" }}>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>
+                    📅 Thông tin đặt phòng
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>Ngày nhận:</b> {formatDate(checkinInfo.check_in_date)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>Ngày trả:</b> {formatDate(checkinInfo.check_out_date)}
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>Đặt cọc:</b>{" "}
+                    {numeral(checkinInfo.deposit_amount).format("0,0")} VNĐ
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>Tổng tiền:</b>{" "}
+                    {numeral(checkinInfo.total_amount).format("0,0")} VNĐ
+                  </Typography>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>Người tạo:</b> {checkinInfo.created_by}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* PHÒNG */}
+              <Box>
+                <Typography variant="h6" fontWeight={700} gutterBottom>
+                  🛏️ Phòng
+                </Typography>
+                {checkinInfo.rooms.map((room, index) => (
+                  <Box key={index} sx={{ ml: 2, mb: 1 }}>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <b>Phòng:</b> {room.room_number} - {room.type.name}
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <b>Giá:</b> {numeral(room.rate).format("0,0")} VNĐ
+                    </Typography>
+                    <Typography variant="body2" sx={{ mb: 1 }}>
+                      <b>Sức chứa:</b> {room.type.max_occupancy} người
+                    </Typography>
+                    {room.type.amenities.map((a, i) => (
+                      <Typography key={i} variant="body2" sx={{ mb: 1 }}>
+                        - {a.name} x{a.quantity}
+                      </Typography>
+                    ))}
+                  </Box>
+                ))}
+              </Box>
+
+              {/* DỊCH VỤ */}
+              <Box>
+                <Typography variant="h6" fontWeight={700} gutterBottom>
+                  🛎️ Dịch vụ đi kèm
+                </Typography>
+                {checkinInfo.services.length === 0 ? (
+                  <Typography variant="body2" sx={{ mb: 1 }} fontStyle="italic">
+                    Không có dịch vụ
+                  </Typography>
+                ) : (
+                  checkinInfo.services.map((s, i) => (
+                    <Typography key={i} variant="body2" sx={{ ml: 2, mb: 1 }}>
+                      - {s.name} x{s.quantity} ({numeral(s.price).format("0,0")}{" "}
+                      VNĐ)
+                    </Typography>
+                  ))
+                )}
+              </Box>
+            </Box>
+          ) : (
+            <Typography>Đang tải thông tin...</Typography>
+          )}
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={handleCloseCheckinDialog}>Đóng</Button>
+          <Button
+            onClick={handleCheckinConfirm}
+            variant="contained"
+            color="primary"
+            disabled={!checkinInfo}
+          >
+            Check-in ngay
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };
