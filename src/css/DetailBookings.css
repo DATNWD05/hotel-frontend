@@ -376,3 +376,30 @@
     margin-bottom: 10px;
   }
 }
+.detail-container .user-detail-table .action-delete {
+  color: #d93025;
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #d93025;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.action-delete:hover {
+  background: #d93025;
+  color: #fff;
+}
+
+.card-header .tim-kiem {
+  display: flex;
+  align-items: center;
+  margin-left: auto; /* Đẩy ô tìm kiếm sang bên phải */
+  width: 300px; /* Độ rộng cố định, có thể điều chỉnh */
+}
+
+.card-header .tim-kiem .MuiTextField-root {
+  width: 100%; /* Đảm bảo TextField chiếm toàn bộ chiều rộng của container */
+}
