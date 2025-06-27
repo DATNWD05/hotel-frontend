@@ -21,26 +21,28 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import api from '../../api/axios';
 import '../../css/HiddenRoom.css';
 
+interface Amenity {
+  id: number;
+  name: string;
+  pivot: {
+    quantity: number;
+  };
+}
+
 interface Room {
   id: number;
   room_number: string;
   room_type_id: number;
   status: string;
-  image: string;
+  image: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string;
-}
-
-interface RoomType {
-  id: number;
-  name: string;
-}
-
-interface Amenity {
-  id: number;
-  name: string;
-  quantity: number;
+  room_type: {
+    id: number;
+    name: string;
+    amenities: Amenity[];
+  };
 }
 
 interface RoomResponse {
@@ -53,31 +55,9 @@ interface RoomResponse {
   };
 }
 
-interface RoomTypeResponse {
-  data: RoomType[];
-  meta: {
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-  };
-}
-
-interface AmenityResponse {
-  data: Amenity[];
-  meta: {
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-  };
-}
-
 const HiddenRoom: React.FC = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
-  const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
-  const [amenities, setAmenities] = useState<{ [key: number]: Amenity[] }>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
@@ -101,48 +81,21 @@ const HiddenRoom: React.FC = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
       setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchRoomTypes = async () => {
-    try {
-      const response = await api.get<RoomTypeResponse>('/room-types');
-      if (response.status === 200) {
-        setRoomTypes(response.data.data);
-      }
-    } catch (err) {
-      console.error('Lỗi khi tải loại phòng:', err);
-    }
-  };
-
-  const fetchAmenitiesByRoomType = async (roomTypeId: number) => {
-    try {
-      const response = await api.get<AmenityResponse>(`/room-types/${roomTypeId}/amenities`);
-      if (response.status === 200) {
-        setAmenities((prev) => ({ ...prev, [roomTypeId]: response.data.data }));
-      }
-    } catch (err) {
-      console.error(`Lỗi khi tải tiện nghi cho loại phòng ${roomTypeId}:`, err);
-    }
-  };
-
   useEffect(() => {
     fetchTrashedRooms();
-    fetchRoomTypes();
   }, []);
 
   useEffect(() => {
     setFilteredRooms(rooms.slice((currentPage - 1) * 10, currentPage * 10));
     setLastPage(Math.ceil(rooms.length / 10));
   }, [currentPage, rooms]);
-
-  useEffect(() => {
-    const uniqueRoomTypeIds = rooms.map((room) => room.room_type_id);
-    const distinctRoomTypeIds = Array.from(new Set(uniqueRoomTypeIds));
-    distinctRoomTypeIds.forEach((roomTypeId) => fetchAmenitiesByRoomType(roomTypeId));
-  }, [rooms]);
 
   const handleRestore = async (roomId: number) => {
     try {
@@ -168,11 +121,6 @@ const HiddenRoom: React.FC = () => {
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
     setCurrentPage(page);
-  };
-
-  const getRoomTypeName = (roomTypeId: number) => {
-    const roomType = roomTypes.find((rt) => rt.id === roomTypeId);
-    return roomType ? roomType.name : 'Không xác định';
   };
 
   const getStatusText = (status: string) => {
@@ -227,7 +175,7 @@ const HiddenRoom: React.FC = () => {
                   <React.Fragment key={room.id}>
                     <TableRow>
                       <TableCell>{room.room_number}</TableCell>
-                      <TableCell>{getRoomTypeName(room.room_type_id)}</TableCell>
+                      <TableCell>{room.room_type.name}</TableCell>
                       <TableCell>{getStatusText(room.status)}</TableCell>
                       <TableCell align="center">
                         <IconButton
@@ -255,7 +203,7 @@ const HiddenRoom: React.FC = () => {
                               <TableBody>
                                 <TableRow>
                                   <TableCell><strong>Số Phòng:</strong> {room.room_number}</TableCell>
-                                  <TableCell><strong>Loại Phòng:</strong> {getRoomTypeName(room.room_type_id)}</TableCell>
+                                  <TableCell><strong>Loại Phòng:</strong> {room.room_type.name}</TableCell>
                                 </TableRow>
                                 <TableRow>
                                   <TableCell><strong>Trạng Thái:</strong> {getStatusText(room.status)}</TableCell>
@@ -263,7 +211,7 @@ const HiddenRoom: React.FC = () => {
                               </TableBody>
                             </Table>
                             <h3>Tiện nghi</h3>
-                            {amenities[room.room_type_id] && amenities[room.room_type_id].length > 0 ? (
+                            {room.room_type.amenities && room.room_type.amenities.length > 0 ? (
                               <Table className="hidden-room-detail-table">
                                 <TableHead>
                                   <TableRow>
@@ -272,10 +220,10 @@ const HiddenRoom: React.FC = () => {
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
-                                  {amenities[room.room_type_id].map((amenity) => (
+                                  {room.room_type.amenities.map((amenity) => (
                                     <TableRow key={amenity.id}>
                                       <TableCell>{amenity.name}</TableCell>
-                                      <TableCell>{amenity.quantity}</TableCell>
+                                      <TableCell>{amenity.pivot.quantity}</TableCell>
                                     </TableRow>
                                   ))}
                                 </TableBody>

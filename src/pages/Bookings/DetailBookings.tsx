@@ -16,6 +16,14 @@ import {
   Box,
   Snackbar,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  Checkbox,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO, isValid } from 'date-fns';
@@ -137,6 +145,10 @@ const DetailBookings: React.FC = () => {
   const [editedServices, setEditedServices] = useState<Partial<Service>>({});
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [openServiceDialog, setOpenServiceDialog] = useState<boolean>(false);
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<number[]>([]);
+  const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -156,7 +168,6 @@ const DetailBookings: React.FC = () => {
       if (response.status === 200) {
         const data = response.data;
         if (!data.customer || !data.rooms || !data.rooms.length) {
-          setError('Dữ liệu đặt phòng không đầy đủ. Vui lòng kiểm tra backend.');
           setLoading(false);
           return;
         }
@@ -174,17 +185,37 @@ const DetailBookings: React.FC = () => {
           services: data.services || [],
         };
         setBooking(bookingData);
-        const initialShowAmenities = data.rooms.reduce((acc, room) => ({ ...acc, [room.id]: false }), {});
-        const initialShowServices = data.rooms.reduce((acc, room) => ({ ...acc, [room.id]: false }), {});
+        const initialShowAmenities = data.rooms.reduce((acc: { [key: number]: boolean }, room: Room) => ({ ...acc, [room.id]: false }), {});
+        const initialShowServices = data.rooms.reduce((acc: { [key: number]: boolean }, room: Room) => ({ ...acc, [room.id]: false }), {});
         setShowAmenities(initialShowAmenities);
         setShowServices(initialShowServices);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải chi tiết đặt phòng');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Đã xảy ra lỗi khi tải chi tiết đặt phòng');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailableServices = async () => {
+    try {
+      const response = await api.get('/service', {
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      if (response.status === 200) {
+        const services = Array.isArray(response.data) ? response.data : response.data.data || [];
+        setAvailableServices(services.filter((service: Service) => service.status === 'active'));
+      } else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách dịch vụ:', error);
+      setSnackbarMessage('Lỗi khi tải danh sách dịch vụ.');
+      setSnackbarOpen(true);
     }
   };
 
@@ -195,8 +226,6 @@ const DetailBookings: React.FC = () => {
   const handleBack = () => navigate('/listbookings');
   const handleEdit = (section: string) => console.log(`Edit ${section} clicked`);
   const handleEditServices = () => console.log('Edit Services clicked');
-  const handleAddAmenity = () => console.log('Add Amenity clicked');
-  const handleAddService = (roomId: number) => console.log(`Add Service for room ${roomId} clicked`);
 
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { className: string; text: string } } = {
@@ -262,52 +291,72 @@ const DetailBookings: React.FC = () => {
         setSnackbarMessage('Cập nhật dịch vụ thành công!');
         setSnackbarOpen(true);
       }
-    } catch (err) {
-      setSnackbarMessage('Lỗi khi cập nhật dịch vụ.');
+    } catch (error) {
+    console.error(error);
+    setSnackbarMessage('Lỗi khi cập nhật dịch vụ.');
+    setSnackbarOpen(true);
+  }
+
+  };
+
+  const handleOpenServiceDialog = (roomId: number) => {
+    setCurrentRoomId(roomId);
+    setSelectedServices([]);
+    fetchAvailableServices();
+    setOpenServiceDialog(true);
+  };
+
+  const handleCloseServiceDialog = () => {
+    setOpenServiceDialog(false);
+    setCurrentRoomId(null);
+    setSelectedServices([]);
+  };
+
+  const handleServiceSelection = (serviceId: number) => {
+    setSelectedServices((prev) =>
+      prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId]
+    );
+  };
+
+  const handleAddServices = async () => {
+    if (!currentRoomId || selectedServices.length === 0) {
+      setSnackbarMessage('Vui lòng chọn ít nhất một dịch vụ.');
       setSnackbarOpen(true);
+      return;
     }
-  };
 
-  const handleAddNewService = async (roomId: number) => {
-    const newService: Partial<Service> = {
-      name: '',
-      code: '',
-      price: '',
-      quantity: 0,
-      status: 'active',
-    };
-    setEditingServicesId(roomId);
-    setEditedServices(newService);
-  };
-
-  const handleSaveNewService = async (roomId: number) => {
     try {
       const response = await api.post(`/bookings/${bookingId}/add-services`, {
-        room_id: roomId,
-        service: editedServices,
+        room_id: currentRoomId,
+        services: selectedServices.map((serviceId) => ({
+          service_id: serviceId,
+          quantity: 1,
+        })),
       });
+
       if (response.status === 200) {
         setBooking((prev) => {
           if (!prev) return prev;
+          const newServices = response.data.services || [];
           return {
             ...prev,
             rooms: prev.rooms.map((room) =>
-              room.id === roomId
+              room.id === currentRoomId
                 ? {
                     ...room,
-                    services: [...(room.services || []), response.data.service],
+                    services: [...(room.services || []), ...newServices],
                   }
                 : room
             ),
           };
         });
-        setEditingServicesId(null);
-        setEditedServices({});
         setSnackbarMessage('Thêm dịch vụ thành công!');
         setSnackbarOpen(true);
+        handleCloseServiceDialog();
       }
-    } catch (err) {
-      setSnackbarMessage('Lỗi khi thêm dịch vụ.');
+    } catch (error) {
+      console.error('Lỗi khi thêm dịch vụ:', error);
+      setSnackbarMessage('Lỗi khi thêm dịch vụ. Vui lòng thử lại.');
       setSnackbarOpen(true);
     }
   };
@@ -333,7 +382,8 @@ const DetailBookings: React.FC = () => {
         setSnackbarMessage('Xóa dịch vụ thành công!');
         setSnackbarOpen(true);
       }
-    } catch (err) {
+    } catch (error) {
+      console.log(error);
       setSnackbarMessage('Lỗi khi xóa dịch vụ.');
       setSnackbarOpen(true);
     }
@@ -374,7 +424,6 @@ const DetailBookings: React.FC = () => {
         <>
           <div className="card-group top-section">
             <div className="container">
-              {/* Thông tin khách hàng */}
               <div className="card customer-info">
                 <div className="card-header">
                   <div className="card-icon">👤</div>
@@ -425,7 +474,6 @@ const DetailBookings: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Thông tin đặt phòng */}
               <div className="card booking-info">
                 <div className="card-header">
                   <div className="card-icon">📅</div>
@@ -478,7 +526,6 @@ const DetailBookings: React.FC = () => {
 
           <div className="card-group bottom-section">
             <div className="container">
-              {/* Thông tin phòng (table) */}
               <div className="card room-info customer-card">
                 <div className="card-header">
                   <div className="card-icon">🏨</div>
@@ -498,7 +545,7 @@ const DetailBookings: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {booking.rooms.map((room) => (
+                      {booking.rooms.map((room: Room) => (
                         <React.Fragment key={room.id}>
                           <tr>
                             <td>{room.room_number}</td>
@@ -611,14 +658,10 @@ const DetailBookings: React.FC = () => {
                                         <Button
                                           variant="contained"
                                           color="primary"
-                                          onClick={() =>
-                                            editedServices.id
-                                              ? handleSaveServices(room.id)
-                                              : handleSaveNewService(room.id)
-                                          }
+                                          onClick={() => handleSaveServices(room.id)}
                                           disabled={!editedServices.name || !editedServices.code || !editedServices.price || !editedServices.quantity}
                                         >
-                                          {editedServices.id ? 'Lưu' : 'Thêm'}
+                                          Lưu
                                         </Button>
                                         <Button
                                           variant="outlined"
@@ -670,8 +713,8 @@ const DetailBookings: React.FC = () => {
                                     <Button
                                       variant="contained"
                                       startIcon={<PlusIcon />}
-                                      onClick={() => handleAddNewService(room.id)}
-                                      className="action-add"
+                                      onClick={() => handleOpenServiceDialog(room.id)}
+                                      className="action-add-service"
                                     >
                                       Thêm dịch vụ
                                     </Button>
@@ -689,13 +732,9 @@ const DetailBookings: React.FC = () => {
                   <Button className="edit-button" onClick={handleEditServices}>
                     Sửa dịch vụ
                   </Button>
-                  <Button className="add-button" onClick={handleAddService}>
-                    Thêm dịch vụ
-                  </Button>
                 </div>
               </div>
 
-              {/* Thông tin dịch vụ (table) */}
               <div className="card services-info customer-card">
                 <div className="card-header">
                   <div className="card-icon">🛎️</div>
@@ -735,13 +774,47 @@ const DetailBookings: React.FC = () => {
                   <Button className="edit-button" onClick={handleEditServices}>
                     Sửa dịch vụ
                   </Button>
-                  <Button className="add-button" onClick={handleAddService}>
-                    Thêm dịch vụ
-                  </Button>
                 </div>
               </div>
             </div>
           </div>
+
+          <Dialog open={openServiceDialog} onClose={handleCloseServiceDialog} maxWidth="sm" fullWidth>
+            <DialogTitle>Thêm dịch vụ cho phòng</DialogTitle>
+            <DialogContent>
+              <List>
+                {availableServices.length > 0 ? (
+                  availableServices.map((service) => (
+                    <ListItem key={service.id}>
+                      <Checkbox
+                        checked={selectedServices.includes(service.id)}
+                        onChange={() => handleServiceSelection(service.id)}
+                      />
+                      <ListItemText
+                        primary={service.name}
+                        secondary={`Mã: ${service.code || 'N/A'} | Giá: ${formatCurrency(service.price)}`}
+                      />
+                    </ListItem>
+                  ))
+                ) : (
+                  <Typography>Không có dịch vụ nào khả dụng.</Typography>
+                )}
+              </List>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseServiceDialog} color="secondary">
+                Hủy
+              </Button>
+              <Button
+                onClick={handleAddServices}
+                color="primary"
+                variant="contained"
+                disabled={selectedServices.length === 0}
+              >
+                Thêm
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           <Snackbar
             open={snackbarOpen}
