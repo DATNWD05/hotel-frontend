@@ -3,12 +3,34 @@ import {
   CircularProgress,
   Typography,
   Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
+  Collapse,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Box,
+  Snackbar,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  Checkbox,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO, isValid } from 'date-fns';
 import numeral from 'numeral';
 import api from '../../api/axios';
 import '../../css/DetailBookings.css';
+import { EditIcon, TrashIcon, PlusIcon } from 'lucide-react';
 
 // Interface definitions
 interface Customer {
@@ -77,6 +99,7 @@ interface Room {
   created_at: string;
   updated_at: string;
   room_type: RoomType;
+  services?: Service[];
 }
 
 interface Booking {
@@ -117,6 +140,15 @@ const DetailBookings: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showAmenities, setShowAmenities] = useState<{ [key: number]: boolean }>({});
+  const [showServices, setShowServices] = useState<{ [key: number]: boolean }>({});
+  const [editingServicesId, setEditingServicesId] = useState<number | null>(null);
+  const [editedServices, setEditedServices] = useState<Partial<Service>>({});
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [openServiceDialog, setOpenServiceDialog] = useState<boolean>(false);
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<number[]>([]);
+  const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -133,12 +165,9 @@ const DetailBookings: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await api.get(`/bookings/${bookingId}`);
-      console.log(response.data);
-      
       if (response.status === 200) {
         const data = response.data;
         if (!data.customer || !data.rooms || !data.rooms.length) {
-          setError('Dữ liệu đặt phòng không đầy đủ. Vui lòng kiểm tra backend.');
           setLoading(false);
           return;
         }
@@ -156,16 +185,37 @@ const DetailBookings: React.FC = () => {
           services: data.services || [],
         };
         setBooking(bookingData);
-        // Khởi tạo trạng thái hiển thị tiện nghi cho từng phòng
-        const initialShowAmenities = data.rooms.reduce((acc, room) => ({ ...acc, [room.id]: false }), {});
+        const initialShowAmenities = data.rooms.reduce((acc: { [key: number]: boolean }, room: Room) => ({ ...acc, [room.id]: false }), {});
+        const initialShowServices = data.rooms.reduce((acc: { [key: number]: boolean }, room: Room) => ({ ...acc, [room.id]: false }), {});
         setShowAmenities(initialShowAmenities);
+        setShowServices(initialShowServices);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải chi tiết đặt phòng');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Đã xảy ra lỗi khi tải chi tiết đặt phòng');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailableServices = async () => {
+    try {
+      const response = await api.get('/service', {
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+      if (response.status === 200) {
+        const services = Array.isArray(response.data) ? response.data : response.data.data || [];
+        setAvailableServices(services.filter((service: Service) => service.status === 'active'));
+      } else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách dịch vụ:', error);
+      setSnackbarMessage('Lỗi khi tải danh sách dịch vụ.');
+      setSnackbarOpen(true);
     }
   };
 
@@ -175,10 +225,7 @@ const DetailBookings: React.FC = () => {
 
   const handleBack = () => navigate('/listbookings');
   const handleEdit = (section: string) => console.log(`Edit ${section} clicked`);
-  const handleEditAmenities = () => console.log('Edit Amenities clicked');
   const handleEditServices = () => console.log('Edit Services clicked');
-  const handleAddAmenity = () => console.log('Add Amenity clicked');
-  const handleAddService = () => console.log('Add Service clicked');
 
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { className: string; text: string } } = {
@@ -196,6 +243,157 @@ const DetailBookings: React.FC = () => {
     setShowAmenities((prev) => ({ ...prev, [roomId]: !prev[roomId] }));
   };
 
+  const toggleServices = (roomId: number) => {
+    setShowServices((prev) => ({ ...prev, [roomId]: !prev[roomId] }));
+    setEditingServicesId(null);
+  };
+
+  const handleEditServicesClick = (roomId: number, service: Service) => {
+    setEditingServicesId(roomId);
+    setEditedServices({
+      id: service.id,
+      name: service.name || '',
+      code: service.code || '',
+      price: service.price || '',
+      quantity: service.quantity || 0,
+      status: service.status || 'active',
+    });
+  };
+
+  const handleChangeServices = (field: keyof Service, value: string | number) => {
+    setEditedServices((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveServices = async (roomId: number) => {
+    try {
+      const response = await api.put(`/service/${editedServices.id}`, editedServices);
+      if (response.status === 200) {
+        setBooking((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            rooms: prev.rooms.map((room) =>
+              room.id === roomId
+                ? {
+                    ...room,
+                    services: room.services?.map((s) =>
+                      s.id === editedServices.id ? { ...s, ...editedServices } : s
+                    ),
+                  }
+                : room
+            ),
+          };
+        });
+        setEditingServicesId(null);
+        setSnackbarMessage('Cập nhật dịch vụ thành công!');
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+    console.error(error);
+    setSnackbarMessage('Lỗi khi cập nhật dịch vụ.');
+    setSnackbarOpen(true);
+  }
+
+  };
+
+  const handleOpenServiceDialog = (roomId: number) => {
+    setCurrentRoomId(roomId);
+    setSelectedServices([]);
+    fetchAvailableServices();
+    setOpenServiceDialog(true);
+  };
+
+  const handleCloseServiceDialog = () => {
+    setOpenServiceDialog(false);
+    setCurrentRoomId(null);
+    setSelectedServices([]);
+  };
+
+  const handleServiceSelection = (serviceId: number) => {
+    setSelectedServices((prev) =>
+      prev.includes(serviceId) ? prev.filter((id) => id !== serviceId) : [...prev, serviceId]
+    );
+  };
+
+  const handleAddServices = async () => {
+    if (!currentRoomId || selectedServices.length === 0) {
+      setSnackbarMessage('Vui lòng chọn ít nhất một dịch vụ.');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    try {
+      const response = await api.post(`/bookings/${bookingId}/add-services`, {
+        room_id: currentRoomId,
+        services: selectedServices.map((serviceId) => ({
+          service_id: serviceId,
+          quantity: 1,
+        })),
+      });
+
+      if (response.status === 200) {
+        setBooking((prev) => {
+          if (!prev) return prev;
+          const newServices = response.data.services || [];
+          return {
+            ...prev,
+            rooms: prev.rooms.map((room) =>
+              room.id === currentRoomId
+                ? {
+                    ...room,
+                    services: [...(room.services || []), ...newServices],
+                  }
+                : room
+            ),
+          };
+        });
+        setSnackbarMessage('Thêm dịch vụ thành công!');
+        setSnackbarOpen(true);
+        handleCloseServiceDialog();
+      }
+    } catch (error) {
+      console.error('Lỗi khi thêm dịch vụ:', error);
+      setSnackbarMessage('Lỗi khi thêm dịch vụ. Vui lòng thử lại.');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleDeleteService = async (roomId: number, serviceId: number) => {
+    try {
+      const response = await api.delete(`/service/${serviceId}`);
+      if (response.status === 200) {
+        setBooking((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            rooms: prev.rooms.map((room) =>
+              room.id === roomId
+                ? {
+                    ...room,
+                    services: room.services?.filter((s) => s.id !== serviceId),
+                  }
+                : room
+            ),
+          };
+        });
+        setSnackbarMessage('Xóa dịch vụ thành công!');
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      console.log(error);
+      setSnackbarMessage('Lỗi khi xóa dịch vụ.');
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+    setSnackbarMessage('');
+  };
+
   return (
     <div className="detail-booking-wrapper">
       <div className="detail-booking-title">
@@ -203,30 +401,29 @@ const DetailBookings: React.FC = () => {
           <h2>
             Chi Tiết <b>Đặt Phòng</b>
           </h2>
-          <Button className="detail-booking-back-button" onClick={handleBack}>
+          <Button className="detail-back-button" onClick={handleBack}>
             Quay lại
           </Button>
         </div>
       </div>
 
       {loading ? (
-        <div className="detail-booking-loading-container">
+        <div className="detail-loading-container">
           <CircularProgress />
           <Typography>Đang tải chi tiết đặt phòng...</Typography>
         </div>
       ) : error ? (
-        <Typography color="error" className="detail-booking-error-message">
+        <Typography color="error" className="detail-error-message">
           {error}
         </Typography>
       ) : !booking || !booking.customer || !booking.rooms ? (
-        <Typography className="detail-booking-no-data">
+        <Typography className="detail-no-data">
           Không tìm thấy thông tin đặt phòng hoặc dữ liệu không đầy đủ.
         </Typography>
       ) : (
         <>
           <div className="card-group top-section">
             <div className="container">
-              {/* Thông tin khách hàng */}
               <div className="card customer-info">
                 <div className="card-header">
                   <div className="card-icon">👤</div>
@@ -277,7 +474,6 @@ const DetailBookings: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Thông tin đặt phòng */}
               <div className="card booking-info">
                 <div className="card-header">
                   <div className="card-icon">📅</div>
@@ -330,7 +526,6 @@ const DetailBookings: React.FC = () => {
 
           <div className="card-group bottom-section">
             <div className="container">
-              {/* Thông tin phòng (table) */}
               <div className="card room-info customer-card">
                 <div className="card-header">
                   <div className="card-icon">🏨</div>
@@ -350,7 +545,7 @@ const DetailBookings: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {booking.rooms.map((room) => (
+                      {booking.rooms.map((room: Room) => (
                         <React.Fragment key={room.id}>
                           <tr>
                             <td>{room.room_number}</td>
@@ -360,68 +555,186 @@ const DetailBookings: React.FC = () => {
                             <td className="price-highlight">{formatCurrency(room.room_type.base_rate)}</td>
                             <td>{room.status === 'booked' ? 'Đã đặt' : room.status}</td>
                             <td>
-                              <Button
-                                className="view-amenities-button"
-                                onClick={() => toggleAmenities(room.id)}
-                              >
-                                {showAmenities[room.id] ? 'Ẩn tiện nghi' : 'Xem tiện nghi'}
-                              </Button>
+                              <div className="action-buttons">
+                                <Button
+                                  className="view-amenities-button"
+                                  onClick={() => toggleAmenities(room.id)}
+                                >
+                                  {showAmenities[room.id] ? 'Ẩn tiện nghi' : 'Xem tiện nghi'}
+                                </Button>
+                                <Button
+                                  className="view-services-button"
+                                  onClick={() => toggleServices(room.id)}
+                                >
+                                  {showServices[room.id] ? 'Ẩn dịch vụ' : 'Xem dịch vụ'}
+                                </Button>
+                              </div>
                             </td>
                           </tr>
-                          {showAmenities[room.id] && (
-                            <tr>
-                              <td colSpan={7} className="amenities-section">
-                                {/* <div className="card-header amenities-header">
-                                  <div className="card-icon">🛏️</div>
-                                  <h6 className="card-title">Tiện nghi phòng {room.room_number}</h6>
-                                </div> */}
-                                <table className="info-table amenities-table">
-                                  <thead>
-                                    <tr>
-                                      <th>Tên tiện nghi</th>
-                                      <th>Mã</th>
-                                      <th>Giá</th>
-                                      <th>Số lượng</th>
-                                      <th>Trạng thái</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {room.room_type.amenities.length > 0 ? (
-                                      room.room_type.amenities.map((amenity) => (
-                                        <tr key={amenity.id}>
-                                          <td>{amenity.name}</td>
-                                          <td>{amenity.code || 'N/A'}</td>
-                                          <td className="price-highlight">{formatCurrency(amenity.price)}</td>
-                                          <td>{amenity.pivot.quantity}</td>
-                                          <td>{amenity.status === 'active' ? 'Hoạt động' : 'Ngừng hoạt động'}</td>
-                                        </tr>
-                                      ))
-                                    ) : (
-                                      <tr>
-                                        <td colSpan={5}>Không có tiện nghi nào cho phòng {room.room_number}.</td>
-                                      </tr>
-                                    )}
-                                  </tbody>
-                                </table>
-                              </td>
-                            </tr>
-                          )}
+                          <tr>
+                            <td colSpan={7} style={{ padding: 0 }}>
+                              <Collapse in={showAmenities[room.id]}>
+                                <div className="detail-container">
+                                  <h3>Thông tin tiện nghi</h3>
+                                  <Table className="user-detail-table">
+                                    <TableBody>
+                                      {room.room_type.amenities.length > 0 ? (
+                                        room.room_type.amenities.map((amenity) => (
+                                          <TableRow key={amenity.id}>
+                                            <TableCell><strong>Tên tiện nghi:</strong> {amenity.name}</TableCell>
+                                            <TableCell><strong>Mã:</strong> {amenity.code || 'N/A'}</TableCell>
+                                          </TableRow>
+                                        ))
+                                      ) : (
+                                        <TableRow>
+                                          <TableCell colSpan={2}>Không có tiện nghi nào cho phòng {room.room_number}.</TableCell>
+                                        </TableRow>
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </Collapse>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td colSpan={7} style={{ padding: 0 }}>
+                              <Collapse in={showServices[room.id]}>
+                                <div className="detail-container">
+                                  <h3>Thông tin dịch vụ</h3>
+                                  {editingServicesId === room.id ? (
+                                    <>
+                                      <Box display="flex" flexDirection="column" gap={2}>
+                                        <TextField
+                                          label="Tên dịch vụ"
+                                          value={editedServices.name || ''}
+                                          onChange={(e) => handleChangeServices('name', e.target.value)}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          required
+                                        />
+                                        <TextField
+                                          label="Mã"
+                                          value={editedServices.code || ''}
+                                          onChange={(e) => handleChangeServices('code', e.target.value)}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          required
+                                        />
+                                        <TextField
+                                          label="Giá"
+                                          value={editedServices.price || ''}
+                                          onChange={(e) => handleChangeServices('price', e.target.value)}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          required
+                                          type="number"
+                                        />
+                                        <TextField
+                                          label="Số lượng"
+                                          value={editedServices.quantity || ''}
+                                          onChange={(e) => handleChangeServices('quantity', Number(e.target.value))}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          required
+                                          type="number"
+                                        />
+                                        <FormControl fullWidth variant="outlined" size="small" required>
+                                          <InputLabel>Trạng thái</InputLabel>
+                                          <Select
+                                            value={editedServices.status || 'active'}
+                                            onChange={(e) => handleChangeServices('status', e.target.value)}
+                                            label="Trạng thái"
+                                          >
+                                            <MenuItem value="active">Hoạt động</MenuItem>
+                                            <MenuItem value="inactive">Ngừng hoạt động</MenuItem>
+                                          </Select>
+                                        </FormControl>
+                                      </Box>
+                                      <Box mt={2} display="flex" gap={2}>
+                                        <Button
+                                          variant="contained"
+                                          color="primary"
+                                          onClick={() => handleSaveServices(room.id)}
+                                          disabled={!editedServices.name || !editedServices.code || !editedServices.price || !editedServices.quantity}
+                                        >
+                                          Lưu
+                                        </Button>
+                                        <Button
+                                          variant="outlined"
+                                          color="secondary"
+                                          onClick={() => setEditingServicesId(null)}
+                                        >
+                                          Hủy
+                                        </Button>
+                                      </Box>
+                                    </>
+                                  ) : (
+                                    <Table className="user-detail-table">
+                                      <TableBody>
+                                        {room.services && room.services.length > 0 ? (
+                                          room.services.map((service) => (
+                                            <TableRow key={service.id}>
+                                              <TableCell><strong>Tên dịch vụ:</strong> {service.name}</TableCell>
+                                              <TableCell><strong>Mã:</strong> {service.code || 'N/A'}</TableCell>
+                                              <TableCell>
+                                                <Button
+                                                  variant="outlined"
+                                                  startIcon={<EditIcon />}
+                                                  onClick={() => handleEditServicesClick(room.id, service)}
+                                                  className="action-edit"
+                                                >
+                                                  Sửa
+                                                </Button>
+                                                <Button
+                                                  variant="outlined"
+                                                  startIcon={<TrashIcon />}
+                                                  onClick={() => handleDeleteService(room.id, service.id)}
+                                                  className="action-delete"
+                                                  style={{ marginLeft: '10px' }}
+                                                >
+                                                  Xóa
+                                                </Button>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))
+                                        ) : (
+                                          <TableRow>
+                                            <TableCell colSpan={3}>Không có dịch vụ nào cho phòng {room.room_number}.</TableCell>
+                                          </TableRow>
+                                        )}
+                                      </TableBody>
+                                    </Table>
+                                  )}
+                                  <Box mt={2}>
+                                    <Button
+                                      variant="contained"
+                                      startIcon={<PlusIcon />}
+                                      onClick={() => handleOpenServiceDialog(room.id)}
+                                      className="action-add-service"
+                                    >
+                                      Thêm dịch vụ
+                                    </Button>
+                                  </Box>
+                                </div>
+                              </Collapse>
+                            </td>
+                          </tr>
                         </React.Fragment>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 <div className="button-group">
-                  <Button className="edit-button" onClick={handleEditAmenities}>
-                    Sửa tiện nghi
-                  </Button>
-                  <Button className="add-button" onClick={handleAddAmenity}>
-                    Thêm tiện nghi
+                  <Button className="edit-button" onClick={handleEditServices}>
+                    Sửa dịch vụ
                   </Button>
                 </div>
               </div>
 
-              {/* Thông tin dịch vụ (table) */}
               <div className="card services-info customer-card">
                 <div className="card-header">
                   <div className="card-icon">🛎️</div>
@@ -461,13 +774,58 @@ const DetailBookings: React.FC = () => {
                   <Button className="edit-button" onClick={handleEditServices}>
                     Sửa dịch vụ
                   </Button>
-                  <Button className="add-button" onClick={handleAddService}>
-                    Thêm dịch vụ
-                  </Button>
                 </div>
               </div>
             </div>
           </div>
+
+          <Dialog open={openServiceDialog} onClose={handleCloseServiceDialog} maxWidth="sm" fullWidth>
+            <DialogTitle>Thêm dịch vụ cho phòng</DialogTitle>
+            <DialogContent>
+              <List>
+                {availableServices.length > 0 ? (
+                  availableServices.map((service) => (
+                    <ListItem key={service.id}>
+                      <Checkbox
+                        checked={selectedServices.includes(service.id)}
+                        onChange={() => handleServiceSelection(service.id)}
+                      />
+                      <ListItemText
+                        primary={service.name}
+                        secondary={`Mã: ${service.code || 'N/A'} | Giá: ${formatCurrency(service.price)}`}
+                      />
+                    </ListItem>
+                  ))
+                ) : (
+                  <Typography>Không có dịch vụ nào khả dụng.</Typography>
+                )}
+              </List>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseServiceDialog} color="secondary">
+                Hủy
+              </Button>
+              <Button
+                onClick={handleAddServices}
+                color="primary"
+                variant="contained"
+                disabled={selectedServices.length === 0}
+              >
+                Thêm
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Snackbar
+            open={snackbarOpen}
+            autoHideDuration={3000}
+            onClose={handleSnackbarClose}
+            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+          >
+            <Alert onClose={handleSnackbarClose} severity={snackbarMessage.includes('thành công') ? 'success' : 'error'} sx={{ width: '100%' }}>
+              {snackbarMessage}
+            </Alert>
+          </Snackbar>
         </>
       )}
     </div>

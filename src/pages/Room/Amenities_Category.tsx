@@ -23,7 +23,6 @@ import {
   Alert,
 } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios, { AxiosError } from 'axios';
@@ -51,6 +50,7 @@ interface ApiResponse {
 }
 
 const AmenitiesCategoryList: React.FC = () => {
+  const [allCategories, ] = useState<AmenityCategory[]>([]);
   const [categories, setCategories] = useState<AmenityCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +64,9 @@ const AmenitiesCategoryList: React.FC = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [lastPage, setLastPage] = useState<number>(1);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -115,6 +118,17 @@ const AmenitiesCategoryList: React.FC = () => {
 
     fetchCategories();
   }, [navigate]);
+
+  useEffect(() => {
+    let filtered = [...allCategories];
+    if (searchQuery.trim() !== '') {
+      filtered = filtered.filter((cat) =>
+        cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    setLastPage(Math.ceil(filtered.length / 10));
+    setCategories(filtered.slice((currentPage - 1) * 10, currentPage * 10));
+  }, [searchQuery, currentPage, allCategories]);
 
   const validateForm = (data: AmenityCategory): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -205,10 +219,8 @@ const AmenitiesCategoryList: React.FC = () => {
   };
 
   const handleViewDetails = (id: string) => {
-    if (selectedCategoryId === id && editCategoryId !== id) {
-      setSelectedCategoryId(null);
-    } else {
-      setSelectedCategoryId(id);
+    setSelectedCategoryId((prev) => (prev === id ? null : id));
+    if (editCategoryId === id) {
       setEditCategoryId(null);
       setEditFormData(null);
       setValidationErrors({});
@@ -353,7 +365,7 @@ const AmenitiesCategoryList: React.FC = () => {
                             transition: 'all 0.2s ease-in-out',
                           }}
                         >
-                          {selectedCategoryId === category.id ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                          {selectedCategoryId === category.id ? <VisibilityIcon /> : <VisibilityIcon />}
                         </IconButton>
                         <IconButton
                           title="Chỉnh sửa danh mục"

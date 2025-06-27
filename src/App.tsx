@@ -27,6 +27,7 @@ import AddBookings from "./pages/Bookings/AddBookings";
 import DetailBookings from "./pages/Bookings/DetailBookings";
 import Statistics from "./pages/Statistics/Statistics";
 import Service from "./pages/Services/service";
+import HiddenRoom from "./pages/Room/HiddenRoom";
 
 function App() {
   return (
@@ -45,10 +46,12 @@ function App() {
 
         <Route path="/statistics" element={<RoleBasedRoute allowedRoleIds={[1]}><Statistics /></RoleBasedRoute>} />
 
+        <Route path="/hiddenrooms" element={<RoleBasedRoute allowedRoleIds={[1]}><HiddenRoom /></RoleBasedRoute>} />
+
+
 
         <Route path="customer" element={<RoleBasedRoute allowedRoleIds={[1]}><Customer /></RoleBasedRoute>} />
-        <Route path="customer/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddCustomer
-        /></RoleBasedRoute>} />
+        <Route path="customer/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddCustomer/></RoleBasedRoute>} />
 
         <Route path="/promotions" element={<RoleBasedRoute allowedRoleIds={[1]}><Promotions /></RoleBasedRoute>} />
         <Route path="promotions/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddPromotion /></RoleBasedRoute>} />

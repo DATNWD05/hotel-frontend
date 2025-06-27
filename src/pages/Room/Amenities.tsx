@@ -35,7 +35,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import '../../css/AmenitiesCategory.css';
+import '../../css/Amenities.css';
 
 interface Amenity {
   id: string;
@@ -95,7 +95,9 @@ const Amenities: React.FC = () => {
   const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [allAmenities, setAllAmenities] = useState<Amenity[]>([]);
   const [filteredAmenities, setFilteredAmenities] = useState<Amenity[]>([]);
-  const [amenityCategories, setAmenityCategories] = useState<AmenityCategory[]>([]);
+  const [amenityCategories, setAmenityCategories] = useState<AmenityCategory[]>([
+    { id: 'all', name: 'Tất cả' },
+  ]);
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -129,7 +131,7 @@ const Amenities: React.FC = () => {
 
       while (true) {
         const url = `http://127.0.0.1:8000/api/amenities?page=${page}${
-          activeCategories.length > 0
+          activeCategories.length > 0 && !activeCategories.includes('all')
             ? `&category_id=${activeCategories.join(',')}`
             : ''
         }`;
@@ -216,10 +218,13 @@ const Amenities: React.FC = () => {
           setSnackbarOpen(true);
           return;
         }
-        const categories: AmenityCategory[] = data.map((cat: RawAmenityCategory) => ({
-          id: cat.id != null ? String(cat.id) : '',
-          name: cat.name || 'Không xác định',
-        }));
+        const categories: AmenityCategory[] = [
+          { id: 'all', name: 'Tất cả' },
+          ...data.map((cat: RawAmenityCategory) => ({
+            id: cat.id != null ? String(cat.id) : '',
+            name: cat.name || 'Không xác định',
+          })),
+        ];
         setAmenityCategories(categories);
       })
       .catch((err: unknown) => {
@@ -242,7 +247,7 @@ const Amenities: React.FC = () => {
       );
     }
 
-    if (activeCategories.length > 0) {
+    if (activeCategories.length > 0 && !activeCategories.includes('all')) {
       filtered = filtered.filter((amenity) => activeCategories.includes(amenity.category_id));
     }
 
@@ -428,7 +433,7 @@ const Amenities: React.FC = () => {
       if (prev.includes(categoryId)) {
         return prev.filter((id) => id !== categoryId);
       } else {
-        return [...prev, categoryId];
+        return [...prev, categoryId].filter((id) => id !== 'all');
       }
     });
     handleFilterClose();
@@ -571,7 +576,7 @@ const Amenities: React.FC = () => {
           ) : filteredAmenities.length === 0 ? (
             <Typography className="promotions-no-data">
               {searchQuery || activeCategories.length > 0
-                ? `Không tìm thấy tiện ích phù hợp trong danh mục: ${amenityCategories.find((c) => activeCategories.includes(c.id))?.name || ''}`
+                ? `Không tìm thấy tiện ích phù hợp trong danh mục: ${amenityCategories.find((c) => activeCategories.includes(c.id))?.name || 'Tất cả'}`
                 : 'Không tìm thấy tiện ích nào.'}
             </Typography>
           ) : (
@@ -585,7 +590,7 @@ const Amenities: React.FC = () => {
                       <TableCell><b>Mã</b></TableCell>
                       <TableCell><b>Tên</b></TableCell>
                       <TableCell><b>Giá</b></TableCell>
-                      <TableCell><b>Số lượng mặc định</b></TableCell>
+                      <TableCell><b>Số lượng</b></TableCell>
                       <TableCell><b>Trạng thái</b></TableCell>
                       <TableCell align="center" sx={{ width: '150px' }}><b>Hành động</b></TableCell>
                     </TableRow>
