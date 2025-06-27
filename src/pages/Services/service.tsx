@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, SyntheticEvent } from 'react';
 import {
   Table,
   TableBody,
@@ -13,10 +13,8 @@ import {
   Collapse,
   Box,
   TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
+  Checkbox,
+  FormControlLabel,
   Button,
   Pagination,
   Dialog,
@@ -25,15 +23,19 @@ import {
   DialogActions,
   Snackbar,
   Alert,
+  MenuItem,
+  Popover,
 } from '@mui/material';
-import { SelectChangeEvent } from '@mui/material/Select';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
-import '../../css/Service.css';
 import { Link } from 'react-router-dom';
+import '../../css/Service.css';
 
 interface Service {
   id: string;
@@ -68,11 +70,153 @@ interface ValidationErrors {
   description?: string;
 }
 
+interface ServiceFilterProps {
+  categories: ServiceCategory[];
+  onFilterChange: (filters: { searchService: string; searchCategory: string[] }) => void;
+  onResetFilters: () => void;
+}
+
+const ServiceFilter: React.FC<ServiceFilterProps> = ({ categories, onFilterChange, onResetFilters }) => {
+  const [searchService, setSearchService] = useState('');
+  const [searchCategory, setSearchCategory] = useState<string[]>([]);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+
+  const handleSearchServiceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newSearch = e.target.value;
+    setSearchService(newSearch);
+    onFilterChange({ searchService: newSearch, searchCategory });
+  };
+
+  const handleCategoryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const categoryId = event.target.name;
+    setSearchCategory((prev) => {
+      if (event.target.checked) {
+        return prev.includes(categoryId) ? prev : [...prev.filter((id) => id !== 'all'), categoryId];
+      } else {
+        return prev.filter((id) => id !== categoryId);
+      }
+    });
+    onFilterChange({ searchService, searchCategory: searchCategory.filter((id) => id !== 'all') });
+  };
+
+  const handleReset = () => {
+    setSearchService('');
+    setSearchCategory([]);
+    onResetFilters();
+  };
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const open = Boolean(anchorEl);
+
+  return (
+    <Box className="promotion-filter-container">
+      <Box sx={{ position: 'relative', width: '300px' }}>
+        <TextField
+          label="Tìm kiếm dịch vụ"
+          variant="outlined"
+          size="small"
+          value={searchService}
+          onChange={handleSearchServiceChange}
+          InputProps={{
+            startAdornment: <SearchIcon sx={{ color: '#666', mr: 1 }} />,
+          }}
+          sx={{ width: '100%', '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: '#fff' } }}
+        />
+      </Box>
+      <Box sx={{ width: '300px', position: 'relative' }}>
+        <Box
+          sx={{
+            border: '1px solid #ccc',
+            borderRadius: '12px',
+            bgcolor: '#fff',
+            padding: '8px',
+            cursor: 'pointer',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+          onClick={handleClick}
+        >
+          <Typography sx={{ color: searchCategory.length > 0 ? '#00796b' : '#666' }}>
+            {searchCategory.length > 0 ? `${searchCategory.length} danh mục được chọn` : 'Chọn danh mục'}
+          </Typography>
+          <ExpandMoreIcon />
+        </Box>
+        <Popover
+          open={open}
+          anchorEl={anchorEl}
+          onClose={handleClose}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+          sx={{
+            '& .MuiPaper-root': {
+              borderRadius: '12px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              maxHeight: '300px',
+              overflowY: 'auto',
+              mt: 1,
+              p: 1,
+            },
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', bgcolor: '#fff' }}>
+            <FormControlLabel
+              control={<Checkbox checked={searchCategory.length === 0 || searchCategory.includes('all')} name="all" onChange={handleCategoryChange} />}
+              label="Tất cả"
+              sx={{ mb: 0.5 }}
+            />
+            {categories.map((category) => (
+              <FormControlLabel
+                key={category.id}
+                control={<Checkbox checked={searchCategory.includes(category.id)} name={category.id} onChange={handleCategoryChange} />}
+                label={category.name}
+                sx={{ mb: 0.5 }}
+              />
+            ))}
+          </Box>
+        </Popover>
+      </Box>
+      {(searchService || searchCategory.length > 0) && (
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<ClearIcon />}
+          onClick={handleReset}
+          sx={{
+            textTransform: 'none',
+            color: '#d32f2f',
+            borderColor: '#d32f2f',
+            borderRadius: '12px',
+            '&:hover': { borderColor: '#c62828', bgcolor: '#ffebee' },
+          }}
+        >
+          Xóa bộ lọc
+        </Button>
+      )}
+    </Box>
+  );
+};
+
 const Service: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
-  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([{ id: 'all', name: 'Tất cả' }]);
-  const [activeCategories, setActiveCategories] = useState<string[]>(['all']);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [filters, setFilters] = useState<{ searchService: string; searchCategory: string[] }>({
+    searchService: '',
+    searchCategory: [],
+  });
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
@@ -107,18 +251,13 @@ const Service: React.FC = () => {
           setError('Dữ liệu danh mục không đúng định dạng');
           return;
         }
-        const categories: ServiceCategory[] = [
-          { id: 'all', name: 'Tất cả' },
-          ...data.map((cat: RawServiceCategory) => ({
-            id: cat.id.toString(),
-            name: cat.name,
-          })),
-        ];
+        const categories: ServiceCategory[] = data.map((cat: RawServiceCategory) => ({
+          id: cat.id.toString(),
+          name: cat.name,
+        }));
         setServiceCategories(categories);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? `Không thể tải danh mục dịch vụ: ${err.message}` : 'Lỗi không xác định';
-        setError(errorMessage);
+        setError(err instanceof Error ? `Không thể tải danh mục dịch vụ: ${err.message}` : 'Lỗi không xác định');
       }
     };
 
@@ -137,11 +276,11 @@ const Service: React.FC = () => {
       try {
         setLoading(true);
         let url = `http://127.0.0.1:8000/api/service?page=${currentPage}`;
-        if (!activeCategories.includes('all')) {
-          url += `&category_id=${activeCategories.join(',')}`;
+        if (filters.searchService.trim()) {
+          url += `&search=${encodeURIComponent(filters.searchService)}`;
         }
-        if (searchQuery.trim()) {
-          url += `&search=${encodeURIComponent(searchQuery)}`;
+        if (filters.searchCategory.length > 0 && !filters.searchCategory.includes('all')) {
+          url += `&category_id=${filters.searchCategory.join(',')}`;
         }
 
         const response = await axios.get(url, {
@@ -167,22 +306,27 @@ const Service: React.FC = () => {
         setServices(mapped);
         setLastPage(response.data.meta?.last_page || 1);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? `Không thể tải danh sách dịch vụ: ${err.message}` : 'Lỗi không xác định';
-        setError(errorMessage);
+        setError(err instanceof Error ? `Không thể tải danh sách dịch vụ: ${err.message}` : 'Lỗi không xác định');
       } finally {
         setLoading(false);
       }
     };
 
     fetchServices();
-  }, [currentPage, activeCategories, searchQuery]);
+  }, [currentPage, filters]);
+
+  const filteredServices = useMemo(() => {
+    return services.filter((svc) =>
+      (filters.searchCategory.length === 0 || filters.searchCategory.includes('all') || filters.searchCategory.includes(svc.category.id)) &&
+      svc.name.toLowerCase().includes(filters.searchService.toLowerCase())
+    );
+  }, [services, filters]);
 
   const validateForm = (data: Service): ValidationErrors => {
     const errors: ValidationErrors = {};
     if (!data.name.trim()) errors.name = 'Tên dịch vụ không được để trống';
     else if (data.name.length > 50) errors.name = 'Tên dịch vụ không được vượt quá 50 ký tự';
-    if (!data.category.id || data.category.id === 'all') errors.category = 'Vui lòng chọn danh mục dịch vụ';
+    if (!data.category.id) errors.category = 'Vui lòng chọn danh mục dịch vụ';
     if (data.price <= 0) errors.price = 'Giá phải lớn hơn 0';
     if (data.description && data.description.length > 500)
       errors.description = 'Mô tả không được vượt quá 500 ký tự';
@@ -194,13 +338,12 @@ const Service: React.FC = () => {
     if (editFormData) {
       const updatedData = { ...editFormData, [name]: name === 'price' ? parseFloat(value) || 0 : value };
       setEditFormData(updatedData);
-      const errors = validateForm(updatedData);
-      setValidationErrors(errors);
+      setValidationErrors(validateForm(updatedData));
     }
   };
 
-  const handleSelectChange = (e: SelectChangeEvent) => {
-    const { value } = e.target;
+  const handleSelectChange = (e: React.ChangeEvent<{ value: unknown }>) => {
+    const value = e.target.value as string;
     if (editFormData) {
       const selectedCategory = serviceCategories.find((cat) => cat.id === value);
       const updatedData = {
@@ -208,8 +351,7 @@ const Service: React.FC = () => {
         category: selectedCategory ? { id: value, name: selectedCategory.name } : editFormData.category,
       };
       setEditFormData(updatedData);
-      const errors = validateForm(updatedData);
-      setValidationErrors(errors);
+      setValidationErrors(validateForm(updatedData));
     }
   };
 
@@ -329,7 +471,7 @@ const Service: React.FC = () => {
     }
   };
 
-  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
+  const handlePageChange = (_: React.ChangeEvent<unknown>, page: number) => {
     setCurrentPage(page);
   };
 
@@ -338,24 +480,15 @@ const Service: React.FC = () => {
     setSnackbarMessage('');
   };
 
-  const handleCategoryClick = (categoryId: string) => {
+  const handleFilterChange = (newFilters: { searchService: string; searchCategory: string[] }) => {
+    setFilters(newFilters);
     setCurrentPage(1);
-    if (categoryId === 'all') {
-      setActiveCategories(['all']);
-    } else {
-      setActiveCategories([categoryId]);
-    }
   };
 
-  const filtered: Service[] = activeCategories.includes('all')
-    ? services.filter((svc) =>
-        svc.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : services.filter(
-        (svc) =>
-          activeCategories.includes(svc.category.id.toString()) &&
-          svc.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  const handleResetFilters = () => {
+    setFilters({ searchService: '', searchCategory: [] });
+    setCurrentPage(1);
+  };
 
   return (
     <div className="promotion-wrapper">
@@ -364,15 +497,11 @@ const Service: React.FC = () => {
           <h2>
             Danh Sách <b>Dịch Vụ</b>
           </h2>
-          <Box display="flex" gap={2} alignItems="center">
-            <TextField
-              label="Tìm kiếm dịch vụ"
-              className="promotion-search-input"
-              variant="outlined"
-              size="small"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{ width: '300px' }}
+          <Box display="flex" alignItems="center" gap={2}>
+            <ServiceFilter
+              categories={serviceCategories}
+              onFilterChange={handleFilterChange}
+              onResetFilters={handleResetFilters}
             />
             <Link className="promotion-btn-add" to="/service/add">
               Thêm mới
@@ -380,18 +509,6 @@ const Service: React.FC = () => {
           </Box>
         </div>
       </div>
-
-      <ul className="promotion-filter-bar">
-        {serviceCategories.map((cat) => (
-          <li
-            key={cat.id}
-            className={`promotion-filter-btn ${activeCategories.includes(cat.id) ? 'active' : ''}`}
-            onClick={() => handleCategoryClick(cat.id)}
-          >
-            {cat.name}
-          </li>
-        ))}
-      </ul>
 
       {loading ? (
         <div className="promotion-loading-container">
@@ -402,9 +519,9 @@ const Service: React.FC = () => {
         <Typography color="error" className="promotion-error-message">
           {error}
         </Typography>
-      ) : filtered.length === 0 ? (
+      ) : filteredServices.length === 0 ? (
         <Typography className="promotion-no-data">
-          {searchQuery || !activeCategories.includes('all')
+          {filters.searchService || filters.searchCategory.length > 0
             ? 'Không tìm thấy dịch vụ phù hợp.'
             : 'Không tìm thấy dịch vụ nào.'}
         </Typography>
@@ -422,9 +539,9 @@ const Service: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filtered.map((svc) => (
+                {filteredServices.map((svc) => (
                   <React.Fragment key={svc.id}>
-                    <TableRow>
+                    <TableRow hover>
                       <TableCell>{svc.name}</TableCell>
                       <TableCell>{svc.category.name}</TableCell>
                       <TableCell>{svc.price.toLocaleString()} đ</TableCell>
@@ -434,6 +551,7 @@ const Service: React.FC = () => {
                           className="promotion-action-view"
                           title={selectedServiceId === svc.id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
                           onClick={() => handleViewDetails(svc.id)}
+                          sx={{ color: '#1a73e8' }}
                         >
                           {selectedServiceId === svc.id ? <VisibilityOffIcon /> : <VisibilityIcon />}
                         </IconButton>
@@ -441,6 +559,7 @@ const Service: React.FC = () => {
                           className="promotion-action-edit"
                           title="Chỉnh sửa dịch vụ"
                           onClick={() => handleEdit(svc)}
+                          sx={{ color: '#FACC15' }}
                         >
                           <EditIcon />
                         </IconButton>
@@ -448,6 +567,7 @@ const Service: React.FC = () => {
                           className="promotion-action-delete"
                           title="Xóa dịch vụ"
                           onClick={() => handleDelete(svc.id)}
+                          sx={{ color: '#d32f2f' }}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -472,30 +592,28 @@ const Service: React.FC = () => {
                                       size="small"
                                       error={!!validationErrors.name}
                                       helperText={validationErrors.name}
+                                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
                                     />
-                                    <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.category}>
-                                      <InputLabel>Nhóm dịch vụ</InputLabel>
-                                      <Select
-                                        name="category"
-                                        value={editFormData.category.id}
-                                        onChange={handleSelectChange}
-                                        label="Nhóm dịch vụ"
-                                      >
-                                        <MenuItem value="">Chọn danh mục</MenuItem>
-                                        {serviceCategories
-                                          .filter((cat) => cat.id !== 'all')
-                                          .map((cat) => (
-                                            <MenuItem key={cat.id} value={cat.id}>
-                                              {cat.name}
-                                            </MenuItem>
-                                          ))}
-                                      </Select>
-                                      {validationErrors.category && (
-                                        <Typography color="error" variant="caption">
-                                          {validationErrors.category}
-                                        </Typography>
-                                      )}
-                                    </FormControl>
+                                    <TextField
+                                      select
+                                      label="Nhóm dịch vụ"
+                                      name="category"
+                                      value={editFormData.category.id}
+                                      onChange={handleSelectChange}
+                                      fullWidth
+                                      variant="outlined"
+                                      size="small"
+                                      error={!!validationErrors.category}
+                                      helperText={validationErrors.category}
+                                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
+                                    >
+                                      <MenuItem value="">Chọn danh mục</MenuItem>
+                                      {serviceCategories.map((cat) => (
+                                        <MenuItem key={cat.id} value={cat.id}>
+                                          {cat.name}
+                                        </MenuItem>
+                                      ))}
+                                    </TextField>
                                   </Box>
                                   <Box display="flex" gap={2}>
                                     <TextField
@@ -510,6 +628,7 @@ const Service: React.FC = () => {
                                       error={!!validationErrors.price}
                                       helperText={validationErrors.price}
                                       inputProps={{ min: 0 }}
+                                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
                                     />
                                     <TextField
                                       label="Mô tả"
@@ -523,6 +642,7 @@ const Service: React.FC = () => {
                                       rows={3}
                                       error={!!validationErrors.description}
                                       helperText={validationErrors.description}
+                                      sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px' } }}
                                     />
                                   </Box>
                                   <Box mt={2} display="flex" gap={2}>
@@ -531,6 +651,7 @@ const Service: React.FC = () => {
                                       color="primary"
                                       onClick={handleSave}
                                       disabled={editLoading}
+                                      sx={{ borderRadius: '12px', textTransform: 'none' }}
                                     >
                                       Lưu
                                     </Button>
@@ -539,6 +660,7 @@ const Service: React.FC = () => {
                                       className="promotion-btn-cancel"
                                       onClick={handleCancel}
                                       disabled={editLoading}
+                                      sx={{ borderRadius: '12px', textTransform: 'none' }}
                                     >
                                       Hủy
                                     </Button>
@@ -585,6 +707,7 @@ const Service: React.FC = () => {
               shape="rounded"
               showFirstButton
               showLastButton
+              sx={{ '& .MuiPaginationItem-root': { borderRadius: '12px' } }}
             />
           </Box>
         </>
@@ -602,8 +725,15 @@ const Service: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Hủy</Button>
-          <Button onClick={confirmDelete} variant="contained" color="error">
+          <Button onClick={() => setDeleteDialogOpen(false)} sx={{ textTransform: 'none' }}>
+            Hủy
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            color="error"
+            sx={{ borderRadius: '12px', textTransform: 'none' }}
+          >
             Xác nhận
           </Button>
         </DialogActions>
@@ -618,7 +748,7 @@ const Service: React.FC = () => {
         <Alert
           onClose={handleSnackbarClose}
           severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
+          sx={{ width: '100%', borderRadius: '12px' }}
         >
           {snackbarMessage}
         </Alert>

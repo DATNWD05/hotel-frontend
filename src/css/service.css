@@ -3,90 +3,141 @@
   max-width: 100%;
   margin: 0 auto;
   padding: 20px;
-  background: #f0f2f5;
+  background: #f0f4f8;
+  transition: background 0.3s ease;
 }
 
 .promotion-title .promotion-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .promotion-title h2 {
   margin: 0;
   font-size: 24px;
   color: #1a73e8;
+  transition: color 0.3s ease;
 }
 
 .promotion-title h2 b {
   color: #d93025;
+  transition: color 0.3s ease;
 }
 
-.promotion-filter-bar {
+.promotion-filter-container {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-  list-style: none;
-  padding: 0;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 0; /* Đảm bảo không có khoảng cách */
+  padding: 0; /* Loại bỏ padding hoàn toàn */
+  background: #f0f4f8;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  max-width: 600px;
+  transition: all 0.3s ease;
 }
 
-.promotion-filter-btn {
-  padding: 6px 12px;
-  border-radius: 12px; /* Increased for a softer, more modern look */
-  text-transform: none;
-  font-weight: 500;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  cursor: pointer;
-  transition: background-color 0.3s ease, transform 0.2s ease, border-color 0.3s ease;
+.promotion-filter-container .MuiTextField-root,
+.promotion-filter-container .category-select,
+.promotion-filter-container .MuiButton-root {
+  margin: 0; /* Loại bỏ margin */
+  padding: 0; /* Loại bỏ padding */
 }
 
-.promotion-filter-btn:hover {
-  background: #f5f5f5;
-  border-color: #1a73e8;
-  border-radius: 12px; /* Ensure consistency on hover */
+.promotion-filter-container .MuiTextField-root {
+  background: #ffffff;
+  border-radius: 6px;
+  width: 150px;
+  flex: 0 0 auto;
+  transition: all 0.3s ease;
+  /* Loại bỏ khoảng cách nội tại của Material-UI */
+  & .MuiInputBase-root {
+    padding: 4px 8px; /* Tùy chỉnh padding nội tại */
+    margin: 0;
+  }
 }
 
-.promotion-filter-btn.active {
-  background: #1a73e8;
-  color: #fff;
-  font-weight: 600;
-  border-color: #1a73e8;
-  border-radius: 12px; /* Ensure consistency when active */
-  transform: scale(1.05);
+.promotion-filter-container .MuiTextField-root:hover {
+  background: #f1f5f9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.promotion-title .promotion-btn-add {
-  background: #4318FF;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
-  display: inline-flex;
+.promotion-filter-container .category-select {
+  background: #ffffff;
+  border-radius: 6px;
+  width: 150px;
+  flex: 0 0 auto;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+  /* Loại bỏ khoảng cách nội tại */
+  & > * {
+    margin: 0;
+    padding: 4px 8px;
+  }
 }
 
-.promotion-title .promotion-btn-add:hover {
-  background: #3700b3;
-  transform: translateY(-1px);
+.promotion-filter-container .category-select:hover {
+  background: #f1f5f9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.promotion-title .promotion-btn-add:active {
-  background: #104a9b;
-  transform: translateY(0);
+.promotion-filter-container .MuiButton-root {
+  border-radius: 6px;
+  text-transform: none;
+  color: #1a73e8;
+  border-color: #1a73e8;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  flex: 0 0 auto;
+  background: #ffffff;
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+.promotion-filter-container .MuiButton-root:hover {
+  background: #e0f2fe;
+  border-color: #104ea0;
+  color: #104ea0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.promotion-filter-container .MuiPopover-paper {
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  max-height: 280px;
+  padding: 8px;
+  background: #f0f4f8;
+  animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.promotion-filter-container .MuiTypography-root {
+  font-size: 14px;
+  color: #374151;
+  transition: color 0.3s ease;
 }
 
 .promotion-table-container {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  transition: all 0.3s ease;
 }
 
 .promotion-table {
@@ -100,6 +151,7 @@
   padding: 12px 15px;
   font-size: 14px;
   border-bottom: 1px solid #e0e0e0;
+  transition: background 0.3s ease;
 }
 
 .promotion-table th {
@@ -114,45 +166,65 @@
   color: #333;
 }
 
+.promotion-table tr:hover {
+  background-color: #f9fafb;
+}
+
 .promotion-wrapper .promotion-action-view {
   color: #1a73e8;
+  transition: all 0.3s ease;
 }
 
 .promotion-wrapper .promotion-action-view:hover {
   opacity: 0.8;
+  transform: scale(1.1);
 }
 
 .promotion-wrapper .promotion-action-edit {
   color: #FACC15;
+  transition: all 0.3s ease;
 }
 
 .promotion-wrapper .promotion-action-edit:hover {
   opacity: 0.8;
+  transform: scale(1.1);
 }
 
 .promotion-wrapper .promotion-action-delete {
   color: #d32f2f;
+  transition: all 0.3s ease;
 }
 
 .promotion-wrapper .promotion-action-delete:hover {
   opacity: 0.8;
+  transform: scale(1.1);
 }
 
 .promotion-wrapper .promotion-btn-cancel {
   color: #d32f2f;
+  border-color: #d32f2f;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.promotion-wrapper .promotion-btn-cancel:hover {
+  background: #fef2f2;
+  border-color: #c62828;
 }
 
 .promotion-detail-container {
   padding: 15px;
-  background: #fff;
+  background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
 .promotion-detail-container h3 {
   margin: 10px 0;
   color: #1a73e8;
   font-size: 18px;
+  transition: color 0.3s ease;
 }
 
 .promotion-detail-table {
@@ -161,12 +233,14 @@
   border-radius: 4px;
   margin: 10px 0;
   width: 100%;
+  transition: all 0.3s ease;
 }
 
 .promotion-detail-table td {
   padding: 8px 15px;
   border: none;
   color: #555;
+  transition: color 0.3s ease;
 }
 
 .promotion-detail-table th {
@@ -191,6 +265,7 @@
   background: #ffebee;
   border-radius: 5px;
   margin-bottom: 20px;
+  transition: all 0.3s ease;
 }
 
 .promotion-no-data {
@@ -198,22 +273,26 @@
   padding: 20px;
   color: #666;
   font-size: 16px;
+  transition: color 0.3s ease;
 }
 
 .promotion-dialog {
   border-radius: 8px;
   padding: 16px;
+  transition: all 0.3s ease;
 }
 
-.promotion-search-input {
-  background: #fff;
-  border-radius: 4px;
+.MuiPaginationItem-root {
+  border-radius: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
-.promotion-detail-container .MuiChip-root {
-  border-radius: 16px;
-  overflow: hidden;
-  position: relative;
+
+.MuiPaginationItem-root.Mui-selected {
+  background-color: #1a73e8;
+  color: #fff;
 }
-.promotion-detail-container .MuiChip-label {
-  padding-right: 24px; /* Đảm bảo nhãn không bị che */
+
+.MuiPaginationItem-root:hover {
+  background-color: #e0f2fe;
 }
