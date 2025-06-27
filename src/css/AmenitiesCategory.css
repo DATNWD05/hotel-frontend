@@ -1,4 +1,4 @@
-.promotions-wrapper {
+.amenities-container {
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
@@ -8,46 +8,22 @@
   overflow-x: hidden;
 }
 
-body *::-webkit-scrollbar {
-  width: 0px !important;
+.header {
+  padding: 0;
+  margin-bottom: 16px;
 }
 
-.promotions-title .promotions-btn-add {
-  background: #4318FF;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-}
-
-.promotions-title .promotions-btn-add:hover {
-  background: #ff1818;
-  transform: translateY(-1px);
-}
-
-.promotions-title .promotions-btn-add:active {
-  background: #104a9b;
-  transform: translateY(0);
-}
-
-.promotions-table-container {
+.amenities-table-container {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
   min-width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
   box-sizing: border-box;
 }
 
-.promotions-table {
+.amenities-table {
   background: #fff;
   border-collapse: separate;
   border-spacing: 0;
@@ -55,116 +31,57 @@ body *::-webkit-scrollbar {
   table-layout: fixed;
 }
 
-.promotions-table th,
-.promotions-table td {
+.amenities-table th,
+.amenities-table td {
   padding: 12px 15px;
   font-size: 14px;
   border-bottom: 1px solid #e0e0e0;
   box-sizing: border-box;
 }
 
-.promotions-table th {
-  background: #f5f5f5;
+.amenities-table th {
+  background: #f4f6fa;
   color: #333;
   text-transform: uppercase;
   font-weight: 600;
   border-bottom: 2px solid #e0e0e0;
 }
 
-.promotions-table td {
+.amenities-table td {
   color: #333;
 }
 
-.promotions-wrapper .promotions-btn-cancel {
-  border-radius: 5px;
-  height: 35px;
-  width: 60px;
-  font-size: 14px;
-  color: #d32f2f;
+.amenity-row:hover {
+  background-color: #f5f5f5;
 }
 
-.promotions-wrapper .promotions-btn-save {
-  border-radius: 5px;
-  height: 35px;
-  width: 60px;
-  font-size: 14px;
-  background-color: #1976d2;
-  color: #fff;
-  transition: background-color 0.3s ease;
+.detail-container {
+  padding: 16px;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
 }
 
-.promotions-wrapper .promotions-btn-save:hover {
-  background-color: #1565c0;
-}
-
-.promotions-detail-container {
+.detail-table {
   width: 100%;
-  max-width: 100%;
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  padding: 16px 20px;
-  margin-top: 0px;
-  transition: opacity 0.3s ease-in-out;
-  box-sizing: border-box;
-  overflow-x: hidden;
-}
-
-.promotions-detail-container h3 {
-  margin-bottom: 16px;
-  margin-top: 12px;
-}
-
-.promotions-detail-container > .MuiBox-root:first-of-type {
-  margin-top: 16px;
-}
-
-.promotions-detail-table {
-  background: #f9f9f9;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
-  margin: 10px 0;
-  width: 100%;
-  max-width: 100%;
-  table-layout: fixed;
-  box-sizing: border-box;
 }
 
-.promotions-detail-table td {
+.detail-table td {
   padding: 8px 15px;
   border: none;
   color: #555;
-  box-sizing: border-box;
 }
 
-.promotions-detail-table th {
-  background: #f5f5f5;
-  color: #333;
-  font-weight: 600;
-  box-sizing: border-box;
-}
-
-.promotions-loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.promotions-error-message {
+.error-message {
   text-align: center;
   padding: 10px;
   color: #d32f2f;
-  font-size: 16px;
   background: #ffebee;
   border-radius: 5px;
   margin-bottom: 20px;
 }
 
-.promotions-no-data {
-  text-align: center;
-  padding: 20px;
-  color: #666;
-  font-size: 16px;
+.pagination-container {
+  padding-right: 3px;
 }

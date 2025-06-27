@@ -32,7 +32,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
-import '../../css/AmenitiesCategory.css';
+import '../../css/Amenities.css';
 
 interface Amenity {
   id: string;
