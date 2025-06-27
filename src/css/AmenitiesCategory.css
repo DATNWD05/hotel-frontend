@@ -1,131 +1,87 @@
-.amenities-category-list-wrapper {
-      padding: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
+.amenities-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f0f2f5;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-.amenities-category-list-title {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
+.header {
+  padding: 0;
+  margin-bottom: 16px;
 }
 
-.amenities-category-list-title h2 {
-      margin: 0;
-      font-size: 24px;
-      color: #333;
+.amenities-table-container {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
 }
 
-.amenities-category-loading-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 200px;
+.amenities-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  table-layout: fixed;
 }
 
-table {
-      width: 100%;
-      border-collapse: collapse;
-      background-color: #fff;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+.amenities-table th,
+.amenities-table td {
+  padding: 12px 15px;
+  font-size: 14px;
+  border-bottom: 1px solid #e0e0e0;
+  box-sizing: border-box;
 }
 
-th,
-td {
-      padding: 12px 15px;
-      text-align: left;
-      border-bottom: 1px solid #ddd;
+.amenities-table th {
+  background: #f4f6fa;
+  color: #333;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 2px solid #e0e0e0;
 }
 
-th {
-      background-color: #f4f4f4;
-      font-weight: 600;
-      color: #333;
+.amenities-table td {
+  color: #333;
 }
 
-tr:hover {
-      background-color: #f5f5f5;
+.amenity-row:hover {
+  background-color: #f5f5f5;
 }
 
-td button {
-      margin-right: 10px;
+.detail-container {
+  padding: 16px;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
 }
 
-.amenities-category-error-message {
-      color: #d32f2f;
-      text-align: center;
-      padding: 20px;
+.detail-table {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
 }
 
-@media (max-width: 600px) {
-      .amenities-category-list-title {
-            flex-direction: column;
-            gap: 10px;
-      }
+.detail-table td {
+  padding: 8px 15px;
+  border: none;
+  color: #555;
+}
 
-      table,
-      thead,
-      tbody,
-      th,
-      td,
-      tr {
-            display: block;
-      }
+.error-message {
+  text-align: center;
+  padding: 10px;
+  color: #d32f2f;
+  background: #ffebee;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
 
-      thead tr {
-            position: absolute;
-            top: -9999px;
-            left: -9999px;
-      }
-
-      tr {
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-      }
-
-      td {
-            border: none;
-            position: relative;
-            padding-left: 50%;
-      }
-
-      td:before {
-            position: absolute;
-            left: 10px;
-            width: 45%;
-            padding-right: 10px;
-            white-space: nowrap;
-            font-weight: bold;
-            content: attr(data-label);
-      }
-
-      td[data-label="ID"]:before {
-            content: "ID";
-      }
-
-      td[data-label="Tên danh mục"]:before {
-            content: "Tên danh mục";
-      }
-
-      td[data-label="Mô tả"]:before {
-            content: "Mô tả";
-      }
-
-      td[data-label="Ngày tạo"]:before {
-            content: "Ngày tạo";
-      }
-
-      td[data-label="Ngày cập nhật"]:before {
-            content: "Ngày cập nhật";
-      }
-
-      td[data-label="Ngày xóa"]:before {
-            content: "Ngày xóa";
-      }
-
-      td[data-label="Hành động"]:before {
-            content: "Hành động";
-      }
+.pagination-container {
+  padding-right: 3px;
 }

@@ -4,59 +4,44 @@
   margin: 0 auto;
   padding: 20px;
   background: #f0f2f5;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-.role-title .role-header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+body *::-webkit-scrollbar {
+  width: 0px !important;
 }
 
 .role-title h2 {
   margin: 0;
-  font-size: 24px;
-  color: #1a73e8;
+  font-size: 33px;
 }
 
 .role-title h2 b {
   color: #d93025;
 }
 
-.role-title .role-btn-add {
-  background: #4318FF;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-}
-
-.role-title .role-btn-add:hover {
-  background: #4318FF;
-  transform: translateY(-1px);
-}
-
-.role-title .role-btn-add:active {
-  background: #104a9b;
-  transform: translateY(0);
+.section-title {
+  color: #1a1f4b !important;
+  font-weight: 700;
 }
 
 .role-table-container {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .role-table {
   background: #fff;
   border-collapse: separate;
   border-spacing: 0;
+  width: 100%;
+  table-layout: fixed;
 }
 
 .role-table th,
@@ -64,6 +49,7 @@
   padding: 12px 15px;
   font-size: 14px;
   border-bottom: 1px solid #e0e0e0;
+  box-sizing: border-box;
 }
 
 .role-table th {
@@ -78,42 +64,47 @@
   color: #333;
 }
 
-.role-wrapper .role-action-view {
-  color: #1a73e8;
+.role-btn-add {
+  border-radius: 5px;
+  height: 35px;
+  font-size: 14px;
 }
 
-.role-wrapper .role-action-view:hover {
-  opacity: 0.8;
-}
-
-.role-wrapper .role-action-edit {
-  color: #FACC15;
-}
-
-.role-wrapper .role-action-edit:hover {
-  opacity: 0.8;
-}
-
-.role-wrapper .role-action-delete {
+.role-btn-cancel {
+  border-radius: 5px;
+  height: 35px;
+  width: 60px;
+  font-size: 14px;
   color: #d32f2f;
 }
 
-.role-wrapper .role-action-delete:hover {
-  opacity: 0.8;
-}
-
-.role-wrapper .role-btn-cancel {
-  color: #d32f2f;
+.role-btn-save {
+  border-radius: 5px;
+  height: 35px;
+  width: 60px;
+  font-size: 14px;
 }
 
 .role-detail-container {
-  padding: 15px;
+  width: 100%;
+  max-width: 100%;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
+  margin-top: 0px;
+  transition: opacity 0.3s ease-in-out;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .role-detail-container h3 {
-  margin: 10px 0;
-  color: #1a73e8;
-  font-size: 18px;
+  margin-bottom: 16px;
+  margin-top: 12px;
+}
+
+.role-detail-container > .MuiBox-root:first-of-type {
+  margin-top: 16px;
 }
 
 .role-detail-table {
@@ -122,18 +113,23 @@
   border-radius: 4px;
   margin: 10px 0;
   width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  box-sizing: border-box;
 }
 
 .role-detail-table td {
   padding: 8px 15px;
   border: none;
   color: #555;
+  box-sizing: border-box;
 }
 
 .role-detail-table th {
   background: #f5f5f5;
   color: #333;
   font-weight: 600;
+  box-sizing: border-box;
 }
 
 .role-loading-container {
