@@ -4,6 +4,13 @@
   margin: 0 auto;
   padding: 20px;
   background: #f0f2f5;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+body *::-webkit-scrollbar {
+    width: 0px !important;
+
 }
 
 .customer-title .customer-header-content {
@@ -51,12 +58,19 @@
 .customer-table-container {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .customer-table {
   background: #fff;
   border-collapse: separate;
   border-spacing: 0;
+  width: 100%;
+  table-layout: fixed;
 }
 
 .customer-table th,
@@ -64,6 +78,7 @@
   padding: 12px 15px;
   font-size: 14px;
   border-bottom: 1px solid #e0e0e0;
+  box-sizing: border-box;
 }
 
 .customer-table th {
@@ -91,7 +106,17 @@
 }
 
 .customer-wrapper .customer-btn-cancel {
+  border-radius: 5px; 
+  height: 35px;
+  width: 60px;
+  font-size: 14px;
   color: #d32f2f;
+}
+.customer-wrapper .customer-btn-save {
+  border-radius: 5px; 
+  height: 35px;
+  width: 60px;
+  font-size: 14px;
 }
 
 .customer-wrapper .customer-action-edit:hover {
@@ -99,16 +124,30 @@
 }
 
 .customer-detail-container {
-  padding: 15px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 100%;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
+  margin-top: 0px;
+  transition: opacity 0.3s ease-in-out;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
+
 .customer-detail-container h3 {
-  margin: 10px 0;
-  color: #1a73e8;
-  font-size: 18px;
+  margin-bottom: 16px;
+  margin-top: 12px; /* thêm khoảng cách phía trên tiêu đề */
+}
+
+.customer-detail-container > .MuiBox-root:first-of-type {
+  margin-top: 16px; /* tạo khoảng cách giữa tiêu đề và phần form */
+}
+
+.css-1cu7xai {
+    background-color: #f7f7f7 !important; 
 }
 
 .customer-detail-table {
@@ -117,18 +156,23 @@
   border-radius: 4px;
   margin: 10px 0;
   width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  box-sizing: border-box;
 }
 
 .customer-detail-table td {
   padding: 8px 15px;
   border: none;
   color: #555;
+  box-sizing: border-box;
 }
 
 .customer-detail-table th {
   background: #f5f5f5;
   color: #333;
   font-weight: 600;
+  box-sizing: border-box;
 }
 
 .customer-loading-container {

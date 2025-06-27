@@ -1,50 +1,36 @@
-.promotion-wrapper {
+.customer-wrapper {
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
   padding: 20px;
   background: #f0f2f5;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-.promotion-title .promotion-header-content {
+body *::-webkit-scrollbar {
+    width: 0px !important;
+
+}
+
+.customer-title .customer-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
 
-.promotion-title h2 {
+.customer-title h2 {
   margin: 0;
   font-size: 24px;
   color: #1a73e8;
 }
 
-.promotion-title h2 b {
+.customer-title h2 b {
   color: #d93025;
 }
 
-.promotion-filter-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.promotion-filter-btn {
-  padding: 6px 12px;
-  border-radius: 4px;
-  text-transform: none;
-  font-weight: 500;
-  transition: background-color 0.3s ease, transform 0.2s ease;
-}
-
-.promotion-filter-btn.active {
-  font-weight: 600;
-  transform: scale(1.05);
-}
-
-.promotion-title .promotion-btn-add {
+.customer-title .customer-btn-add {
   background: #4318FF;
   color: #fff;
   border: none;
@@ -59,35 +45,43 @@
   align-items: center;
 }
 
-.promotion-title .promotion-btn-add:hover {
-  background: #3700b3;
+.customer-title .customer-btn-add:hover {
+  background: #4318FF;
   transform: translateY(-1px);
 }
 
-.promotion-title .promotion-btn-add:active {
+.customer-title .customer-btn-add:active {
   background: #104a9b;
   transform: translateY(0);
 }
 
-.promotion-table-container {
+.customer-table-container {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
-.promotion-table {
+.customer-table {
   background: #fff;
   border-collapse: separate;
   border-spacing: 0;
+  width: 100%;
+  table-layout: fixed;
 }
 
-.promotion-table th,
-.promotion-table td {
+.customer-table th,
+.customer-table td {
   padding: 12px 15px;
   font-size: 14px;
   border-bottom: 1px solid #e0e0e0;
+  box-sizing: border-box;
 }
 
-.promotion-table th {
+.customer-table th {
   background: #f5f5f5;
   color: #333;
   text-transform: uppercase;
@@ -95,72 +89,93 @@
   border-bottom: 2px solid #e0e0e0;
 }
 
-.promotion-table td {
+.customer-table td {
   color: #333;
 }
 
-.promotion-wrapper .promotion-action-view {
+.customer-wrapper .customer-action-view {
   color: #1a73e8;
 }
 
-.promotion-wrapper .promotion-action-view:hover {
+.customer-wrapper .customer-action-view:hover {
   opacity: 0.8;
 }
 
-.promotion-wrapper .promotion-action-edit {
+.customer-wrapper .customer-action-edit {
   color: #FACC15;
 }
 
-.promotion-wrapper .promotion-action-edit:hover {
+.customer-wrapper .customer-btn-cancel {
+  border-radius: 5px; 
+  height: 35px;
+  width: 60px;
+  font-size: 14px;
+  color: #d32f2f;
+}
+.customer-wrapper .customer-btn-save {
+  border-radius: 5px; 
+  height: 35px;
+  width: 60px;
+  font-size: 14px;
+}
+
+.customer-wrapper .customer-action-edit:hover {
   opacity: 0.8;
 }
 
-.promotion-wrapper .promotion-action-delete {
-  color: #d32f2f;
+.customer-detail-container {
+  width: 100%;
+  max-width: 100%;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
+  margin-top: 0px;
+  transition: opacity 0.3s ease-in-out;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-.promotion-wrapper .promotion-action-delete:hover {
-  opacity: 0.8;
+
+.customer-detail-container h3 {
+  margin-bottom: 16px;
+  margin-top: 12px; /* thêm khoảng cách phía trên tiêu đề */
 }
 
-.promotion-wrapper .promotion-btn-cancel {
-  color: #d32f2f;
+.customer-detail-container > .MuiBox-root:first-of-type {
+  margin-top: 16px; /* tạo khoảng cách giữa tiêu đề và phần form */
 }
 
-.promotion-detail-container {
-  padding: 15px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.css-1cu7xai {
+    background-color: #f7f7f7 !important; 
 }
 
-.promotion-detail-container h3 {
-  margin: 10px 0;
-  color: #1a73e8;
-  font-size: 18px;
-}
-
-.promotion-detail-table {
+.customer-detail-table {
   background: #f9f9f9;
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   margin: 10px 0;
   width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  box-sizing: border-box;
 }
 
-.promotion-detail-table td {
+.customer-detail-table td {
   padding: 8px 15px;
   border: none;
   color: #555;
+  box-sizing: border-box;
 }
 
-.promotion-detail-table th {
+.customer-detail-table th {
   background: #f5f5f5;
   color: #333;
   font-weight: 600;
+  box-sizing: border-box;
 }
 
-.promotion-loading-container {
+.customer-loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -168,7 +183,7 @@
   padding: 20px;
 }
 
-.promotion-error-message {
+.customer-error-message {
   text-align: center;
   padding: 10px;
   color: #d32f2f;
@@ -178,19 +193,9 @@
   margin-bottom: 20px;
 }
 
-.promotion-no-data {
+.customer-no-data {
   text-align: center;
   padding: 20px;
   color: #666;
   font-size: 16px;
-}
-
-.promotion-dialog {
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.promotion-search-input {
-  background: #fff;
-  border-radius: 4px;
 }

@@ -359,41 +359,44 @@ const Customer: React.FC = () => {
           Khách Hàng &gt; Danh sách
         </Typography>
         <Box
-  display="flex"
-  justifyContent="space-between"
-  alignItems="center"
-  flexWrap="wrap"
-  mb={2}
->
-  <Typography variant="h4" fontWeight={700}>
-    Khách Hàng
-  </Typography>
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          mb={2}
+        >
+          <Typography variant="h2" fontWeight={700}>
+            Khách Hàng
+          </Typography>
 
-  <TextField
-    variant="outlined"
-    placeholder="Tìm kiếm (Tên hoặc SĐT)"
-    size="small"
-    InputProps={{
-      startAdornment: (
-        <InputAdornment position="start">
-          <SearchIcon />
-        </InputAdornment>
-      ),
-    }}
-    sx={{
-      width: 300,
-      bgcolor: "#fff",
-      borderRadius: "8px",
-      mt: { xs: 2, sm: 0 },
-    }}
-    value={searchQuery}
-    onChange={(e) => setSearchQuery(e.target.value)}
-  />
-</Box>
+          <TextField
+            variant="outlined"
+            placeholder="Tìm kiếm (Tên hoặc SĐT)"
+            size="small"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+            sx={{
+              width: 300,
+              bgcolor: "#fff",
+              borderRadius: "8px",
+              mt: { xs: 2, sm: 0 },
+              "& input": {
+                fontSize: "15px", // hoặc '18px' tùy mong muốn
+              },
+            }}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </Box>
       </div>
 
-      <Card elevation={3} sx={{ mt: 0, px: 3, pb: 0 }}>
-  <CardContent sx={{ pt: 0, px: 0 }}>
+      <Card elevation={3} sx={{ p: 0, mt: 0 }}>
+        <CardContent sx={{ p: 0 }}>
           {loading ? (
             <div className="customer-loading-container">
               <CircularProgress />
@@ -419,16 +422,16 @@ const Customer: React.FC = () => {
                   <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
                     <TableRow>
                       <TableCell>
-                        <b>TÊN ĐẦY ĐỦ</b>
+                        <b>Tên đầy đủ</b>
                       </TableCell>
                       <TableCell>
-                        <b>ĐỊA CHỈ EMAIL</b>
+                        <b>Địa chỉ email</b>
                       </TableCell>
                       <TableCell>
-                        <b>SỐ ĐIỆN THOẠI</b>
+                        <b>Số điện thoại</b>
                       </TableCell>
                       <TableCell align="center">
-                        <b>HÀNH ĐỘNG</b>
+                        <b>Hành động</b>
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -441,23 +444,60 @@ const Customer: React.FC = () => {
                           <TableCell>{customer.email}</TableCell>
                           <TableCell>{customer.phone}</TableCell>
                           <TableCell align="center">
-                            <IconButton
-                              color="primary"
-                              onClick={() => handleViewDetails(customer.id)}
-                            >
-                              <VisibilityIcon />
-                            </IconButton>
-                            <IconButton
-                              color="warning"
-                              onClick={() => handleEdit(customer)}
-                            >
-                              <EditIcon />
-                            </IconButton>
+                            <Box display="flex" justifyContent="center" gap={1}>
+                              <IconButton
+                                title="Xem chi tiết"
+                                sx={{
+                                  color: "#1976d2",
+                                  bgcolor: "#e3f2fd",
+                                  "&:hover": {
+                                    bgcolor: "#bbdefb",
+                                    boxShadow:
+                                      "0 2px 6px rgba(25, 118, 210, 0.4)",
+                                  },
+                                  transition: "all 0.2s ease-in-out",
+                                }}
+                                onClick={() => handleViewDetails(customer.id)}
+                              >
+                                <VisibilityIcon fontSize="small" />
+                              </IconButton>
+
+                              <IconButton
+                                title="Chỉnh sửa"
+                                sx={{
+                                  color: "#f57c00",
+                                  bgcolor: "#fff3e0",
+                                  "&:hover": {
+                                    bgcolor: "#ffe0b2",
+                                    boxShadow:
+                                      "0 2px 6px rgba(245, 124, 0, 0.4)",
+                                  },
+                                  transition: "all 0.2s ease-in-out",
+                                }}
+                                onClick={() => handleEdit(customer)}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
                           </TableCell>
                         </TableRow>
+
                         <TableRow>
                           <TableCell colSpan={4} style={{ padding: 0 }}>
-                            <Collapse in={selectedCustomerId === customer.id}>
+                            <Collapse
+                              in={selectedCustomerId === customer.id}
+                              timeout="auto"
+                              unmountOnExit
+                            >
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  bgcolor: "#f9f9f9",
+                                  px: 3,
+                                  py: 2,
+                                  borderTop: "1px solid #ddd",
+                                }}
+                              ></Box>
                               <div className="customer-detail-container">
                                 {editCustomerId === customer.id &&
                                 editFormData ? (
@@ -479,7 +519,29 @@ const Customer: React.FC = () => {
                                           size="small"
                                           error={!!validationErrors.name}
                                           helperText={validationErrors.name}
+                                          sx={{
+                                            "& .MuiOutlinedInput-root": {
+                                              "& fieldset": {
+                                                borderColor: "#ccc", // viền mặc định
+                                              },
+                                              "&:hover fieldset": {
+                                                borderColor: "#888", // viền khi hover
+                                              },
+                                              "&.Mui-focused fieldset": {
+                                                borderColor: "#1976d2", // viền khi focus
+                                                borderWidth: "2px",
+                                              },
+                                            },
+                                            "& label": {
+                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
+                                              padding: "0 4px",
+                                            },
+                                            "& label.Mui-focused": {
+                                              color: "#1976d2",
+                                            },
+                                          }}
                                         />
+
                                         <TextField
                                           label="Email"
                                           name="email"
@@ -490,6 +552,27 @@ const Customer: React.FC = () => {
                                           size="small"
                                           error={!!validationErrors.email}
                                           helperText={validationErrors.email}
+                                          sx={{
+                                            "& .MuiOutlinedInput-root": {
+                                              "& fieldset": {
+                                                borderColor: "#ccc", // viền mặc định
+                                              },
+                                              "&:hover fieldset": {
+                                                borderColor: "#888", // viền khi hover
+                                              },
+                                              "&.Mui-focused fieldset": {
+                                                borderColor: "#1976d2", // viền khi focus
+                                                borderWidth: "2px",
+                                              },
+                                            },
+                                            "& label": {
+                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
+                                              padding: "0 4px",
+                                            },
+                                            "& label.Mui-focused": {
+                                              color: "#1976d2",
+                                            },
+                                          }}
                                         />
                                       </Box>
                                       <Box display="flex" gap={2}>
@@ -503,6 +586,27 @@ const Customer: React.FC = () => {
                                           size="small"
                                           error={!!validationErrors.phone}
                                           helperText={validationErrors.phone}
+                                          sx={{
+                                            "& .MuiOutlinedInput-root": {
+                                              "& fieldset": {
+                                                borderColor: "#ccc", // viền mặc định
+                                              },
+                                              "&:hover fieldset": {
+                                                borderColor: "#888", // viền khi hover
+                                              },
+                                              "&.Mui-focused fieldset": {
+                                                borderColor: "#1976d2", // viền khi focus
+                                                borderWidth: "2px",
+                                              },
+                                            },
+                                            "& label": {
+                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
+                                              padding: "0 4px",
+                                            },
+                                            "& label.Mui-focused": {
+                                              color: "#1976d2",
+                                            },
+                                          }}
                                         />
                                         <TextField
                                           label="Địa chỉ"
@@ -514,6 +618,27 @@ const Customer: React.FC = () => {
                                           size="small"
                                           error={!!validationErrors.address}
                                           helperText={validationErrors.address}
+                                          sx={{
+                                            "& .MuiOutlinedInput-root": {
+                                              "& fieldset": {
+                                                borderColor: "#ccc", // viền mặc định
+                                              },
+                                              "&:hover fieldset": {
+                                                borderColor: "#888", // viền khi hover
+                                              },
+                                              "&.Mui-focused fieldset": {
+                                                borderColor: "#1976d2", // viền khi focus
+                                                borderWidth: "2px",
+                                              },
+                                            },
+                                            "& label": {
+                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
+                                              padding: "0 4px",
+                                            },
+                                            "& label.Mui-focused": {
+                                              color: "#1976d2",
+                                            },
+                                          }}
                                         />
                                       </Box>
                                       <Box display="flex" gap={2}>
@@ -533,6 +658,27 @@ const Customer: React.FC = () => {
                                           helperText={
                                             validationErrors.date_of_birth
                                           }
+                                          sx={{
+                                            "& .MuiOutlinedInput-root": {
+                                              "& fieldset": {
+                                                borderColor: "#ccc", // viền mặc định
+                                              },
+                                              "&:hover fieldset": {
+                                                borderColor: "#888", // viền khi hover
+                                              },
+                                              "&.Mui-focused fieldset": {
+                                                borderColor: "#1976d2", // viền khi focus
+                                                borderWidth: "2px",
+                                              },
+                                            },
+                                            "& label": {
+                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
+                                              padding: "0 4px",
+                                            },
+                                            "& label.Mui-focused": {
+                                              color: "#1976d2",
+                                            },
+                                          }}
                                         />
                                         <FormControl
                                           fullWidth
@@ -579,6 +725,27 @@ const Customer: React.FC = () => {
                                           helperText={
                                             validationErrors.nationality
                                           }
+                                          sx={{
+                                            "& .MuiOutlinedInput-root": {
+                                              "& fieldset": {
+                                                borderColor: "#ccc", // viền mặc định
+                                              },
+                                              "&:hover fieldset": {
+                                                borderColor: "#888", // viền khi hover
+                                              },
+                                              "&.Mui-focused fieldset": {
+                                                borderColor: "#1976d2", // viền khi focus
+                                                borderWidth: "2px",
+                                              },
+                                            },
+                                            "& label": {
+                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
+                                              padding: "0 4px",
+                                            },
+                                            "& label.Mui-focused": {
+                                              color: "#1976d2",
+                                            },
+                                          }}
                                         />
                                         <TextField
                                           label="CCCD"
@@ -593,6 +760,27 @@ const Customer: React.FC = () => {
                                             validationErrors.cccd ||
                                             "Ví dụ: 123456789012"
                                           }
+                                          sx={{
+                                            "& .MuiOutlinedInput-root": {
+                                              "& fieldset": {
+                                                borderColor: "#ccc", // viền mặc định
+                                              },
+                                              "&:hover fieldset": {
+                                                borderColor: "#888", // viền khi hover
+                                              },
+                                              "&.Mui-focused fieldset": {
+                                                borderColor: "#1976d2", // viền khi focus
+                                                borderWidth: "2px",
+                                              },
+                                            },
+                                            "& label": {
+                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
+                                              padding: "0 4px",
+                                            },
+                                            "& label.Mui-focused": {
+                                              color: "#1976d2",
+                                            },
+                                          }}
                                         />
                                       </Box>
                                       <Box display="flex" gap={2}>
@@ -609,19 +797,43 @@ const Customer: React.FC = () => {
                                             validationErrors.note ||
                                             "Tối đa 200 ký tự"
                                           }
+                                          sx={{
+                                            "& .MuiOutlinedInput-root": {
+                                              "& fieldset": {
+                                                borderColor: "#ccc", // viền mặc định
+                                              },
+                                              "&:hover fieldset": {
+                                                borderColor: "#888", // viền khi hover
+                                              },
+                                              "&.Mui-focused fieldset": {
+                                                borderColor: "#1976d2", // viền khi focus
+                                                borderWidth: "2px",
+                                              },
+                                            },
+                                            "& label": {
+                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
+                                              padding: "0 4px",
+                                            },
+                                            "& label.Mui-focused": {
+                                              color: "#1976d2",
+                                            },
+                                          }}
                                         />
+
                                       </Box>
                                     </Box>
 
-                                    <Box mt={2} display="flex" gap={2}>
+                                    <Box pb={3} mt={2} display="flex" gap={2}>
                                       <Button
                                         variant="contained"
                                         color="primary"
+                                        className="customer-btn-save"
                                         onClick={handleSave}
                                         disabled={editLoading}
                                       >
                                         Lưu
                                       </Button>
+
                                       <Button
                                         variant="outlined"
                                         className="customer-btn-cancel"
@@ -762,7 +974,7 @@ const Customer: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Box mt={3} display="flex" justifyContent="flex-end">
+              <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
                 <Pagination
                   count={lastPage}
                   page={currentPage}
