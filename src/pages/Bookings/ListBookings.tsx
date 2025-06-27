@@ -98,7 +98,6 @@ interface Booking {
   customer: Customer;
   room: Room;
 }
-
 const formatCurrency = (value: string): string => {
   const num = parseFloat(value);
   if (isNaN(num)) return 'N/A';
@@ -117,22 +116,28 @@ const formatDate = (date: string): JSX.Element => {
   }
 };
 
-const getBookingStatus = (status: string): { status: string; color: string } => {
-  switch (status.toLowerCase()) {
-    case 'pending':
-      return { status: 'Chờ xác nhận', color: '#FFA500' };
-    case 'confirmed':
-      return { status: 'Đã xác nhận', color: '#388E3C' };
-    case 'checked_in':
-      return { status: 'Đã nhận phòng', color: '#1A73E8' };
-    case 'checked_out':
-      return { status: 'Đã trả phòng', color: '#757575' };
-    case 'cancelled':
-      return { status: 'Đã hủy', color: '#D32F2F' };
-    default:
-      return { status: 'Không xác định', color: '#757575' };
-  }
+type BookingStatusKey =
+  | 'pending'
+  | 'confirmed'
+  | 'checked_in'
+  | 'checked_out'
+  | 'cancelled';
+
+const bookingStatusMap: Record<BookingStatusKey, { status: string; color: string }> = {
+  pending: { status: 'Chờ xác nhận', color: '#FFA500' },
+  confirmed: { status: 'Đã xác nhận', color: '#388E3C' },
+  checked_in: { status: 'Đã nhận phòng', color: '#1A73E8' },
+  checked_out: { status: 'Đã trả phòng', color: '#757575' },
+  cancelled: { status: 'Đã hủy', color: '#D32F2F' },
 };
+
+const getBookingStatus = (
+  status: string
+): { status: string; color: string } => {
+  const key = status.toLowerCase() as BookingStatusKey;
+  return bookingStatusMap[key] ?? { status: 'Không xác định', color: '#757575' };
+};
+
 
 const ListBookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
