@@ -150,6 +150,26 @@ interface Booking {
   room: Room;
 }
 
+interface CheckoutInfo {
+  booking_id: number;
+  status: string;
+  check_in_date: string;
+  check_out_date: string;
+  deposit_amount: number;
+  total_amount: number;
+  raw_total: number;
+  discount_amount: number;
+  nights: number;
+  room_total: number;
+  service_total: number;
+  check_out_at?: string;
+  room_details: {
+    room_number: string;
+    base_rate: number;
+    total: number;
+  }[];
+}
+
 const formatCurrency = (value: string): string => {
   const num = parseFloat(value);
   if (isNaN(num)) return "N/A";
@@ -193,6 +213,7 @@ const ListBookings: React.FC = () => {
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(
     null
@@ -206,7 +227,57 @@ const ListBookings: React.FC = () => {
   const [openCheckinDialog, setOpenCheckinDialog] = useState(false);
   const [checkinInfo, setCheckinInfo] = useState<CheckinInfo | null>(null);
 
+  const [checkoutInfo, setCheckoutInfo] = useState<CheckoutInfo | null>(null);
+
+  const [openCheckoutDialog, setOpenCheckoutDialog] = useState(false);
+
   const navigate = useNavigate();
+
+  const handleOpenCheckoutDialog = async (bookingId: number) => {
+    try {
+      const res = await api.get(`/check-out/${bookingId}`);
+      setCheckoutInfo(res.data);
+      setOpenCheckoutDialog(true);
+    } catch (error) {
+      console.error("Lỗi khi lấy thông tin check-out:", error);
+      setError("Không thể tải thông tin check-out");
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleConfirmCheckout = async () => {
+    if (!checkoutInfo) {
+      setError("Không có thông tin check-out để xác nhận.");
+      setSnackbarOpen(true);
+      return;
+    }
+    try {
+      const res = await api.post(`/pay-by-cash/${checkoutInfo.booking_id}`);
+      setSuccessMessage(res.data.message || "Check-out thành công!");
+      setSnackbarOpen(true);
+      setOpenCheckoutDialog(false);
+      fetchAllBookings();
+    } catch (err) {
+      console.error(err);
+      setError("Check-out thất bại");
+      setSnackbarOpen(true);
+    }
+  };
+
+  const handleVNPayCheckout = async (bookingId: number) => {
+    try {
+      const res = await api.post(`/vnpay/create`, { booking_id: bookingId });
+      if (res.data && res.data.payment_url) {
+        window.open(res.data.payment_url, "_blank");
+      } else {
+        throw new Error("Không nhận được URL thanh toán.");
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (error) {
+      setError("Không thể khởi tạo thanh toán online.");
+      setSnackbarOpen(true);
+    }
+  };
 
   const handleCancelBooking = async (bookingId: number) => {
     if (!window.confirm("Bạn có chắc chắn muốn hủy đơn đặt phòng này không?"))
@@ -214,7 +285,8 @@ const ListBookings: React.FC = () => {
 
     try {
       await api.post(`/bookings/${bookingId}/cancel`);
-      await fetchAllBookings(); // Load lại danh sách
+      await fetchAllBookings();
+      setSuccessMessage("Hủy đặt phòng thành công");
       setSnackbarOpen(true);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
@@ -228,18 +300,20 @@ const ListBookings: React.FC = () => {
       const res = await api.get(`/check-in/${bookingId}`);
       setCheckinInfo(res.data);
       setOpenCheckinDialog(true);
+      setSelectedBookingId(bookingId);
     } catch (err) {
       console.error("Lỗi lấy thông tin check-in", err);
+      setError("Không thể tải thông tin check-in");
+      setSnackbarOpen(true);
     }
   };
 
-  // Fetch check-in info and open dialog
   const handleOpenCheckinDialog = async () => {
     try {
       const response = await api.get(`/check-in/${selectedBookingId}`);
       if (response.status === 200) {
-        setCheckinInfo(response.data); // Lưu thông tin chi tiết
-        setOpenCheckinDialog(true); // Mở Dialog
+        setCheckinInfo(response.data);
+        setOpenCheckinDialog(true);
       }
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
@@ -263,8 +337,9 @@ const ListBookings: React.FC = () => {
     if (!selectedBookingId) return;
 
     try {
-      await api.post(`/check-in/${selectedBookingId}`); // Đảm bảo API này tồn tại
-      await fetchAllBookings(); // Tải lại danh sách
+      await api.post(`/check-in/${selectedBookingId}`);
+      await fetchAllBookings();
+      setSuccessMessage("Check-in thành công");
       setSnackbarOpen(true);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
@@ -412,6 +487,7 @@ const ListBookings: React.FC = () => {
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
     setError(null);
+    setSuccessMessage(null);
   };
 
   const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -651,9 +727,7 @@ const ListBookings: React.FC = () => {
                             <VisibilityIcon fontSize="small" />
                           </IconButton>
 
-                          {["Chờ xác nhận", "Đã xác nhận"].includes(
-                            getBookingStatus(booking.status).status
-                          ) && (
+                          {["Chờ xác nhận", "Đã xác nhận"].includes(status) && (
                             <IconButton
                               title="Xác nhận Check-in"
                               onClick={() => handleCheckinDialog(booking.id)}
@@ -664,13 +738,10 @@ const ListBookings: React.FC = () => {
                                 "&:hover": { bgcolor: "#c8e6c9" },
                               }}
                             >
-                              <AppsIcon fontSize="small" />{" "}
-                              {/* Icon 4 chấm như bạn mong muốn */}
+                              <AppsIcon fontSize="small" />
                             </IconButton>
                           )}
-                          {["Chờ xác nhận", "Đã xác nhận"].includes(
-                            getBookingStatus(booking.status).status
-                          ) && (
+                          {["Chờ xác nhận", "Đã xác nhận"].includes(status) && (
                             <IconButton
                               title="Hủy đặt phòng"
                               onClick={() => handleCancelBooking(booking.id)}
@@ -682,6 +753,22 @@ const ListBookings: React.FC = () => {
                               }}
                             >
                               <HighlightOffIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                          {status === "Đã nhận phòng" && (
+                            <IconButton
+                              title="Thanh toán và trả phòng"
+                              onClick={() =>
+                                handleOpenCheckoutDialog(booking.id)
+                              }
+                              sx={{
+                                ml: 1,
+                                color: "#ff9800",
+                                bgcolor: "#fff3e0",
+                                "&:hover": { bgcolor: "#ffe0b2" },
+                              }}
+                            >
+                              <AppsIcon fontSize="small" />
                             </IconButton>
                           )}
                         </TableCell>
@@ -703,10 +790,10 @@ const ListBookings: React.FC = () => {
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity="error"
+          severity={successMessage ? "success" : "error"}
           sx={{ width: "100%" }}
         >
-          {error}
+          {successMessage || error}
         </Alert>
       </Snackbar>
       <Menu
@@ -732,7 +819,7 @@ const ListBookings: React.FC = () => {
           sx={{
             fontWeight: 600,
             fontSize: "25px",
-            color: "#4318FF", // Tùy chọn: màu tím nổi bật
+            color: "#4318FF",
             mb: 2,
           }}
         >
@@ -741,9 +828,7 @@ const ListBookings: React.FC = () => {
         <DialogContent dividers sx={{ px: 4, py: 3 }}>
           {checkinInfo ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {/* 2 CỘT CHÍNH */}
               <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                {/* THÔNG TIN KHÁCH HÀNG */}
                 <Box sx={{ flex: 1, minWidth: "280px" }}>
                   <Typography variant="h6" fontWeight={700} gutterBottom>
                     🧑‍💼 Thông tin khách hàng
@@ -768,7 +853,6 @@ const ListBookings: React.FC = () => {
                   </Typography>
                 </Box>
 
-                {/* THÔNG TIN ĐẶT PHÒNG */}
                 <Box sx={{ flex: 1, minWidth: "280px" }}>
                   <Typography variant="h6" fontWeight={700} gutterBottom>
                     📅 Thông tin đặt phòng
@@ -793,7 +877,6 @@ const ListBookings: React.FC = () => {
                 </Box>
               </Box>
 
-              {/* PHÒNG */}
               <Box>
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   🛏️ Phòng
@@ -818,7 +901,6 @@ const ListBookings: React.FC = () => {
                 ))}
               </Box>
 
-              {/* DỊCH VỤ */}
               <Box>
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   🛎️ Dịch vụ đi kèm
@@ -852,6 +934,92 @@ const ListBookings: React.FC = () => {
           >
             Check-in ngay
           </Button>
+        </DialogActions>
+      </Dialog>
+
+        {/* Thông tin thanh toán & trả phòng */}
+      <Dialog
+        open={openCheckoutDialog}
+        onClose={() => setOpenCheckoutDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700, fontSize: "24px", color: "#FF9800" }}>
+          💸 Thông tin thanh toán & trả phòng
+        </DialogTitle>
+        <DialogContent dividers sx={{ px: 4, py: 3 }}>
+          {checkoutInfo ? (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <Box>
+                <Typography variant="h6" fontWeight={700} gutterBottom>
+                  🧾 Thông tin đơn đặt phòng
+                </Typography>
+                <Typography><b>Mã đơn:</b> #{checkoutInfo.booking_id}</Typography>
+                <Typography><b>Trạng thái:</b> {checkoutInfo.status}</Typography>
+                <Typography><b>Ngày nhận phòng:</b> {formatDate(checkoutInfo.check_in_date)}</Typography>
+                <Typography><b>Ngày trả phòng:</b> {formatDate(checkoutInfo.check_out_date)}</Typography>
+                <Typography><b>Số đêm:</b> {checkoutInfo.nights} đêm</Typography>
+                <Typography><b>Tiền đặt cọc:</b> {numeral(checkoutInfo.deposit_amount).format("0,0")} VNĐ</Typography>
+              </Box>
+
+              <Box sx={{ display: "flex", gap: 20 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>
+                    🛏️ Chi tiết phòng
+                  </Typography>
+                  {checkoutInfo.room_details.map((room, index) => (
+                    <Typography key={index}>
+                      - Phòng {room.room_number}: {numeral(room.base_rate).format("0,0")} × {checkoutInfo.nights} đêm = {numeral(room.total).format("0,0")} VNĐ
+                    </Typography>
+                  ))}
+                  <Typography mt={1}><b>Tổng tiền phòng:</b> {numeral(checkoutInfo.room_total).format("0,0")} VNĐ</Typography>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>
+                    🛎️ Dịch vụ sử dụng
+                  </Typography>
+                  <Typography><b>Tổng tiền dịch vụ:</b> {numeral(checkoutInfo.service_total).format("0,0")} VNĐ</Typography>
+                </Box>
+              </Box>
+
+              <Box>
+                <Typography variant="h6" fontWeight={700} gutterBottom>
+                  💳 Tóm tắt thanh toán
+                </Typography>
+                <Typography>- Thành tiền (phòng + dịch vụ): {numeral(checkoutInfo.raw_total).format("0,0")} VNĐ</Typography>
+                <Typography>- Giảm giá: {numeral(checkoutInfo.discount_amount).format("0,0")} VNĐ</Typography>
+                <Typography sx={{ fontSize: "18px", fontWeight: "bold", mt: 1 }}>
+                  = Tổng cần thanh toán: {numeral(checkoutInfo.total_amount).format("0,0")} VNĐ
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <Box>
+                  <Typography variant="h6" fontWeight={700} gutterBottom>
+                    🔘 Phương thức thanh toán
+                  </Typography>
+                  <Box display="flex" gap={2}>
+                    <Button variant="outlined" color="primary" onClick={handleConfirmCheckout}>
+                      Thanh toán tiền mặt
+                    </Button>
+                    <Button variant="contained" color="secondary" onClick={() => handleVNPayCheckout(checkoutInfo.booking_id)}>
+                      Thanh toán online (VNPay)
+                    </Button>
+                  </Box>
+                </Box>
+                <Box sx={{ textAlign: "right" }}>
+                  <Button variant="contained" color="primary" onClick={handleConfirmCheckout} disabled={!checkoutInfo}>
+                    Xác nhận Check-out
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
+          ) : (
+            <Typography>Đang tải thông tin...</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenCheckoutDialog(false)}>Hủy bỏ</Button>
         </DialogActions>
       </Dialog>
     </div>
