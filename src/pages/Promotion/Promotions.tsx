@@ -42,7 +42,7 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
 import api from "../../api/axios";
-import "../../css/Promotion.css"; // Đã cập nhật đường dẫn CSS
+import "../../css/Promotion.css";
 import { JSX } from "react/jsx-runtime";
 import { Link } from "react-router-dom";
 
@@ -505,7 +505,7 @@ const Promotions: React.FC = () => {
           flexWrap="wrap"
           mb={2}
         >
-          <Typography variant="h2" fontWeight={700}>
+          <Typography variant="h2" fontWeight={700} >
             Khuyến Mãi
           </Typography>
           <Box display="flex" gap={2} alignItems="center">
@@ -615,7 +615,7 @@ const Promotions: React.FC = () => {
                 fontWeight: 600,
                 borderRadius: "8px",
                 px: 2.5,
-                py: 1,
+                py: 0.7,
                 boxShadow: "0 2px 6px rgba(106, 27, 154, 0.3)",
                 "&:hover": {
                   backgroundColor: "#7B1FA2",

@@ -13,13 +13,6 @@ body *::-webkit-scrollbar {
 
 }
 
-.customer-title .customer-header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
 .customer-title h2 {
   margin: 0;
   font-size: 24px;
@@ -28,31 +21,6 @@ body *::-webkit-scrollbar {
 
 .customer-title h2 b {
   color: #d93025;
-}
-
-.customer-title .customer-btn-add {
-  background: #4318FF;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-}
-
-.customer-title .customer-btn-add:hover {
-  background: #4318FF;
-  transform: translateY(-1px);
-}
-
-.customer-title .customer-btn-add:active {
-  background: #104a9b;
-  transform: translateY(0);
 }
 
 .customer-table-container {
@@ -93,17 +61,6 @@ body *::-webkit-scrollbar {
   color: #333;
 }
 
-.customer-wrapper .customer-action-view {
-  color: #1a73e8;
-}
-
-.customer-wrapper .customer-action-view:hover {
-  opacity: 0.8;
-}
-
-.customer-wrapper .customer-action-edit {
-  color: #FACC15;
-}
 
 .customer-wrapper .customer-btn-cancel {
   border-radius: 5px; 
@@ -117,10 +74,6 @@ body *::-webkit-scrollbar {
   height: 35px;
   width: 60px;
   font-size: 14px;
-}
-
-.customer-wrapper .customer-action-edit:hover {
-  opacity: 0.8;
 }
 
 .customer-detail-container {
@@ -146,9 +99,9 @@ body *::-webkit-scrollbar {
   margin-top: 16px; /* tạo khoảng cách giữa tiêu đề và phần form */
 }
 
-.css-1cu7xai {
-    background-color: #f7f7f7 !important; 
-}
+/* .css-1cu7xai {
+    background-color: #f30000 !important; 
+} */
 
 .customer-detail-table {
   background: #f9f9f9;
@@ -199,3 +152,14 @@ body *::-webkit-scrollbar {
   color: #666;
   font-size: 16px;
 }
+.section-title {
+  color: #1a1f4b !important;
+  font-weight: 700;
+}
+
+.customer-title h2 {
+    margin: 0;
+    font-size: 33px;
+}
+
+

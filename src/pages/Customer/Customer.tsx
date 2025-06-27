@@ -365,7 +365,7 @@ const Customer: React.FC = () => {
           flexWrap="wrap"
           mb={2}
         >
-          <Typography variant="h2" fontWeight={700}>
+          <Typography variant="h2" className="section-title" fontWeight={700} >
             Khách Hàng
           </Typography>
 
