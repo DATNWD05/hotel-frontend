@@ -30,9 +30,9 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import StarIcon from '@mui/icons-material/Star';
 import EditIcon from '@mui/icons-material/Edit';
-import BookingForm from './BookingForm';
 import '../../css/OrderRoom.css';
 import api from '../../api/axios';
+import { Link } from 'react-router-dom';
 
 interface RoomType {
   id: number;
@@ -163,9 +163,7 @@ const OrderRoom: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [openDialog, setOpenDialog] = useState<boolean>(false);
-  const [openBooking, setOpenBooking] = useState<boolean>(false);
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
-  const [bookingRoom, setBookingRoom] = useState<{ roomNumber: string; roomId: number }>({ roomNumber: '', roomId: 0 });
   const [editRoom, setEditRoom] = useState<Partial<Room>>({});
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
@@ -314,16 +312,6 @@ const OrderRoom: React.FC = () => {
   const handleCloseDialog = () => {
     setOpenDialog(false);
     setSelectedRoom(null);
-  };
-
-  const handleBookRoom = (room: Room) => {
-    setBookingRoom({ roomNumber: room.room_number, roomId: room.id });
-    setOpenBooking(true);
-  };
-
-  const handleCloseBooking = () => {
-    setOpenBooking(false);
-    setBookingRoom({ roomNumber: '', roomId: 0 });
   };
 
   const handleOpenEditDialog = (room: Room) => {
@@ -484,31 +472,64 @@ const OrderRoom: React.FC = () => {
         <Button
           className={`order-room-filter-tat_ca ${statusFilter === 'all' ? 'active' : ''}`}
           onClick={() => handleStatusFilter('all')}
-          sx={{ backgroundColor: '#607D8B', color: 'white', mr: 1, '&:hover': { backgroundColor: '#546E7A' } }}
+          sx={{
+            backgroundColor: '#607D8B',
+            color: 'white',
+            mr: 1,
+            '&:hover': { backgroundColor: '#546E7A' },
+          }}
         >
           Tất cả
         </Button>
         <Button
           className={`order-room-filter-trong ${statusFilter === 'trong' ? 'active' : ''}`}
           onClick={() => handleStatusFilter('trong')}
-          sx={{ backgroundColor: '#1B5E20', color: 'white', mr: 1, '&:hover': { backgroundColor: '#2E7D32' } }}
+          sx={{
+            backgroundColor: '#1B5E20',
+            color: 'white',
+            mr: 1,
+            '&:hover': { backgroundColor: '#2E7D32' },
+          }}
         >
           Trống
         </Button>
         <Button
           className={`order-room-filter-da_dat ${statusFilter === 'da_dat' ? 'active' : ''}`}
           onClick={() => handleStatusFilter('da_dat')}
-          sx={{ backgroundColor: '#B71C1C', color: 'white', mr: 1, '&:hover': { backgroundColor: '#C62828' } }}
+          sx={{
+            backgroundColor: '#B71C1C',
+            color: 'white',
+            mr: 1,
+            '&:hover': { backgroundColor: '#C62828' },
+          }}
         >
           Đã đặt
         </Button>
         <Button
           className={`order-room-filter-dang_sua ${statusFilter === 'dang_sua' ? 'active' : ''}`}
           onClick={() => handleStatusFilter('dang_sua')}
-          sx={{ backgroundColor: '#F57F17', color: 'white', mr: 1, '&:hover': { backgroundColor: '#FB8C00' } }}
+          sx={{
+            backgroundColor: '#F57F17',
+            color: 'white',
+            mr: 1,
+            '&:hover': { backgroundColor: '#FB8C00' },
+          }}
         >
           Đang sửa
         </Button>
+        <Link to="/listbookings/add">
+          <Button
+            className="order-room-filter-book"
+            sx={{
+              backgroundColor: '#4CAF50',
+              color: 'white',
+              ml: 'auto',
+              '&:hover': { backgroundColor: '#2E7D32' },
+            }}
+          >
+            Đặt phòng
+          </Button>
+        </Link>
       </div>
 
       {filteredRooms.length === 0 ? (
@@ -564,9 +585,7 @@ const OrderRoom: React.FC = () => {
                     </>
                   )}
                   {mapStatusToUI(room.status) === 'dang_sua' && (
-                    <>
-                      <div className="order-room-status-text">Đang sửa chữa</div>
-                    </>
+                    <div className="order-room-status-text">Đang sửa chữa</div>
                   )}
                 </div>
               </div>
@@ -591,7 +610,7 @@ const OrderRoom: React.FC = () => {
         
         <DialogContent className="dialog-content-enhanced">
           {selectedRoom ? (
-            <div className="room-details-container">
+            <>
               <Card className="info-card room-info-card">
                 <CardContent>
                   <div className="card-header">
@@ -733,7 +752,7 @@ const OrderRoom: React.FC = () => {
                         value={selectedRoom.guest_phone ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<CalendarTodayIcon />} 
+                        icon=<CalendarTodayIcon /> 
                         label="Ngày sinh" 
                         value={formatDate(selectedRoom.guest_date_of_birth)} 
                       />
@@ -795,7 +814,7 @@ const OrderRoom: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </>
           ) : (
             <Typography align="center" sx={{ mt: 4 }}>Không có phòng được chọn.</Typography>
           )}
@@ -803,22 +822,33 @@ const OrderRoom: React.FC = () => {
         
         <DialogActions className="dialog-actions-enhanced">
           {selectedRoom?.status === 'available' && (
-            <Button
-              onClick={() => handleBookRoom(selectedRoom)}
-              variant="contained"
-              sx={{ backgroundColor: '#4CAF50', color: 'white', mr: 1, '&:hover': { backgroundColor: '#2E7D32' } }}
-            >
-              Đặt phòng
-            </Button>
+            <Link to="/listbookings/add">
+              <Button
+                className="order-room-filter-book"
+                sx={{
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  ml: 'auto',
+                  '&:hover': { backgroundColor: '#2E7D32' },
+                }}
+              >
+                Đặt phòng
+              </Button>
+            </Link>
           )}
           {selectedRoom && (selectedRoom.status === 'available' || selectedRoom.status === 'maintenance') && (
             <Button
               onClick={() => handleOpenEditDialog(selectedRoom)}
               variant="contained"
-              sx={{ backgroundColor: '#FACC15', color: '#2c3e50', mr: 1, '&:hover': { backgroundColor: '#E0B800' } }}
+              sx={{
+                backgroundColor: '#FACC15',
+                color: '#2c3e50',
+                mr: 1,
+                '&:hover': { backgroundColor: '#E0B800' },
+              }}
               startIcon={<EditIcon />}
             >
-              Sửa
+              Sửa phòng
             </Button>
           )}
           <Button 
@@ -939,13 +969,6 @@ const OrderRoom: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <BookingForm 
-        open={openBooking} 
-        onClose={handleCloseBooking} 
-        roomNumber={bookingRoom.roomNumber} 
-        roomId={bookingRoom.roomId} 
-      />
 
       <Snackbar
         open={snackbarOpen}
