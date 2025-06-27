@@ -937,78 +937,232 @@ const ListBookings: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-        {/* Thông tin thanh toán & trả phòng */}
+      {/* Thông tin thanh toán & trả phòng */}
       <Dialog
         open={openCheckoutDialog}
         onClose={() => setOpenCheckoutDialog(false)}
         maxWidth="md"
         fullWidth
       >
-        <DialogTitle sx={{ fontWeight: 700, fontSize: "24px", color: "#FF9800" }}>
+        <DialogTitle
+          sx={{ fontWeight: 700, fontSize: "24px", color: "#FF9800" }}
+        >
           💸 Thông tin thanh toán & trả phòng
         </DialogTitle>
         <DialogContent dividers sx={{ px: 4, py: 3 }}>
           {checkoutInfo ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <Box>
+              {/* Thông tin đơn đặt phòng */}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   🧾 Thông tin đơn đặt phòng
                 </Typography>
-                <Typography><b>Mã đơn:</b> #{checkoutInfo.booking_id}</Typography>
-                <Typography><b>Trạng thái:</b> {checkoutInfo.status}</Typography>
-                <Typography><b>Ngày nhận phòng:</b> {formatDate(checkoutInfo.check_in_date)}</Typography>
-                <Typography><b>Ngày trả phòng:</b> {formatDate(checkoutInfo.check_out_date)}</Typography>
-                <Typography><b>Số đêm:</b> {checkoutInfo.nights} đêm</Typography>
-                <Typography><b>Tiền đặt cọc:</b> {numeral(checkoutInfo.deposit_amount).format("0,0")} VNĐ</Typography>
+                <Box
+                  sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
+                >
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography fontWeight={600}>Mã đơn:</Typography>
+                    <Typography>#{checkoutInfo.booking_id}</Typography>
+                  </Box>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography fontWeight={600}>Trạng thái:</Typography>
+                    <Typography>{checkoutInfo.status}</Typography>
+                  </Box>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography fontWeight={600}>Ngày nhận phòng:</Typography>
+                    <Typography>
+                      {formatDate(checkoutInfo.check_in_date)}
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography fontWeight={600}>Ngày trả phòng:</Typography>
+                    <Typography>
+                      {formatDate(checkoutInfo.check_out_date)}
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography fontWeight={600}>Số đêm:</Typography>
+                    <Typography>{checkoutInfo.nights} đêm</Typography>
+                  </Box>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography fontWeight={600}>Tiền đặt cọc:</Typography>
+                    <Typography>
+                      {numeral(checkoutInfo.deposit_amount).format("0,0")} VNĐ
+                    </Typography>
+                  </Box>
+                </Box>
               </Box>
 
-              <Box sx={{ display: "flex", gap: 20 }}>
-                <Box sx={{ flex: 1 }}>
+              {/* Chi tiết phòng và Dịch vụ sử dụng */}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: { xs: "column", md: "row" },
+                  gap: 4,
+                  alignItems: "flex-start",
+                }}
+              >
+                {/* Chi tiết phòng */}
+                <Box
+                  sx={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1,
+                  }}
+                >
                   <Typography variant="h6" fontWeight={700} gutterBottom>
                     🛏️ Chi tiết phòng
                   </Typography>
-                  {checkoutInfo.room_details.map((room, index) => (
-                    <Typography key={index}>
-                      - Phòng {room.room_number}: {numeral(room.base_rate).format("0,0")} × {checkoutInfo.nights} đêm = {numeral(room.total).format("0,0")} VNĐ
-                    </Typography>
-                  ))}
-                  <Typography mt={1}><b>Tổng tiền phòng:</b> {numeral(checkoutInfo.room_total).format("0,0")} VNĐ</Typography>
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
+                  >
+                    {checkoutInfo.room_details.map((room, index) => (
+                      <Box
+                        key={index}
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Typography>- Phòng {room.room_number}:</Typography>
+                        <Typography>
+                          {numeral(room.base_rate).format("0,0")} ×{" "}
+                          {checkoutInfo.nights} đêm ={" "}
+                          {numeral(room.total).format("0,0")} VNĐ
+                        </Typography>
+                      </Box>
+                    ))}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        mt: 1,
+                      }}
+                    >
+                      <Typography fontWeight={600}>Tổng tiền phòng:</Typography>
+                      <Typography>
+                        {numeral(checkoutInfo.room_total).format("0,0")} VNĐ
+                      </Typography>
+                    </Box>
+                  </Box>
                 </Box>
-                <Box sx={{ flex: 1 }}>
+
+                {/* Dịch vụ sử dụng */}
+                <Box
+                  sx={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 1,
+                  }}
+                >
                   <Typography variant="h6" fontWeight={700} gutterBottom>
                     🛎️ Dịch vụ sử dụng
                   </Typography>
-                  <Typography><b>Tổng tiền dịch vụ:</b> {numeral(checkoutInfo.service_total).format("0,0")} VNĐ</Typography>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography fontWeight={600}>Tổng tiền dịch vụ:</Typography>
+                    <Typography>
+                      {numeral(checkoutInfo.service_total).format("0,0")} VNĐ
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
 
-              <Box>
+              {/* Tóm tắt thanh toán */}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   💳 Tóm tắt thanh toán
                 </Typography>
-                <Typography>- Thành tiền (phòng + dịch vụ): {numeral(checkoutInfo.raw_total).format("0,0")} VNĐ</Typography>
-                <Typography>- Giảm giá: {numeral(checkoutInfo.discount_amount).format("0,0")} VNĐ</Typography>
-                <Typography sx={{ fontSize: "18px", fontWeight: "bold", mt: 1 }}>
-                  = Tổng cần thanh toán: {numeral(checkoutInfo.total_amount).format("0,0")} VNĐ
-                </Typography>
+                <Box
+                  sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
+                >
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography>Thành tiền (phòng + dịch vụ):</Typography>
+                    <Typography>
+                      {numeral(checkoutInfo.raw_total).format("0,0")} VNĐ
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography>Giảm giá:</Typography>
+                    <Typography>
+                      {numeral(checkoutInfo.discount_amount).format("0,0")} VNĐ
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    <Typography sx={{ fontSize: "18px", fontWeight: "bold" }}>
+                      Tổng cần thanh toán:
+                    </Typography>
+                    <Typography sx={{ fontSize: "18px", fontWeight: "bold" }}>
+                      {numeral(checkoutInfo.total_amount).format("0,0")} VNĐ
+                    </Typography>
+                  </Box>
+                </Box>
               </Box>
 
-              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <Box>
+              {/* Phương thức thanh toán và Xác nhận Check-out */}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: { xs: "column", md: "row" },
+                  justifyContent: "space-between",
+                  alignItems: { xs: "stretch", md: "center" },
+                  gap: 2,
+                  mt: 2,
+                }}
+              >
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
                   <Typography variant="h6" fontWeight={700} gutterBottom>
                     🔘 Phương thức thanh toán
                   </Typography>
-                  <Box display="flex" gap={2}>
-                    <Button variant="outlined" color="primary" onClick={handleConfirmCheckout}>
+                  <Box sx={{ display: "flex", gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      onClick={handleConfirmCheckout}
+                      sx={{ flex: 1 }}
+                    >
                       Thanh toán tiền mặt
                     </Button>
-                    <Button variant="contained" color="secondary" onClick={() => handleVNPayCheckout(checkoutInfo.booking_id)}>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      onClick={() =>
+                        handleVNPayCheckout(checkoutInfo.booking_id)
+                      }
+                      sx={{ flex: 1 }}
+                    >
                       Thanh toán online (VNPay)
                     </Button>
                   </Box>
                 </Box>
-                <Box sx={{ textAlign: "right" }}>
-                  <Button variant="contained" color="primary" onClick={handleConfirmCheckout} disabled={!checkoutInfo}>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleConfirmCheckout}
+                    disabled={!checkoutInfo}
+                  >
                     Xác nhận Check-out
                   </Button>
                 </Box>
