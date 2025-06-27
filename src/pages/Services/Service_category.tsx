@@ -21,14 +21,22 @@ import {
   DialogActions,
   Snackbar,
   Alert,
+  Card,
+  CardContent,
+  Menu,
+  MenuItem,
+  Chip,
+  InputAdornment,
 } from '@mui/material';
+import { Search as SearchIcon } from 'lucide-react';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import '../../css/service.css';
+import '../../css/Amenities.css';
 
 interface ServiceCategory {
   id: string;
@@ -55,6 +63,7 @@ interface ValidationErrors {
 }
 
 const ServiceCategoryList: React.FC = () => {
+  const [allCategories, setAllCategories] = useState<ServiceCategory[]>([]);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -70,61 +79,80 @@ const ServiceCategoryList: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState<string>('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const navigate = useNavigate();
+
+  const fetchCategories = async (page: number = 1) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      }
+
+      const response = await axios.get(`http://127.0.0.1:8000/api/service-categories?page=${page}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!Array.isArray(response.data.data)) {
+        throw new Error('Dữ liệu danh mục không đúng định dạng.');
+      }
+
+      const mappedCategories: ServiceCategory[] = response.data.data.map((cat: RawServiceCategory) => ({
+        id: cat.id.toString(),
+        name: cat.name || 'Không xác định',
+        description: cat.description || '–',
+      }));
+
+      setAllCategories((prev) => [...prev, ...mappedCategories]);
+      setCategories(mappedCategories);
+      setMeta(response.data.meta);
+    } catch (err: unknown) {
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.status === 401
+          ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+          : `Không thể tải danh mục dịch vụ: ${err.message}`
+        : err instanceof Error
+        ? err.message
+        : 'Lỗi không xác định';
+      setError(errorMessage);
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        navigate('/login');
+      }
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     document.title = 'Danh sách Danh mục Dịch vụ';
-    setLoading(true);
-    setError(null);
+    fetchCategories(page);
+  }, [page, navigate]);
 
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      setError('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
-      setLoading(false);
-      return;
+  useEffect(() => {
+    let filtered = [...allCategories];
+
+    if (searchQuery.trim() !== '') {
+      filtered = filtered.filter((cat) =>
+        cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
 
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(`http://127.0.0.1:8000/api/service-categories?page=${page}`, {
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+    if (activeFilters.length > 0 && !activeFilters.includes('all')) {
+      // Nếu API hỗ trợ trạng thái, thêm logic lọc ở đây
+    }
 
-        if (!Array.isArray(response.data.data)) {
-          setError('Dữ liệu danh mục không đúng định dạng.');
-          return;
-        }
-
-        setCategories(
-          response.data.data.map((cat: RawServiceCategory) => ({
-            id: cat.id.toString(),
-            name: cat.name,
-            description: cat.description || '–',
-          }))
-        );
-        setMeta(response.data.meta);
-      } catch (err: unknown) {
-        console.error('Lỗi fetch:', err);
-        if (axios.isAxiosError(err)) {
-          if (err.response?.status === 401) {
-            setError('Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.');
-            navigate('/login');
-          } else {
-            setError(err.message || 'Lỗi mạng hoặc máy chủ.');
-          }
-        } else {
-          setError(err instanceof Error ? err.message : 'Lỗi không xác định.');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCategories();
-  }, [page, navigate]);
+    setCategories(filtered.slice((page - 1) * (meta?.per_page || 10), page * (meta?.per_page || 10)));
+    setMeta((prev) => (prev ? { ...prev, last_page: Math.ceil(filtered.length / (prev.per_page || 10)) } : prev));
+  }, [searchQuery, activeFilters, allCategories, page, meta]);
 
   const validateForm = (data: ServiceCategory): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -162,8 +190,8 @@ const ServiceCategoryList: React.FC = () => {
       return;
     }
 
-    setEditLoading(true);
     try {
+      setEditLoading(true);
       const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('Không tìm thấy token xác thực');
 
@@ -177,10 +205,11 @@ const ServiceCategoryList: React.FC = () => {
       );
 
       if (response.status === 200) {
+        setAllCategories((prev) =>
+          prev.map((category) => (category.id === editFormData.id ? { ...editFormData } : category))
+        );
         setCategories((prev) =>
-          prev.map((category) =>
-            category.id === editFormData.id ? { ...editFormData } : category
-          )
+          prev.map((category) => (category.id === editFormData.id ? { ...editFormData } : category))
         );
         setEditCategoryId(null);
         setEditFormData(null);
@@ -213,10 +242,8 @@ const ServiceCategoryList: React.FC = () => {
   };
 
   const handleViewDetails = (id: string) => {
-    if (selectedCategoryId === id && editCategoryId !== id) {
-      setSelectedCategoryId(null);
-    } else {
-      setSelectedCategoryId(id);
+    setSelectedCategoryId((prev) => (prev === id && editCategoryId !== id ? null : id));
+    if (editCategoryId === id) {
       setEditCategoryId(null);
       setEditFormData(null);
       setValidationErrors({});
@@ -232,13 +259,15 @@ const ServiceCategoryList: React.FC = () => {
   const confirmDelete = async () => {
     if (!categoryToDelete) return;
 
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      setError('Không tìm thấy token xác thực');
-      return;
-    }
-
     try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        setError('Không tìm thấy token xác thực');
+        setSnackbarMessage('Không tìm thấy token xác thực');
+        setSnackbarOpen(true);
+        return;
+      }
+
       const response = await axios.delete(`http://127.0.0.1:8000/api/service-categories/${categoryToDelete}`, {
         headers: {
           'Accept': 'application/json',
@@ -247,7 +276,8 @@ const ServiceCategoryList: React.FC = () => {
       });
 
       if (response.status === 200) {
-        setCategories((prev) => prev.filter((cat) => cat.id !== categoryToDelete));
+        setAllCategories((prev) => prev.filter((cat) => cat.id !== categoryToDelete));
+        fetchCategories(page);
         setSnackbarMessage('Xóa danh mục thành công!');
         setSnackbarOpen(true);
       } else {
@@ -277,6 +307,25 @@ const ServiceCategoryList: React.FC = () => {
     setPage(newPage);
   };
 
+  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
+    setFilterAnchorEl(event.currentTarget);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const handleFilterSelect = (filter: string) => {
+    setActiveFilters((prev) => {
+      if (prev.includes(filter)) {
+        return prev.filter((f) => f !== filter);
+      } else {
+        return [...prev, filter].filter((f) => f !== 'all');
+      }
+    });
+    handleFilterClose();
+  };
+
   return (
     <div className="promotions-wrapper">
       <div className="promotions-title">
@@ -287,14 +336,80 @@ const ServiceCategoryList: React.FC = () => {
           <Typography variant="h2" fontWeight={700}>
             Danh Mục Dịch Vụ
           </Typography>
-          <Box display="flex" gap={2} alignItems="center">
+          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
             <TextField
-              label="Tìm kiếm danh mục"
               variant="outlined"
+              placeholder="Tìm kiếm danh mục"
               size="small"
-              sx={{ width: 300, bgcolor: '#fff', borderRadius: '8px', '& input': { fontSize: '15px' } }}
-              disabled // Temporary, as search is not implemented
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                width: { xs: '100%', sm: 300 },
+                bgcolor: '#fff',
+                borderRadius: '8px',
+                '& input': { fontSize: '15px' },
+              }}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <IconButton
+              onClick={handleFilterClick}
+              sx={{
+                bgcolor: '#fff',
+                borderRadius: '8px',
+                p: 1,
+                '&:hover': { bgcolor: '#f0f0f0' },
+              }}
+              className="filter-button"
+            >
+              <FilterListIcon />
+            </IconButton>
+            <Menu
+              anchorEl={filterAnchorEl}
+              open={Boolean(filterAnchorEl)}
+              onClose={handleFilterClose}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              sx={{ '& .MuiPaper-root': { borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' } }}
+            >
+              {['all', 'active', 'inactive'].map((filter) => (
+                <MenuItem
+                  key={filter}
+                  onClick={() => handleFilterSelect(filter)}
+                  selected={activeFilters.includes(filter)}
+                  sx={{
+                    '&:hover': { bgcolor: '#f0f0f0' },
+                    '&.Mui-selected': { bgcolor: '#e0f7fa', '&:hover': { bgcolor: '#b2ebf2' } },
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: activeFilters.includes(filter) ? '#00796b' : '#333' }}>
+                    {filter === 'all' ? 'Tất cả' : filter === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                  </Typography>
+                </MenuItem>
+              ))}
+            </Menu>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+              {activeFilters.length > 0 && (
+                <Chip
+                  label={`Bộ lọc: ${activeFilters.length} đã chọn`}
+                  onDelete={() => setActiveFilters([])}
+                  onClick={handleFilterClick}
+                  sx={{
+                    bgcolor: '#e0f7fa',
+                    color: '#00796b',
+                    fontWeight: 'bold',
+                    height: '28px',
+                    cursor: 'pointer',
+                    '& .MuiChip-deleteIcon': { color: '#00796b' },
+                  }}
+                />
+              )}
+            </Box>
             <Button
               variant="contained"
               onClick={() => navigate('/service-categories/add')}
@@ -319,219 +434,196 @@ const ServiceCategoryList: React.FC = () => {
         </Box>
       </div>
 
-      {loading ? (
-        <div className="promotions-loading-container">
-          <CircularProgress />
-          <Typography>Đang tải danh sách danh mục...</Typography>
-        </div>
-      ) : error ? (
-        <Typography color="error" className="promotions-error-message">
-          {error}
-        </Typography>
-      ) : categories.length === 0 ? (
-        <Typography className="promotions-no-data">
-          Không tìm thấy danh mục dịch vụ nào.
-        </Typography>
-      ) : (
-        <>
-          <TableContainer component={Paper} className="promotions-table-container">
-            <Table className="promotions-table" sx={{ width: '100%' }}>
-              <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
-                <TableRow>
-                  <TableCell><b>Tên danh mục</b></TableCell>
-                  <TableCell><b>Mô tả</b></TableCell>
-                  <TableCell align="center"><b>Hành động</b></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {categories.map((cat) => (
-                  <React.Fragment key={cat.id}>
-                    <TableRow>
-                      <TableCell>{cat.name}</TableCell>
-                      <TableCell>{cat.description}</TableCell>
-                      <TableCell align="center">
-                        <Box display="flex" justifyContent="center" gap={1}>
-                          <IconButton
-                            title={selectedCategoryId === cat.id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
-                            onClick={() => handleViewDetails(cat.id)}
-                            sx={{
-                              color: '#1976d2',
-                              bgcolor: '#e3f2fd',
-                              '&:hover': {
-                                bgcolor: '#bbdefb',
-                                boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)',
-                              },
-                              transition: 'all 0.2s ease-in-out',
-                            }}
-                          >
-                            {selectedCategoryId === cat.id ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                          </IconButton>
-                          <IconButton
-                            title="Chỉnh sửa danh mục"
-                            onClick={() => handleEdit(cat)}
-                            sx={{
-                              color: '#FACC15',
-                              bgcolor: '#fef9c3',
-                              '&:hover': {
-                                bgcolor: '#fff9c4',
-                                boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)',
-                              },
-                              transition: 'all 0.2s ease-in-out',
-                            }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            title="Xóa danh mục"
-                            onClick={() => handleDelete(cat.id)}
-                            sx={{
-                              color: '#d32f2f',
-                              bgcolor: '#ffebee',
-                              '&:hover': {
-                                bgcolor: '#ffcdd2',
-                                boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)',
-                              },
-                              transition: 'all 0.2s ease-in-out',
-                            }}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell colSpan={3} style={{ padding: 0 }}>
-                        <Collapse in={selectedCategoryId === cat.id}>
-                          <div className="promotion-detail-container">
-                            {editCategoryId === cat.id && editFormData ? (
-                              <Box sx={{ p: 2 }}>
-                                <Typography variant="h6" gutterBottom>
-                                  Chỉnh sửa danh mục
-                                </Typography>
-                                <Box display="flex" flexDirection="column" gap={2}>
-                                  <Box display="flex" gap={2}>
-                                    <TextField
-                                      label="Tên danh mục"
-                                      name="name"
-                                      value={editFormData.name}
-                                      onChange={handleChange}
-                                      fullWidth
-                                      variant="outlined"
-                                      size="small"
-                                      error={!!validationErrors.name}
-                                      helperText={validationErrors.name}
-                                    />
-                                    <TextField
-                                      label="Mô tả"
-                                      name="description"
-                                      value={editFormData.description}
-                                      onChange={handleChange}
-                                      fullWidth
-                                      variant="outlined"
-                                      size="small"
-                                      multiline
-                                      rows={3}
-                                      error={!!validationErrors.description}
-                                      helperText={validationErrors.description}
-                                    />
-                                  </Box>
-                                  <Box mt={2} display="flex" gap={2}>
-                                    <Button
-                                      variant="contained"
-                                      onClick={handleSave}
-                                      disabled={editLoading}
-                                      sx={{
-                                        backgroundColor: '#4318FF',
-                                        color: '#fff',
-                                        textTransform: 'none',
-                                        fontWeight: 600,
-                                        borderRadius: '8px',
-                                        px: 2.5,
-                                        py: 0.7,
-                                        boxShadow: '0 2px 6px rgba(106, 27, 154, 0.3)',
-                                        '&:hover': {
-                                          backgroundColor: '#7B1FA2',
-                                          boxShadow: '0 4px 12px rgba(106, 27, 154, 0.4)',
-                                        },
-                                        '&:disabled': {
-                                          backgroundColor: '#a9a9a9',
-                                          boxShadow: 'none',
-                                        },
-                                      }}
-                                    >
-                                      Lưu
-                                    </Button>
-                                    <Button
-                                      variant="outlined"
-                                      onClick={handleCancel}
-                                      disabled={editLoading}
-                                      sx={{
-                                        color: '#f44336',
-                                        borderColor: '#f44336',
-                                        textTransform: 'none',
-                                        fontWeight: 600,
-                                        borderRadius: '8px',
-                                        px: 2.5,
-                                        py: 0.7,
-                                        '&:hover': {
-                                          borderColor: '#d32f2f',
-                                          backgroundColor: '#ffebee',
-                                        },
-                                        '&:disabled': {
-                                          color: '#a9a9a9',
-                                          borderColor: '#a9a9a9',
-                                        },
-                                      }}
-                                    >
-                                      Hủy
-                                    </Button>
-                                  </Box>
-                                  {editError && (
-                                    <Typography color="error" mt={1}>
-                                      {editError}
-                                    </Typography>
-                                  )}
-                                </Box>
-                              </Box>
-                            ) : (
-                              <Box sx={{ p: 2 }}>
-                                <Typography variant="h6" gutterBottom>
-                                  Thông tin danh mục
-                                </Typography>
-                                <Table className="promotion-detail-table">
-                                  <TableBody>
-                                    <TableRow>
-                                      <TableCell><strong>Tên danh mục:</strong> {cat.name}</TableCell>
-                                      <TableCell><strong>Mô tả:</strong> {cat.description}</TableCell>
-                                    </TableRow>
-                                  </TableBody>
-                                </Table>
-                              </Box>
-                            )}
-                          </div>
-                        </Collapse>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          {meta && meta.last_page > 1 && (
-            <Box display="flex" justifyContent="flex-end" mt={2} pr={3}>
-              <Pagination
-                count={meta.last_page}
-                page={page}
-                onChange={handlePageChange}
-                color="primary"
-                shape="rounded"
-                showFirstButton
-                showLastButton
-              />
+      <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: '8px' }}>
+        <CardContent sx={{ p: 0 }}>
+          {loading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+              <CircularProgress />
+              <Typography ml={2}>Đang tải danh sách danh mục...</Typography>
             </Box>
+          ) : error ? (
+            <Typography color="error" p={2} textAlign="center">
+              {error}
+            </Typography>
+          ) : categories.length === 0 ? (
+            <Typography p={2} textAlign="center">
+              {searchQuery || activeFilters.length > 0
+                ? 'Không tìm thấy danh mục phù hợp'
+                : 'Không tìm thấy danh mục dịch vụ nào.'}
+            </Typography>
+          ) : (
+            <>
+              <TableContainer component={Paper} className="promotions-table-container" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+                <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
+                  <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
+                    <TableRow>
+                      <TableCell sx={{ minWidth: '150px' }}><b>Tên danh mục</b></TableCell>
+                      <TableCell sx={{ minWidth: '200px' }}><b>Mô tả</b></TableCell>
+                      <TableCell align="center" sx={{ minWidth: '150px' }}><b>Hành động</b></TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {categories.map((cat) => (
+                      <React.Fragment key={cat.id}>
+                        <TableRow hover>
+                          <TableCell>{cat.name}</TableCell>
+                          <TableCell>{cat.description}</TableCell>
+                          <TableCell align="center">
+                            <Box display="flex" justifyContent="center" gap={1} sx={{ flexWrap: 'wrap' }}>
+                              <IconButton
+                                title={selectedCategoryId === cat.id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                                onClick={() => handleViewDetails(cat.id)}
+                                sx={{
+                                  color: '#1976d2',
+                                  bgcolor: '#e3f2fd',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#bbdefb', boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)' },
+                                }}
+                              >
+                                {selectedCategoryId === cat.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                              </IconButton>
+                              <IconButton
+                                title="Chỉnh sửa danh mục"
+                                onClick={() => handleEdit(cat)}
+                                sx={{
+                                  color: '#FACC15',
+                                  bgcolor: '#fef9c3',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#fff9c4', boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)' },
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                title="Xóa danh mục"
+                                onClick={() => handleDelete(cat.id)}
+                                sx={{
+                                  color: '#d32f2f',
+                                  bgcolor: '#ffebee',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#ffcdd2', boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)' },
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={3} style={{ padding: 0 }}>
+                            <Collapse in={selectedCategoryId === cat.id}>
+                              <div className="promotion-detail-container">
+                                {editCategoryId === cat.id && editFormData ? (
+                                  <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
+                                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
+                                      Chỉnh sửa danh mục
+                                    </Typography>
+                                    <Box display="flex" flexDirection="column" gap={2}>
+                                      <TextField
+                                        label="Tên danh mục"
+                                        name="name"
+                                        value={editFormData.name}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!validationErrors.name}
+                                        helperText={validationErrors.name}
+                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                      />
+                                      <TextField
+                                        label="Mô tả"
+                                        name="description"
+                                        value={editFormData.description}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        multiline
+                                        rows={3}
+                                        error={!!validationErrors.description}
+                                        helperText={validationErrors.description}
+                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                      />
+                                      <Box mt={2} display="flex" gap={2}>
+                                        <Button
+                                          variant="contained"
+                                          onClick={handleSave}
+                                          disabled={editLoading}
+                                          sx={{
+                                            backgroundColor: '#4318FF',
+                                            color: '#fff',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            borderRadius: '8px',
+                                            px: 2.5,
+                                            py: 0.7,
+                                            '&:hover': { backgroundColor: '#7B1FA2' },
+                                            '&:disabled': { backgroundColor: '#a9a9a9' },
+                                          }}
+                                        >
+                                          {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
+                                        </Button>
+                                        <Button
+                                          variant="outlined"
+                                          onClick={handleCancel}
+                                          disabled={editLoading}
+                                          sx={{
+                                            color: '#f44336',
+                                            borderColor: '#f44336',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            borderRadius: '8px',
+                                            px: 2.5,
+                                            py: 0.7,
+                                            '&:hover': { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
+                                            '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
+                                          }}
+                                        >
+                                          Hủy
+                                        </Button>
+                                      </Box>
+                                      {editError && <Typography color="error" mt={1}>{editError}</Typography>}
+                                    </Box>
+                                  </Box>
+                                ) : (
+                                  <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
+                                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
+                                      Thông tin danh mục
+                                    </Typography>
+                                    <Box display="grid" gap={1}>
+                                      <Typography><strong>Tên danh mục:</strong> {cat.name}</Typography>
+                                      <Typography><strong>Mô tả:</strong> {cat.description}</Typography>
+                                    </Box>
+                                  </Box>
+                                )}
+                              </div>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </React.Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              {meta && meta.last_page > 1 && (
+                <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+                  <Pagination
+                    count={meta.last_page}
+                    page={page}
+                    onChange={handlePageChange}
+                    color="primary"
+                    shape="rounded"
+                    showFirstButton
+                    showLastButton
+                    sx={{ '& .MuiPaginationItem-root': { fontSize: '14px' } }}
+                  />
+                </Box>
+              )}
+            </>
           )}
-        </>
-      )}
+        </CardContent>
+      </Card>
 
       <Dialog
         open={deleteDialogOpen}
@@ -563,7 +655,15 @@ const ServiceCategoryList: React.FC = () => {
           <Button
             onClick={confirmDelete}
             variant="contained"
-            sx={{ bgcolor: '#d32f2f', '&:hover': { bgcolor: '#b71c1c' } }}
+            sx={{
+              bgcolor: '#d32f2f',
+              '&:hover': { bgcolor: '#b71c1c' },
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.7,
+            }}
           >
             Xác nhận
           </Button>
