@@ -29,7 +29,7 @@ import {
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AppsIcon from "@mui/icons-material/Apps";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
-import { CheckIcon, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
@@ -218,22 +218,19 @@ const ListBookings: React.FC = () => {
   const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(
     null
   );
-  const [actionAnchorEl, setActionAnchorEl] = useState<null | HTMLElement>(
-    null
-  );
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(
     null
   );
   const [openCheckinDialog, setOpenCheckinDialog] = useState(false);
   const [checkinInfo, setCheckinInfo] = useState<CheckinInfo | null>(null);
-
   const [checkoutInfo, setCheckoutInfo] = useState<CheckoutInfo | null>(null);
-
   const [openCheckoutDialog, setOpenCheckoutDialog] = useState(false);
-
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "vnpay" | null>(
     null
   );
+  const [openCancelDialog, setOpenCancelDialog] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<number | null>(null);
+  const [isPaying, setIsPaying] = useState<boolean>(false);
 
   const navigate = useNavigate();
 
@@ -255,47 +252,91 @@ const ListBookings: React.FC = () => {
       setSnackbarOpen(true);
       return;
     }
+    handleOpenConfirmCheckoutDialog();
+  };
+
+  const [openConfirmCheckoutDialog, setOpenConfirmCheckoutDialog] =
+    useState(false);
+
+  const handleOpenConfirmCheckoutDialog = () => {
+    setOpenConfirmCheckoutDialog(true);
+  };
+
+  const handleCloseConfirmCheckoutDialog = () => {
+    setOpenConfirmCheckoutDialog(false);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!checkoutInfo) {
+      setError("Không có thông tin check-out để xác nhận.");
+      setSnackbarOpen(true);
+      return;
+    }
     try {
-      const res = await api.post(`/pay-by-cash/${checkoutInfo.booking_id}`);
-      setSuccessMessage(res.data.message || "Check-out thành công!");
+      const res = await api.post(`/pay-cash/${checkoutInfo.booking_id}`);
+      setCheckoutInfo({
+        ...checkoutInfo,
+        status: res.data.status || "Checked-out",
+        check_out_at: res.data.check_out_at || new Date().toISOString(),
+      });
+      setSuccessMessage(
+        res.data.message || "Thanh toán tiền mặt và trả phòng thành công!"
+      );
       setSnackbarOpen(true);
       setOpenCheckoutDialog(false);
       fetchAllBookings();
     } catch (err) {
-      console.error(err);
-      setError("Check-out thất bại");
+      console.error("Lỗi khi thanh toán tiền mặt:", err);
       setSnackbarOpen(true);
+    } finally {
+      handleCloseConfirmCheckoutDialog();
     }
   };
 
   const handleVNPayCheckout = async (bookingId: number) => {
     try {
-      const res = await api.post(`/vnpay/create`, { booking_id: bookingId });
+      setIsPaying(true);
+      const res = await api.post("/vnpay/create-payment", {
+        booking_id: bookingId,
+      });
       if (res.data && res.data.payment_url) {
-        window.open(res.data.payment_url, "_blank");
+        setOpenCheckoutDialog(false);
+        window.location.href = res.data.payment_url;
       } else {
         throw new Error("Không nhận được URL thanh toán.");
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
-      setError("Không thể khởi tạo thanh toán online.");
+      console.error("Lỗi khi khởi tạo thanh toán VNPay:", error);
       setSnackbarOpen(true);
+    } finally {
+      setIsPaying(false);
     }
   };
 
-  const handleCancelBooking = async (bookingId: number) => {
-    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn đặt phòng này không?"))
-      return;
+  const handleOpenCancelDialog = (bookingId: number) => {
+    setBookingToCancel(bookingId);
+    setOpenCancelDialog(true);
+  };
+
+  const handleCloseCancelDialog = () => {
+    setOpenCancelDialog(false);
+    setBookingToCancel(null);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!bookingToCancel) return;
 
     try {
-      await api.post(`/bookings/${bookingId}/cancel`);
+      await api.post(`/bookings/${bookingToCancel}/cancel`);
       await fetchAllBookings();
       setSuccessMessage("Hủy đặt phòng thành công");
       setSnackbarOpen(true);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
+      console.log("Lỗi hủy đặt phòng", error);
       setError("Hủy đặt phòng thất bại");
       setSnackbarOpen(true);
+    } finally {
+      handleCloseCancelDialog();
     }
   };
 
@@ -312,26 +353,6 @@ const ListBookings: React.FC = () => {
     }
   };
 
-  const handleOpenCheckinDialog = async () => {
-    try {
-      const response = await api.get(`/check-in/${selectedBookingId}`);
-      if (response.status === 200) {
-        setCheckinInfo(response.data);
-        setOpenCheckinDialog(true);
-      }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
-      setError("Không thể tải thông tin check-in");
-      setSnackbarOpen(true);
-    } finally {
-      handleCloseActionMenu();
-    }
-  };
-
-  const handleCloseActionMenu = () => {
-    setActionAnchorEl(null);
-  };
-
   const handleCloseCheckinDialog = () => {
     setOpenCheckinDialog(false);
     setSelectedBookingId(null);
@@ -345,8 +366,8 @@ const ListBookings: React.FC = () => {
       await fetchAllBookings();
       setSuccessMessage("Check-in thành công");
       setSnackbarOpen(true);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
+      console.log("Lỗi check-in", error);
       setError("Check-in thất bại");
       setSnackbarOpen(true);
     } finally {
@@ -377,64 +398,77 @@ const ListBookings: React.FC = () => {
           bookingsData = [];
         }
 
-        const sanitizedData = bookingsData.map((item: Booking) => ({
-          ...item,
-          check_in_date:
-            item.check_in_date && isValid(parseISO(item.check_in_date))
-              ? item.check_in_date
-              : new Date().toISOString(),
-          check_out_date:
-            item.check_out_date && isValid(parseISO(item.check_out_date))
-              ? item.check_out_date
-              : new Date().toISOString(),
-          deposit_amount: item.deposit_amount || "0.00",
-          raw_total: item.raw_total || "0.00",
-          discount_amount: item.discount_amount || "0.00",
-          total_amount: item.total_amount || "0.00",
-          status: [
-            "Pending",
-            "Confirmed",
-            "Checked-in",
-            "Checked-out",
-            "Cancelled",
-          ].includes(item.status)
-            ? item.status
-            : "Cancelled",
-          customer: item.customer || {
-            id: 0,
-            cccd: "N/A",
-            name: "N/A",
-            gender: "N/A",
-            email: "N/A",
-            phone: "N/A",
-            date_of_birth: "N/A",
-            nationality: "N/A",
-            address: "N/A",
-            note: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          room: item.room || {
-            id: 0,
-            room_number: "N/A",
-            room_type_id: 0,
-            status: "N/A",
-            image: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            room_type: {
+        const currentDate = new Date(); // Ngày hiện tại: 28/06/2025
+
+        const sanitizedData = bookingsData.map((item: Booking) => {
+          let updatedStatus = item.status;
+
+          if (["Pending", "Confirmed"].includes(item.status)) {
+            const checkOutDate = parseISO(item.check_out_date);
+            if (isValid(checkOutDate) && checkOutDate < currentDate) {
+              updatedStatus = "Cancelled";
+              api
+                .post(`/bookings/${item.id}/cancel`)
+                .catch((err) =>
+                  console.error(
+                    `Lỗi khi cập nhật trạng thái booking ${item.id}:`,
+                    err
+                  )
+                );
+            }
+          }
+
+          return {
+            ...item,
+            status: updatedStatus,
+            check_in_date:
+              item.check_in_date && isValid(parseISO(item.check_in_date))
+                ? item.check_in_date
+                : new Date().toISOString(),
+            check_out_date:
+              item.check_out_date && isValid(parseISO(item.check_out_date))
+                ? item.check_out_date
+                : new Date().toISOString(),
+            deposit_amount: item.deposit_amount || "0.00",
+            raw_total: item.raw_total || "0.00",
+            discount_amount: item.discount_amount || "0.00",
+            total_amount: item.total_amount || "0.00",
+            customer: item.customer || {
               id: 0,
-              code: "N/A",
+              cccd: "N/A",
               name: "N/A",
-              description: null,
-              max_occupancy: 0,
-              base_rate: "0.00",
-              created_at: null,
-              updated_at: null,
-              amenities: [],
+              gender: "N/A",
+              email: "N/A",
+              phone: "N/A",
+              date_of_birth: "N/A",
+              nationality: "N/A",
+              address: "N/A",
+              note: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             },
-          },
-        }));
+            room: item.room || {
+              id: 0,
+              room_number: "N/A",
+              room_type_id: 0,
+              status: "N/A",
+              image: null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              room_type: {
+                id: 0,
+                code: "N/A",
+                name: "N/A",
+                description: null,
+                max_occupancy: 0,
+                base_rate: "0.00",
+                created_at: null,
+                updated_at: null,
+                amenities: [],
+              },
+            },
+          };
+        });
 
         setAllBookings(sanitizedData);
         setBookings(sanitizedData);
@@ -457,6 +491,35 @@ const ListBookings: React.FC = () => {
   useEffect(() => {
     fetchAllBookings();
   }, []);
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const transactionStatus = urlParams.get("vnp_TransactionStatus");
+    const txnRef = urlParams.get("vnp_TxnRef");
+    const responseCode = urlParams.get("vnp_ResponseCode");
+
+    if (transactionStatus && txnRef && responseCode) {
+      if (responseCode === "00") {
+        setSuccessMessage("Thanh toán VNPay thành công!");
+        setSnackbarOpen(true);
+        const bookingId = parseInt(txnRef.split("-")[1]);
+        api
+          .post(`/pay-cash/${bookingId}`)
+          .then(() => {
+            fetchAllBookings();
+          })
+          .catch((err) => {
+            console.error("Lỗi khi cập nhật trạng thái:", err);
+            setError("Không thể cập nhật trạng thái đặt phòng.");
+            setSnackbarOpen(true);
+          });
+      } else {
+        setError("Thanh toán VNPay không thành công. Vui lòng thử lại.");
+        setSnackbarOpen(true);
+      }
+      navigate("/listbookings", { replace: true });
+    }
+  }, [location, navigate]);
 
   useEffect(() => {
     let filtered = [...allBookings];
@@ -748,7 +811,7 @@ const ListBookings: React.FC = () => {
                           {["Chờ xác nhận", "Đã xác nhận"].includes(status) && (
                             <IconButton
                               title="Hủy đặt phòng"
-                              onClick={() => handleCancelBooking(booking.id)}
+                              onClick={() => handleOpenCancelDialog(booking.id)}
                               sx={{
                                 ml: 1,
                                 color: "#d32f2f",
@@ -800,20 +863,8 @@ const ListBookings: React.FC = () => {
           {successMessage || error}
         </Alert>
       </Snackbar>
-      <Menu
-        anchorEl={actionAnchorEl}
-        open={Boolean(actionAnchorEl)}
-        onClose={handleCloseActionMenu}
-      >
-        <MenuItem onClick={handleOpenCheckinDialog}>
-          <span style={{ marginRight: 8 }}>
-            <CheckIcon />
-          </span>{" "}
-          Xác nhận Check-in
-        </MenuItem>
-      </Menu>
 
-      {/* Thông tin check-in */}
+      {/* Dialog Xác nhận Check-in */}
       <Dialog
         open={openCheckinDialog}
         onClose={handleCloseCheckinDialog}
@@ -830,11 +881,9 @@ const ListBookings: React.FC = () => {
         >
           🧾 Thông tin Check-in
         </DialogTitle>
-
         <DialogContent dividers sx={{ px: 4, py: 3 }}>
           {checkinInfo ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Khách hàng + Đặt phòng: Nằm cạnh nhau */}
               <Box
                 sx={{
                   display: "flex",
@@ -842,7 +891,6 @@ const ListBookings: React.FC = () => {
                   gap: 2,
                 }}
               >
-                {/* Thông tin khách hàng */}
                 <Paper
                   sx={{
                     flex: 1,
@@ -874,8 +922,6 @@ const ListBookings: React.FC = () => {
                     <b>Địa chỉ:</b> {checkinInfo.customer.address}
                   </Typography>
                 </Paper>
-
-                {/* Thông tin đặt phòng */}
                 <Paper
                   sx={{
                     flex: 1,
@@ -907,8 +953,6 @@ const ListBookings: React.FC = () => {
                   </Typography>
                 </Paper>
               </Box>
-
-              {/* Phòng */}
               <Paper
                 sx={{
                   p: 2,
@@ -939,8 +983,6 @@ const ListBookings: React.FC = () => {
                   </Box>
                 ))}
               </Paper>
-
-              {/* Dịch vụ */}
               <Paper
                 sx={{
                   p: 2,
@@ -953,7 +995,7 @@ const ListBookings: React.FC = () => {
                   🛎️ Dịch vụ đi kèm
                 </Typography>
                 {checkinInfo.services.length === 0 ? (
-                  <Typography variant="body2" fontStyle="italic">
+                  <Typography variant="body1" fontStyle="italic">
                     Không có dịch vụ
                   </Typography>
                 ) : (
@@ -970,7 +1012,6 @@ const ListBookings: React.FC = () => {
             <Typography>Đang tải thông tin...</Typography>
           )}
         </DialogContent>
-
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseCheckinDialog} color="inherit">
             Đóng
@@ -987,7 +1028,7 @@ const ListBookings: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Thông tin thanh toán & trả phòng */}
+      {/* Dialog Thanh toán & trả phòng */}
       <Dialog
         open={openCheckoutDialog}
         onClose={() => setOpenCheckoutDialog(false)}
@@ -1002,7 +1043,6 @@ const ListBookings: React.FC = () => {
         <DialogContent dividers sx={{ px: 4, py: 3 }}>
           {checkoutInfo ? (
             <>
-              {/* 🧾 Thông tin đơn đặt phòng */}
               <Paper
                 elevation={1}
                 sx={{
@@ -1063,8 +1103,6 @@ const ListBookings: React.FC = () => {
                   </Box>
                 </Box>
               </Paper>
-
-              {/* 🛏️ Chi tiết phòng + 🛎️ Dịch vụ */}
               <Box
                 sx={{
                   display: "flex",
@@ -1120,7 +1158,6 @@ const ListBookings: React.FC = () => {
                     </Box>
                   </Box>
                 </Paper>
-
                 <Paper
                   elevation={1}
                   sx={{
@@ -1144,8 +1181,6 @@ const ListBookings: React.FC = () => {
                   </Box>
                 </Paper>
               </Box>
-
-              {/* 💳 Tóm tắt thanh toán */}
               <Paper
                 elevation={1}
                 sx={{
@@ -1190,91 +1225,95 @@ const ListBookings: React.FC = () => {
                   </Box>
                 </Box>
               </Paper>
-
-              {/* 🔘 Phương thức thanh toán */}
               <Paper
-  elevation={1}
-  sx={{
-    p: 2,
-    borderRadius: 2,
-    border: "1px solid #e0e0e0",
-    backgroundColor: "#fafafa",
-    mb: 3,
-  }}
->
-  <Typography
-    variant="h6"
-    fontWeight={700}
-    gutterBottom
-    sx={{ color: "#1a237e" }}
-  >
-    🔘 Phương thức thanh toán
-  </Typography>
-
-  <Box sx={{ display: "flex", gap: 2 }}>
-    {[
-      { key: "cash", label: "Thanh toán tiền mặt" },
-      { key: "vnpay", label: "Thanh toán online (VNPay)" },
-    ].map((method) => (
-      <Box
-        key={method.key}
-        onClick={() => setPaymentMethod(method.key as "cash" | "vnpay")}
-        sx={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          borderRadius: 2,
-          border: "2px solid",
-          borderColor:
-            paymentMethod === method.key ? "#3f51b5" : "#c5cae9",
-          backgroundColor:
-            paymentMethod === method.key ? "#e8eaf6" : "transparent",
-          padding: "10px 16px",
-          cursor: "pointer",
-          transition: "all 0.2s",
-          "&:hover": {
-            backgroundColor: "#f5f5f5",
-          },
-        }}
-      >
-        <Box
-          sx={{
-            width: 20,
-            height: 20,
-            border: "2px solid",
-            borderColor:
-              paymentMethod === method.key ? "#3f51b5" : "#9e9e9e",
-            borderRadius: 2,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor:
-              paymentMethod === method.key ? "#3f51b5" : "transparent",
-          }}
-        >
-          {paymentMethod === method.key && (
-            <span style={{ color: "white", fontSize: 14 }}>✓</span>
-          )}
-        </Box>
-
-        <Typography
-          variant="body1"
-          sx={{ fontWeight: 600, color: "#1a237e" }}
-        >
-          {method.label}
-        </Typography>
-      </Box>
-    ))}
-  </Box>
-</Paper>
-
+                elevation={1}
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: "1px solid #e0e0e0",
+                  backgroundColor: "#fafafa",
+                  mb: 3,
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                  gutterBottom
+                  sx={{ color: "#1a237e" }}
+                >
+                  🔘 Phương thức thanh toán
+                </Typography>
+                <Box sx={{ display: "flex", gap: 2 }}>
+                  {[
+                    { key: "cash", label: "Thanh toán tiền mặt" },
+                    { key: "vnpay", label: "Thanh toán online (VNPay)" },
+                  ].map((method) => (
+                    <Box
+                      key={method.key}
+                      onClick={() =>
+                        setPaymentMethod(method.key as "cash" | "vnpay")
+                      }
+                      sx={{
+                        flex: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        borderRadius: 2,
+                        border: "2px solid",
+                        borderColor:
+                          paymentMethod === method.key ? "#3f51b5" : "#c5cae9",
+                        backgroundColor:
+                          paymentMethod === method.key
+                            ? "#e8eaf6"
+                            : "transparent",
+                        padding: "10px 16px",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                        "&:hover": {
+                          backgroundColor: "#f5f5f5",
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 20,
+                          height: 20,
+                          border: "2px solid",
+                          borderColor:
+                            paymentMethod === method.key
+                              ? "#3f51b5"
+                              : "#9e9e9e",
+                          borderRadius: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor:
+                            paymentMethod === method.key
+                              ? "#3f51b5"
+                              : "transparent",
+                        }}
+                      >
+                        {paymentMethod === method.key && (
+                          <span style={{ color: "white", fontSize: 14 }}>
+                            ✓
+                          </span>
+                        )}
+                      </Box>
+                      <Typography
+                        variant="body1"
+                        sx={{ fontWeight: 600, color: "#1a237e" }}
+                      >
+                        {method.label}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Paper>
             </>
           ) : (
             <Typography>Đang tải thông tin...</Typography>
           )}
         </DialogContent>
-
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button
             onClick={() => setOpenCheckoutDialog(false)}
@@ -1288,7 +1327,6 @@ const ListBookings: React.FC = () => {
           >
             Hủy bỏ
           </Button>
-
           {paymentMethod && (
             <Button
               variant="contained"
@@ -1300,10 +1338,10 @@ const ListBookings: React.FC = () => {
                   handleVNPayCheckout(checkoutInfo.booking_id);
                 }
               }}
-              disabled={!checkoutInfo}
+              disabled={!checkoutInfo || isPaying}
               sx={{
                 ml: 1,
-                borderRadius: 2, // 🔹 Hình vuông nhẹ
+                borderRadius: 2,
                 fontWeight: 600,
                 textTransform: "none",
                 fontSize: "15px",
@@ -1311,9 +1349,151 @@ const ListBookings: React.FC = () => {
                 py: 1.2,
               }}
             >
-              Thanh toán
+              {isPaying ? <CircularProgress size={24} /> : "Thanh toán"}
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog Xác nhận thanh toán tiền mặt */}
+      <Dialog
+        open={openConfirmCheckoutDialog}
+        onClose={handleCloseConfirmCheckoutDialog}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            fontSize: "20px",
+            color: "#4318FF",
+            textAlign: "center",
+            py: 2,
+            borderBottom: "1px solid #e0e0e0",
+          }}
+        >
+          Xác nhận thanh toán
+        </DialogTitle>
+        <DialogContent sx={{ py: 3, textAlign: "center" }}>
+          <Typography variant="body1" color="text.secondary">
+            Bạn có chắc chắn muốn thanh toán tiền mặt và hoàn tất trả phòng?
+            Hành động này không thể hoàn tác.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: "center" }}>
+          <Button
+            onClick={handleCloseConfirmCheckoutDialog}
+            variant="outlined"
+            sx={{
+              color: "#D32F2F",
+              borderColor: "#D32F2F",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: 2,
+              px: 3,
+              "&:hover": {
+                backgroundColor: "#fbe9e7",
+                borderColor: "#D32F2F",
+              },
+            }}
+          >
+            Hủy bỏ
+          </Button>
+          <Button
+            onClick={handleConfirmPayment}
+            variant="contained"
+            sx={{
+              backgroundColor: "#4318FF",
+              color: "#fff",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: 2,
+              px: 3,
+              ml: 2,
+              "&:hover": {
+                backgroundColor: "#7B1FA2",
+              },
+            }}
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog Xác nhận hủy đặt phòng */}
+      <Dialog
+        open={openCancelDialog}
+        onClose={handleCloseCancelDialog}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            fontWeight: 700,
+            fontSize: "20px",
+            color: "#4318FF",
+            textAlign: "center",
+            py: 2,
+            borderBottom: "1px solid #e0e0e0",
+          }}
+        >
+          Xác nhận hủy đặt phòng
+        </DialogTitle>
+        <DialogContent sx={{ py: 3, textAlign: "center" }}>
+          <Typography variant="body1" color="text.secondary">
+            Bạn có chắc chắn muốn hủy đơn đặt phòng này không? Hành động này
+            không thể hoàn tác.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, justifyContent: "center" }}>
+          <Button
+            onClick={handleCloseCancelDialog}
+            variant="outlined"
+            sx={{
+              color: "#D32F2F",
+              borderColor: "#D32F2F",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: 2,
+              px: 3,
+              "&:hover": {
+                backgroundColor: "#fbe9e7",
+                borderColor: "#D32F2F",
+              },
+            }}
+          >
+            Hủy bỏ
+          </Button>
+          <Button
+            onClick={handleConfirmCancel}
+            variant="contained"
+            sx={{
+              backgroundColor: "#4318FF",
+              color: "#fff",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: 2,
+              px: 3,
+              ml: 2,
+              "&:hover": {
+                backgroundColor: "#7B1FA2",
+              },
+            }}
+          >
+            Xác nhận
+          </Button>
         </DialogActions>
       </Dialog>
     </div>
