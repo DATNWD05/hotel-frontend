@@ -39,11 +39,6 @@ const sitemap: MenuItem[] = [
     active: true,
     items: [
       {
-        name: 'Danh sách Phòng',
-        pathName: 'rooms',
-        path: '/rooms',
-      },
-      {
         name: 'Phòng Ẩn',
         pathName: 'hidden_rooms ',
         path: '/hiddenrooms',
