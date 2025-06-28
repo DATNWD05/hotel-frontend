@@ -540,15 +540,6 @@ const DetailBookings: React.FC = () => {
     setSnackbarMessage("");
   };
 
-  // Hàm lấy danh sách phòng liên kết với dịch vụ
-  const getLinkedRooms = (serviceId: number): string[] => {
-    return (
-      booking?.rooms
-        .filter((room) => room.services.some((s) => s.service_id === serviceId))
-        .map((room) => room.room_number) || []
-    );
-  };
-
   // Lọc dịch vụ duy nhất và tính tổng số lượng
   const uniqueServices = Array.from(
     new Map(
@@ -893,11 +884,10 @@ const DetailBookings: React.FC = () => {
                 <div className="table-container">
                   <table className="info-table">
                     <thead>
-                      <tr>
+                      <tr key="header">
                         <th>Tên dịch vụ</th>
                         <th>Giá</th>
                         <th>Tổng số lượng</th>
-                        <th>Phòng liên kết</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -909,11 +899,6 @@ const DetailBookings: React.FC = () => {
                               {formatCurrency(service.price)}
                             </TableCell>
                             <TableCell>{service.totalQuantity}</TableCell>
-                            <TableCell>
-                              {getLinkedRooms(service.service_id!).length > 0
-                                ? getLinkedRooms(service.service_id!).join(", ")
-                                : "Không liên kết phòng"}
-                            </TableCell>
                           </TableRow>
                         ))
                       ) : (
