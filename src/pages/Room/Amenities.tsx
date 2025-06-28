@@ -11,9 +11,10 @@ import {
   IconButton,
   CircularProgress,
   Typography,
-  Button,
-  Box,
+  Collapse,
   TextField,
+  Box,
+  Button,
   Menu,
   MenuItem,
   Chip,
@@ -28,6 +29,8 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon } from 'lucide-react';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Snackbar from '@mui/material/Snackbar';
@@ -81,6 +84,13 @@ interface Meta {
   total: number;
 }
 
+interface ValidationErrors {
+  name?: string;
+  description?: string;
+  price?: string;
+  default_quantity?: string;
+}
+
 const Amenities: React.FC = () => {
   const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [allAmenities, setAllAmenities] = useState<Amenity[]>([]);
@@ -99,6 +109,12 @@ const Amenities: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [amenityToDelete, setAmenityToDelete] = useState<string | null>(null);
   const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedAmenityId, setSelectedAmenityId] = useState<string | null>(null);
+  const [editAmenityId, setEditAmenityId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<Amenity | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [editLoading, setEditLoading] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const fetchAllAmenities = async () => {
@@ -240,6 +256,115 @@ const Amenities: React.FC = () => {
     setAmenities(filtered.slice((currentPage - 1) * 10, currentPage * 10));
   }, [searchQuery, activeCategories, allAmenities, currentPage]);
 
+  const validateForm = (data: Amenity): ValidationErrors => {
+    const errors: ValidationErrors = {};
+    if (!data.name.trim()) errors.name = 'Tên tiện ích không được để trống';
+    if (data.description && data.description.length > 500) errors.description = 'Mô tả không được vượt quá 500 ký tự';
+    if (data.price <= 0) errors.price = 'Giá phải lớn hơn 0';
+    if (data.default_quantity <= 0) errors.default_quantity = 'Số lượng mặc định phải lớn hơn 0';
+    return errors;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (editFormData) {
+      const updatedData = { ...editFormData, [name]: name === 'price' || name === 'default_quantity' ? Number(value) : value };
+      setEditFormData(updatedData);
+      const errors = validateForm(updatedData);
+      setValidationErrors(errors);
+    }
+  };
+
+  const handleEdit = (amenity: Amenity) => {
+    setSelectedAmenityId(amenity.id);
+    setEditAmenityId(amenity.id);
+    setEditFormData({ ...amenity });
+    setValidationErrors({});
+    setEditError(null);
+  };
+
+  const handleSave = async () => {
+    if (!editFormData) return;
+
+    const errors = validateForm(editFormData);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    setEditLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) throw new Error('Không tìm thấy token xác thực');
+
+      const response = await fetch(`http://127.0.0.1:8000/api/amenities/${editFormData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          category_id: editFormData.category_id,
+          code: editFormData.code,
+          name: editFormData.name,
+          description: editFormData.description,
+          icon: editFormData.icon,
+          price: editFormData.price,
+          default_quantity: editFormData.default_quantity,
+          status: editFormData.status,
+        }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Lỗi cập nhật tiện ích: ${response.status} ${response.statusText}. Chi tiết: ${text}`);
+      }
+
+      setAllAmenities((prev) =>
+        prev.map((a) => (a.id === editFormData.id ? { ...editFormData } : a))
+      );
+      setFilteredAmenities((prev) =>
+        prev.map((a) => (a.id === editFormData.id ? { ...editFormData } : a))
+      );
+      setAmenities((prev) =>
+        prev.map((a) => (a.id === editFormData.id ? { ...editFormData } : a))
+      );
+      setEditAmenityId(null);
+      setEditFormData(null);
+      setSelectedAmenityId(null);
+      setSnackbarMessage('Cập nhật tiện ích thành công!');
+      setSnackbarOpen(true);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? `Không thể cập nhật tiện ích: ${err.message}` : 'Lỗi không xác định';
+      setEditError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditAmenityId(null);
+    setEditFormData(null);
+    setSelectedAmenityId(null);
+    setValidationErrors({});
+    setEditError(null);
+  };
+
+  const handleViewDetails = (id: string) => {
+    if (selectedAmenityId === id && editAmenityId !== id) {
+      setSelectedAmenityId(null);
+    } else {
+      setSelectedAmenityId(id);
+      setEditAmenityId(null);
+      setEditFormData(null);
+      setValidationErrors({});
+      setEditError(null);
+    }
+  };
+
   const handleDeleteAmenity = async (id: string) => {
     setAmenityToDelete(id);
     setDeleteDialogOpen(true);
@@ -285,10 +410,6 @@ const Amenities: React.FC = () => {
     }
   };
 
-  const handleEditAmenity = (id: string) => {
-    navigate(`/amenities/edit/${id}`);
-  };
-
   const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
     setCurrentPage(page);
     setAmenities(filteredAmenities.slice((page - 1) * 10, page * 10));
@@ -328,7 +449,7 @@ const Amenities: React.FC = () => {
           <Typography variant="h2" fontWeight={700}>
             Tiện ích
           </Typography>
-          <Box display="flex" gap={2} alignItems="center">
+          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
             <TextField
               variant="outlined"
               placeholder="Tìm kiếm tiện ích"
@@ -341,10 +462,9 @@ const Amenities: React.FC = () => {
                 ),
               }}
               sx={{
-                width: 300,
+                width: { xs: '100%', sm: 300 },
                 bgcolor: '#fff',
                 borderRadius: '8px',
-                mt: { xs: 2, sm: 0 },
                 '& input': { fontSize: '15px' },
               }}
               value={searchQuery}
@@ -366,20 +486,9 @@ const Amenities: React.FC = () => {
               anchorEl={filterAnchorEl}
               open={Boolean(filterAnchorEl)}
               onClose={handleFilterClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-              }}
-              sx={{
-                '& .MuiPaper-root': {
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                },
-              }}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              sx={{ '& .MuiPaper-root': { borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' } }}
             >
               {amenityCategories.map((cat) => (
                 <MenuItem
@@ -388,10 +497,7 @@ const Amenities: React.FC = () => {
                   selected={activeCategories.includes(cat.id)}
                   sx={{
                     '&:hover': { bgcolor: '#f0f0f0' },
-                    '&.Mui-selected': {
-                      bgcolor: '#e0f7fa',
-                      '&:hover': { bgcolor: '#b2ebf2' },
-                    },
+                    '&.Mui-selected': { bgcolor: '#e0f7fa', '&:hover': { bgcolor: '#b2ebf2' } },
                   }}
                 >
                   <Typography variant="body2" sx={{ color: activeCategories.includes(cat.id) ? '#00796b' : '#333' }}>
@@ -441,98 +547,215 @@ const Amenities: React.FC = () => {
         </Box>
       </div>
 
-      <Card elevation={3} sx={{ p: 0, mt: 0 }}>
+      <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: '8px' }}>
         <CardContent sx={{ p: 0 }}>
           {loading ? (
-            <div className="promotions-loading-container">
+            <Box display="flex" justifyContent="center" alignItems="center" p={4}>
               <CircularProgress />
-              <Typography>Đang tải danh sách tiện ích...</Typography>
-            </div>
+              <Typography ml={2}>Đang tải danh sách tiện ích...</Typography>
+            </Box>
           ) : error ? (
-            <Typography color="error" className="promotions-error-message">
+            <Typography color="error" p={2} textAlign="center">
               {error}
             </Typography>
           ) : filteredAmenities.length === 0 ? (
-            <Typography className="promotions-no-data">
+            <Typography p={2} textAlign="center">
               {searchQuery || activeCategories.length > 0
                 ? `Không tìm thấy tiện ích phù hợp trong danh mục: ${amenityCategories.find((c) => activeCategories.includes(c.id))?.name || 'Tất cả'}`
                 : 'Không tìm thấy tiện ích nào.'}
             </Typography>
           ) : (
             <>
-              <TableContainer component={Paper} className="promotions-table-container">
-                <Table className="promotions-table" sx={{ width: '100%' }}>
+              <TableContainer component={Paper} className="promotions-table-container" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+                <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
                   <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
                     <TableRow>
-                      <TableCell><b>ID</b></TableCell>
-                      <TableCell><b>Nhóm</b></TableCell>
-                      <TableCell><b>Mã</b></TableCell>
-                      <TableCell><b>Tên</b></TableCell>
-                      <TableCell><b>Mô tả</b></TableCell>
-                      <TableCell><b>Biểu tượng</b></TableCell>
-                      <TableCell><b>Giá</b></TableCell>
-                      <TableCell><b>Số lượng mặc định</b></TableCell>
-                      <TableCell><b>Trạng thái</b></TableCell>
-                      <TableCell align="center"><b>Hành động</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Nhóm</b></TableCell>
+                      <TableCell sx={{ minWidth: '100px' }}><b>Mã</b></TableCell>
+                      <TableCell sx={{ minWidth: '150px' }}><b>Tên</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Giá</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Số lượng mặc định</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Trạng thái</b></TableCell>
+                      <TableCell align="center" sx={{ minWidth: '150px' }}><b>Hành động</b></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {amenities.map((amenity) => (
-                      <TableRow key={amenity.id} hover>
-                        <TableCell>{amenity.id}</TableCell>
-                        <TableCell>{amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</TableCell>
-                        <TableCell>{amenity.code}</TableCell>
-                        <TableCell>{amenity.name}</TableCell>
-                        <TableCell>{amenity.description}</TableCell>
-                        <TableCell>
-                          {amenity.icon ? (
-                            <img src={amenity.icon} alt={amenity.name} width="24" />
-                          ) : (
-                            'Không có'
-                          )}
-                        </TableCell>
-                        <TableCell>{amenity.price.toLocaleString('vi-VN')} đ</TableCell>
-                        <TableCell>{amenity.default_quantity}</TableCell>
-                        <TableCell>
-                          <span style={{ color: amenity.status === 'active' ? '#388E3C' : '#D32F2F', fontWeight: 'bold' }}>
-                            {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
-                          </span>
-                        </TableCell>
-                        <TableCell align="center">
-                          <Box display="flex" justifyContent="center" gap={1}>
-                            <IconButton
-                              title="Chỉnh sửa"
-                              sx={{
-                                color: '#FACC15',
-                                bgcolor: '#fef9c3',
-                                '&:hover': {
-                                  bgcolor: '#fff9c4',
-                                  boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)',
-                                },
-                                transition: 'all 0.2s ease-in-out',
-                              }}
-                              onClick={() => handleEditAmenity(amenity.id)}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              title="Xóa"
-                              sx={{
-                                color: '#d32f2f',
-                                bgcolor: '#ffebee',
-                                '&:hover': {
-                                  bgcolor: '#ffcdd2',
-                                  boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)',
-                                },
-                                transition: 'all 0.2s ease-in-out',
-                              }}
-                              onClick={() => handleDeleteAmenity(amenity.id)}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
+                      <React.Fragment key={amenity.id}>
+                        <TableRow hover>
+                          <TableCell>{amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</TableCell>
+                          <TableCell>{amenity.code}</TableCell>
+                          <TableCell>{amenity.name}</TableCell>
+                          <TableCell>{amenity.price.toLocaleString('vi-VN')} đ</TableCell>
+                          <TableCell>{amenity.default_quantity}</TableCell>
+                          <TableCell>
+                            <span style={{ color: amenity.status === 'active' ? '#388E3C' : '#D32F2F', fontWeight: 'bold' }}>
+                              {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                            </span>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Box display="flex" justifyContent="center" gap={1} sx={{ flexWrap: 'wrap' }}>
+                              <IconButton
+                                title={selectedAmenityId === amenity.id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                                onClick={() => handleViewDetails(amenity.id)}
+                                sx={{
+                                  color: '#1976d2',
+                                  bgcolor: '#e3f2fd',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#bbdefb', boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)' },
+                                }}
+                              >
+                                {selectedAmenityId === amenity.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                              </IconButton>
+                              <IconButton
+                                title="Chỉnh sửa tiện ích"
+                                onClick={() => handleEdit(amenity)}
+                                sx={{
+                                  color: '#FACC15',
+                                  bgcolor: '#fef9c3',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#fff9c4', boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)' },
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                title="Xóa tiện ích"
+                                onClick={() => handleDeleteAmenity(amenity.id)}
+                                sx={{
+                                  color: '#d32f2f',
+                                  bgcolor: '#ffebee',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#ffcdd2', boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)' },
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={7} style={{ padding: 0 }}>
+                            <Collapse in={selectedAmenityId === amenity.id}>
+                              <div className="promotion-detail-container">
+                                {editAmenityId === amenity.id && editFormData ? (
+                                  <Box sx={{ p: 2, bgcolor: '#fff' }}>
+                                    <Typography variant="h6" gutterBottom>
+                                      Chỉnh sửa Tiện ích
+                                    </Typography>
+                                    <Box display="flex" flexDirection="column" gap={2}>
+                                      <TextField
+                                        label="Tên"
+                                        name="name"
+                                        value={editFormData.name}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!validationErrors.name}
+                                        helperText={validationErrors.name}
+                                      />
+                                      <TextField
+                                        label="Mô tả"
+                                        name="description"
+                                        value={editFormData.description}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        multiline
+                                        rows={3}
+                                        error={!!validationErrors.description}
+                                        helperText={validationErrors.description}
+                                      />
+                                      <TextField
+                                        label="Giá"
+                                        name="price"
+                                        type="number"
+                                        value={editFormData.price}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!validationErrors.price}
+                                        helperText={validationErrors.price}
+                                      />
+                                      <TextField
+                                        label="Số lượng mặc định"
+                                        name="default_quantity"
+                                        type="number"
+                                        value={editFormData.default_quantity}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!validationErrors.default_quantity}
+                                        helperText={validationErrors.default_quantity}
+                                      />
+                                      <Box mt={2} display="flex" gap={2}>
+                                        <Button
+                                          variant="contained"
+                                          onClick={handleSave}
+                                          disabled={editLoading}
+                                          sx={{
+                                            backgroundColor: '#4318FF',
+                                            color: '#fff',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            borderRadius: '8px',
+                                            px: 2.5,
+                                            py: 0.7,
+                                            '&:hover': { backgroundColor: '#7B1FA2' },
+                                            '&:disabled': { backgroundColor: '#a9a9a9' },
+                                          }}
+                                        >
+                                          {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
+                                        </Button>
+                                        <Button
+                                          variant="outlined"
+                                          color="secondary"
+                                          onClick={handleCancel}
+                                          disabled={editLoading}
+                                          sx={{
+                                            color: '#f44336',
+                                            borderColor: '#f44336',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            borderRadius: '8px',
+                                            px: 2.5,
+                                            py: 0.7,
+                                            '&:hover': { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
+                                            '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
+                                          }}
+                                        >
+                                          Hủy
+                                        </Button>
+                                      </Box>
+                                      {editError && <Typography color="error" mt={1}>{editError}</Typography>}
+                                    </Box>
+                                  </Box>
+                                ) : (
+                                  <Box sx={{ p: 2, bgcolor: '#fff' }}>
+                                    <Typography variant="h6" gutterBottom>
+                                      Thông tin Tiện ích
+                                    </Typography>
+                                    <Box display="grid" gap={1}>
+                                      <Typography><strong>Nhóm:</strong> {amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</Typography>
+                                      <Typography><strong>Mã:</strong> {amenity.code}</Typography>
+                                      <Typography><strong>Tên:</strong> {amenity.name}</Typography>
+                                      <Typography><strong>Mô tả:</strong> {amenity.description}</Typography>
+                                      <Typography><strong>Biểu tượng:</strong> {amenity.icon ? <img src={amenity.icon} alt={amenity.name} width="24" /> : 'Không có'}</Typography>
+                                      <Typography><strong>Giá:</strong> {amenity.price.toLocaleString('vi-VN')} đ</Typography>
+                                      <Typography><strong>Số lượng mặc định:</strong> {amenity.default_quantity}</Typography>
+                                      <Typography><strong>Trạng thái:</strong> {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}</Typography>
+                                    </Box>
+                                  </Box>
+                                )}
+                              </div>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -546,6 +769,7 @@ const Amenities: React.FC = () => {
                   shape="rounded"
                   showFirstButton
                   showLastButton
+                  sx={{ '& .MuiPaginationItem-root': { fontSize: '14px' } }}
                 />
               </Box>
             </>
@@ -556,28 +780,23 @@ const Amenities: React.FC = () => {
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-        sx={{
-          '& .MuiDialog-paper': {
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          },
-        }}
+        sx={{ '& .MuiDialog-paper': { borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' } }}
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>
-          Xác nhận xóa tiện ích
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Xác nhận xóa tiện ích</DialogTitle>
         <DialogContent>
-          <Typography>
-            Bạn có chắc chắn muốn xóa tiện ích này không? Hành động này không thể hoàn tác.
-          </Typography>
+          <Typography>Bạn có chắc chắn muốn xóa tiện ích này không? Hành động này không thể hoàn tác.</Typography>
         </DialogContent>
         <DialogActions>
           <Button
             onClick={() => setDeleteDialogOpen(false)}
-            className="promotions-btn-cancel"
             sx={{
               color: '#d32f2f',
               borderColor: '#d32f2f',
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.7,
               '&:hover': { borderColor: '#b71c1c', backgroundColor: '#ffebee' },
             }}
           >
@@ -599,11 +818,7 @@ const Amenities: React.FC = () => {
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
-        >
+        <Alert onClose={handleSnackbarClose} severity={snackbarMessage.includes('thành công') ? 'success' : 'error'} sx={{ width: '100%' }}>
           {snackbarMessage}
         </Alert>
       </Snackbar>
