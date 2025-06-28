@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import {
   Table,
   TableBody,
@@ -36,6 +35,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import axios, { AxiosError } from "axios";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import "../../css/Amenities.css"; // Sử dụng cùng file CSS với Amenities
 
 interface AmenityCategory {
