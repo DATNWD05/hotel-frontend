@@ -231,6 +231,10 @@ const ListBookings: React.FC = () => {
 
   const [openCheckoutDialog, setOpenCheckoutDialog] = useState(false);
 
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "vnpay" | null>(
+    null
+  );
+
   const navigate = useNavigate();
 
   const handleOpenCheckoutDialog = async (bookingId: number) => {
@@ -809,6 +813,7 @@ const ListBookings: React.FC = () => {
         </MenuItem>
       </Menu>
 
+      {/* Thông tin check-in */}
       <Dialog
         open={openCheckinDialog}
         onClose={handleCloseCheckinDialog}
@@ -825,11 +830,28 @@ const ListBookings: React.FC = () => {
         >
           🧾 Thông tin Check-in
         </DialogTitle>
+
         <DialogContent dividers sx={{ px: 4, py: 3 }}>
           {checkinInfo ? (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                <Box sx={{ flex: 1, minWidth: "280px" }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {/* Khách hàng + Đặt phòng: Nằm cạnh nhau */}
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: { xs: "column", md: "row" },
+                  gap: 2,
+                }}
+              >
+                {/* Thông tin khách hàng */}
+                <Paper
+                  sx={{
+                    flex: 1,
+                    p: 2,
+                    borderRadius: 2,
+                    border: "1px solid #ccc",
+                    backgroundColor: "#fdfdfd",
+                  }}
+                >
                   <Typography variant="h6" fontWeight={700} gutterBottom>
                     🧑‍💼 Thông tin khách hàng
                   </Typography>
@@ -848,12 +870,21 @@ const ListBookings: React.FC = () => {
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <b>Quốc tịch:</b> {checkinInfo.customer.nationality}
                   </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
+                  <Typography variant="body2">
                     <b>Địa chỉ:</b> {checkinInfo.customer.address}
                   </Typography>
-                </Box>
+                </Paper>
 
-                <Box sx={{ flex: 1, minWidth: "280px" }}>
+                {/* Thông tin đặt phòng */}
+                <Paper
+                  sx={{
+                    flex: 1,
+                    p: 2,
+                    borderRadius: 2,
+                    border: "1px solid #ccc",
+                    backgroundColor: "#fdfdfd",
+                  }}
+                >
                   <Typography variant="h6" fontWeight={700} gutterBottom>
                     📅 Thông tin đặt phòng
                   </Typography>
@@ -871,66 +902,85 @@ const ListBookings: React.FC = () => {
                     <b>Tổng tiền:</b>{" "}
                     {numeral(checkinInfo.total_amount).format("0,0")} VNĐ
                   </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
+                  <Typography variant="body2">
                     <b>Người tạo:</b> {checkinInfo.created_by}
                   </Typography>
-                </Box>
+                </Paper>
               </Box>
 
-              <Box>
+              {/* Phòng */}
+              <Paper
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: "1px solid #ccc",
+                  backgroundColor: "#fdfdfd",
+                }}
+              >
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   🛏️ Phòng
                 </Typography>
                 {checkinInfo.rooms.map((room, index) => (
-                  <Box key={index} sx={{ ml: 2, mb: 1 }}>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                  <Box key={index} sx={{ mb: 2 }}>
+                    <Typography variant="body2">
                       <b>Phòng:</b> {room.room_number} - {room.type.name}
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Typography variant="body2">
                       <b>Giá:</b> {numeral(room.rate).format("0,0")} VNĐ
                     </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
+                    <Typography variant="body2">
                       <b>Sức chứa:</b> {room.type.max_occupancy} người
                     </Typography>
                     {room.type.amenities.map((a, i) => (
-                      <Typography key={i} variant="body2" sx={{ mb: 1 }}>
+                      <Typography key={i} variant="body2">
                         - {a.name} x{a.quantity}
                       </Typography>
                     ))}
                   </Box>
                 ))}
-              </Box>
+              </Paper>
 
-              <Box>
+              {/* Dịch vụ */}
+              <Paper
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: "1px solid #ccc",
+                  backgroundColor: "#fdfdfd",
+                }}
+              >
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   🛎️ Dịch vụ đi kèm
                 </Typography>
                 {checkinInfo.services.length === 0 ? (
-                  <Typography variant="body2" sx={{ mb: 1 }} fontStyle="italic">
+                  <Typography variant="body2" fontStyle="italic">
                     Không có dịch vụ
                   </Typography>
                 ) : (
                   checkinInfo.services.map((s, i) => (
-                    <Typography key={i} variant="body2" sx={{ ml: 2, mb: 1 }}>
+                    <Typography key={i} variant="body2">
                       - {s.name} x{s.quantity} ({numeral(s.price).format("0,0")}{" "}
                       VNĐ)
                     </Typography>
                   ))
                 )}
-              </Box>
+              </Paper>
             </Box>
           ) : (
             <Typography>Đang tải thông tin...</Typography>
           )}
         </DialogContent>
 
-        <DialogActions>
-          <Button onClick={handleCloseCheckinDialog}>Đóng</Button>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={handleCloseCheckinDialog} color="inherit">
+            Đóng
+          </Button>
           <Button
             onClick={handleCheckinConfirm}
             variant="contained"
             color="primary"
             disabled={!checkinInfo}
+            sx={{ borderRadius: 2, px: 3 }}
           >
             Check-in ngay
           </Button>
@@ -951,9 +1001,18 @@ const ListBookings: React.FC = () => {
         </DialogTitle>
         <DialogContent dividers sx={{ px: 4, py: 3 }}>
           {checkoutInfo ? (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Thông tin đơn đặt phòng */}
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <>
+              {/* 🧾 Thông tin đơn đặt phòng */}
+              <Paper
+                elevation={1}
+                sx={{
+                  p: 2,
+                  borderRadius: 3,
+                  border: "1px solid #e0e0e0",
+                  backgroundColor: "#fafafa",
+                  mb: 3,
+                }}
+              >
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   🧾 Thông tin đơn đặt phòng
                 </Typography>
@@ -1003,24 +1062,26 @@ const ListBookings: React.FC = () => {
                     </Typography>
                   </Box>
                 </Box>
-              </Box>
+              </Paper>
 
-              {/* Chi tiết phòng và Dịch vụ sử dụng */}
+              {/* 🛏️ Chi tiết phòng + 🛎️ Dịch vụ */}
               <Box
                 sx={{
                   display: "flex",
                   flexDirection: { xs: "column", md: "row" },
                   gap: 4,
                   alignItems: "flex-start",
+                  mb: 3,
                 }}
               >
-                {/* Chi tiết phòng */}
-                <Box
+                <Paper
+                  elevation={1}
                   sx={{
                     flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1,
+                    p: 2,
+                    borderRadius: 3,
+                    border: "1px solid #e0e0e0",
+                    backgroundColor: "#fafafa",
                   }}
                 >
                   <Typography variant="h6" fontWeight={700} gutterBottom>
@@ -1058,15 +1119,16 @@ const ListBookings: React.FC = () => {
                       </Typography>
                     </Box>
                   </Box>
-                </Box>
+                </Paper>
 
-                {/* Dịch vụ sử dụng */}
-                <Box
+                <Paper
+                  elevation={1}
                   sx={{
                     flex: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1,
+                    p: 2,
+                    borderRadius: 3,
+                    border: "1px solid #e0e0e0",
+                    backgroundColor: "#fafafa",
                   }}
                 >
                   <Typography variant="h6" fontWeight={700} gutterBottom>
@@ -1080,11 +1142,20 @@ const ListBookings: React.FC = () => {
                       {numeral(checkoutInfo.service_total).format("0,0")} VNĐ
                     </Typography>
                   </Box>
-                </Box>
+                </Paper>
               </Box>
 
-              {/* Tóm tắt thanh toán */}
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {/* 💳 Tóm tắt thanh toán */}
+              <Paper
+                elevation={1}
+                sx={{
+                  p: 2,
+                  borderRadius: 3,
+                  border: "1px solid #e0e0e0",
+                  backgroundColor: "#fafafa",
+                  mb: 3,
+                }}
+              >
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   💳 Tóm tắt thanh toán
                 </Typography>
@@ -1118,62 +1189,131 @@ const ListBookings: React.FC = () => {
                     </Typography>
                   </Box>
                 </Box>
-              </Box>
+              </Paper>
 
-              {/* Phương thức thanh toán và Xác nhận Check-out */}
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", md: "row" },
-                  justifyContent: "space-between",
-                  alignItems: { xs: "stretch", md: "center" },
-                  gap: 2,
-                  mt: 2,
-                }}
-              >
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  <Typography variant="h6" fontWeight={700} gutterBottom>
-                    🔘 Phương thức thanh toán
-                  </Typography>
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      onClick={handleConfirmCheckout}
-                      sx={{ flex: 1 }}
-                    >
-                      Thanh toán tiền mặt
-                    </Button>
-                    <Button
-                      variant="contained"
-                      color="secondary"
-                      onClick={() =>
-                        handleVNPayCheckout(checkoutInfo.booking_id)
-                      }
-                      sx={{ flex: 1 }}
-                    >
-                      Thanh toán online (VNPay)
-                    </Button>
-                  </Box>
-                </Box>
-                <Box sx={{ display: "flex", alignItems: "center" }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleConfirmCheckout}
-                    disabled={!checkoutInfo}
-                  >
-                    Xác nhận Check-out
-                  </Button>
-                </Box>
-              </Box>
-            </Box>
+              {/* 🔘 Phương thức thanh toán */}
+              <Paper
+  elevation={1}
+  sx={{
+    p: 2,
+    borderRadius: 2,
+    border: "1px solid #e0e0e0",
+    backgroundColor: "#fafafa",
+    mb: 3,
+  }}
+>
+  <Typography
+    variant="h6"
+    fontWeight={700}
+    gutterBottom
+    sx={{ color: "#1a237e" }}
+  >
+    🔘 Phương thức thanh toán
+  </Typography>
+
+  <Box sx={{ display: "flex", gap: 2 }}>
+    {[
+      { key: "cash", label: "Thanh toán tiền mặt" },
+      { key: "vnpay", label: "Thanh toán online (VNPay)" },
+    ].map((method) => (
+      <Box
+        key={method.key}
+        onClick={() => setPaymentMethod(method.key as "cash" | "vnpay")}
+        sx={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          borderRadius: 2,
+          border: "2px solid",
+          borderColor:
+            paymentMethod === method.key ? "#3f51b5" : "#c5cae9",
+          backgroundColor:
+            paymentMethod === method.key ? "#e8eaf6" : "transparent",
+          padding: "10px 16px",
+          cursor: "pointer",
+          transition: "all 0.2s",
+          "&:hover": {
+            backgroundColor: "#f5f5f5",
+          },
+        }}
+      >
+        <Box
+          sx={{
+            width: 20,
+            height: 20,
+            border: "2px solid",
+            borderColor:
+              paymentMethod === method.key ? "#3f51b5" : "#9e9e9e",
+            borderRadius: 2,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor:
+              paymentMethod === method.key ? "#3f51b5" : "transparent",
+          }}
+        >
+          {paymentMethod === method.key && (
+            <span style={{ color: "white", fontSize: 14 }}>✓</span>
+          )}
+        </Box>
+
+        <Typography
+          variant="body1"
+          sx={{ fontWeight: 600, color: "#1a237e" }}
+        >
+          {method.label}
+        </Typography>
+      </Box>
+    ))}
+  </Box>
+</Paper>
+
+            </>
           ) : (
             <Typography>Đang tải thông tin...</Typography>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenCheckoutDialog(false)}>Hủy bỏ</Button>
+
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setOpenCheckoutDialog(false)}
+            color="inherit"
+            sx={{
+              fontWeight: 600,
+              textTransform: "none",
+              borderRadius: 2,
+              fontSize: "15px",
+            }}
+          >
+            Hủy bỏ
+          </Button>
+
+          {paymentMethod && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => {
+                if (paymentMethod === "cash") {
+                  handleConfirmCheckout();
+                } else if (paymentMethod === "vnpay" && checkoutInfo) {
+                  handleVNPayCheckout(checkoutInfo.booking_id);
+                }
+              }}
+              disabled={!checkoutInfo}
+              sx={{
+                ml: 1,
+                borderRadius: 2, // 🔹 Hình vuông nhẹ
+                fontWeight: 600,
+                textTransform: "none",
+                fontSize: "15px",
+                px: 3,
+                py: 1.2,
+              }}
+            >
+              Thanh toán
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </div>
