@@ -32,7 +32,6 @@ import {
 import { Search as SearchIcon } from 'lucide-react';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios, { AxiosError } from 'axios';
@@ -157,6 +156,17 @@ const AmenitiesCategoryList: React.FC = () => {
     setCategories(filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE));
     setLastPage(Math.ceil(filtered.length / PER_PAGE));
   }, [searchQuery, activeFilters, currentPage, allCategories]);
+
+  useEffect(() => {
+    let filtered = [...allCategories];
+    if (searchQuery.trim() !== '') {
+      filtered = filtered.filter((cat) =>
+        cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    setLastPage(Math.ceil(filtered.length / 10));
+    setCategories(filtered.slice((currentPage - 1) * 10, currentPage * 10));
+  }, [searchQuery, currentPage, allCategories]);
 
   const validateForm = (data: AmenityCategory): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -303,7 +313,7 @@ const AmenitiesCategoryList: React.FC = () => {
       setCategoryToDelete(null);
     }
   };
-
+  
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
     setSnackbarMessage('');
@@ -444,7 +454,7 @@ const AmenitiesCategoryList: React.FC = () => {
       <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: '8px' }}>
         <CardContent sx={{ p: 0 }}>
           {loading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+            <Box display="flex" justifyContent="center" alignItems="center" p=
               <CircularProgress />
               <Typography ml={2}>Đang tải danh sách danh mục...</Typography>
             </Box>

@@ -44,6 +44,11 @@ const sitemap: MenuItem[] = [
         path: '/hiddenrooms',
       },
       {
+        name: 'Phòng Ẩn',
+        pathName: 'hidden_rooms ',
+        path: '/hiddenrooms',
+      },
+      {
         name: 'Loại Phòng',
         pathName: 'room_types',
         path: '/room-types',

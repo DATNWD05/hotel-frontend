@@ -121,15 +121,7 @@
   margin-right: 10px;
 }
 
-.promotions-loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-.promotions-error-message {
+.error-message {
   text-align: center;
   padding: 10px;
   color: #d32f2f;
