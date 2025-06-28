@@ -338,7 +338,6 @@ const ServiceCategoryList: React.FC = () => {
             <Table className="promotions-table" sx={{ width: '100%' }}>
               <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
                 <TableRow>
-                  <TableCell><b>ID</b></TableCell>
                   <TableCell><b>Tên danh mục</b></TableCell>
                   <TableCell><b>Mô tả</b></TableCell>
                   <TableCell align="center"><b>Hành động</b></TableCell>
@@ -348,7 +347,6 @@ const ServiceCategoryList: React.FC = () => {
                 {categories.map((cat) => (
                   <React.Fragment key={cat.id}>
                     <TableRow>
-                      <TableCell>{cat.id}</TableCell>
                       <TableCell>{cat.name}</TableCell>
                       <TableCell>{cat.description}</TableCell>
                       <TableCell align="center">
@@ -402,7 +400,7 @@ const ServiceCategoryList: React.FC = () => {
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={4} style={{ padding: 0 }}>
+                      <TableCell colSpan={3} style={{ padding: 0 }}>
                         <Collapse in={selectedCategoryId === cat.id}>
                           <div className="promotion-detail-container">
                             {editCategoryId === cat.id && editFormData ? (
@@ -503,11 +501,8 @@ const ServiceCategoryList: React.FC = () => {
                                 <Table className="promotion-detail-table">
                                   <TableBody>
                                     <TableRow>
-                                      <TableCell><strong>ID:</strong> {cat.id}</TableCell>
                                       <TableCell><strong>Tên danh mục:</strong> {cat.name}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell colSpan={2}><strong>Mô tả:</strong> {cat.description}</TableCell>
+                                      <TableCell><strong>Mô tả:</strong> {cat.description}</TableCell>
                                     </TableRow>
                                   </TableBody>
                                 </Table>

@@ -32,7 +32,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import axios, { AxiosError } from 'axios';
-import '../../css/service.css';
+import '../../css/Service.css';
 
 interface Amenity {
   id: number;
@@ -361,12 +361,12 @@ const RoomTypesList: React.FC = () => {
           <Typography variant="h2" fontWeight={700}>
             Loại Phòng
           </Typography>
-          <Box display="flex" gap={2} alignItems="center">
+          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
             <TextField
               label="Tìm kiếm loại phòng"
               variant="outlined"
               size="small"
-              sx={{ width: 300, bgcolor: '#fff', borderRadius: '8px', '& input': { fontSize: '15px' } }}
+              sx={{ width: { xs: '100%', sm: 300 }, bgcolor: '#fff', borderRadius: '8px', '& input': { fontSize: '15px' } }}
               disabled
             />
             <Button
@@ -394,59 +394,54 @@ const RoomTypesList: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="promotions-loading-container">
+        <Box display="flex" justifyContent="center" alignItems="center" p={4}>
           <CircularProgress />
-          <Typography>Đang tải danh sách loại phòng...</Typography>
-        </div>
+          <Typography ml={2}>Đang tải danh sách loại phòng...</Typography>
+        </Box>
       ) : error ? (
-        <Typography color="error" className="promotions-error-message">
+        <Typography color="error" p={2} textAlign="center">
           {error}
         </Typography>
       ) : roomTypes.length === 0 ? (
-        <Typography className="promotions-no-data">
+        <Typography p={2} textAlign="center">
           Không tìm thấy loại phòng nào.
         </Typography>
       ) : (
         <>
-          <TableContainer component={Paper} className="promotions-table-container">
-            <Table className="promotions-table" sx={{ width: '100%' }}>
+          <TableContainer component={Paper} className="promotions-table-container" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+            <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
               <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
                 <TableRow>
-                  <TableCell><b>ID</b></TableCell>
-                  <TableCell><b>Mã</b></TableCell>
-                  <TableCell><b>Tên</b></TableCell>
-                  <TableCell><b>Mô tả</b></TableCell>
-                  <TableCell><b>Số người tối đa</b></TableCell>
-                  <TableCell><b>Giá cơ bản</b></TableCell>
-                  <TableCell align="center"><b>Hành động</b></TableCell>
+                  <TableCell sx={{ minWidth: '120px' }}><b>Mã</b></TableCell>
+                  <TableCell sx={{ minWidth: '150px' }}><b>Tên</b></TableCell>
+                  <TableCell sx={{ minWidth: '200px' }}><b>Mô tả</b></TableCell>
+                  <TableCell sx={{ minWidth: '120px' }}><b>Số người tối đa</b></TableCell>
+                  <TableCell sx={{ minWidth: '120px' }}><b>Giá cơ bản</b></TableCell>
+                  <TableCell align="center" sx={{ minWidth: '150px' }}><b>Hành động</b></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {roomTypes.map((rt) => (
                   <React.Fragment key={rt.id}>
-                    <TableRow>
-                      <TableCell>{rt.id}</TableCell>
+                    <TableRow hover>
                       <TableCell>{rt.code}</TableCell>
                       <TableCell>{rt.name}</TableCell>
                       <TableCell>{rt.description}</TableCell>
                       <TableCell>{rt.max_occupancy}</TableCell>
                       <TableCell>{rt.base_rate.toLocaleString()} đ</TableCell>
                       <TableCell align="center">
-                        <Box display="flex" justifyContent="center" gap={1}>
+                        <Box display="flex" justifyContent="center" gap={1} sx={{ flexWrap: 'wrap' }}>
                           <IconButton
                             title={selectedRoomTypeId === rt.id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
                             onClick={() => handleViewDetails(rt.id)}
                             sx={{
                               color: '#1976d2',
                               bgcolor: '#e3f2fd',
-                              '&:hover': {
-                                bgcolor: '#bbdefb',
-                                boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)',
-                              },
-                              transition: 'all 0.2s ease-in-out',
+                              p: '6px',
+                              '&:hover': { bgcolor: '#bbdefb', boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)' },
                             }}
                           >
-                            {selectedRoomTypeId === rt.id ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                            {selectedRoomTypeId === rt.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
                           </IconButton>
                           <IconButton
                             title="Chỉnh sửa loại phòng"
@@ -454,14 +449,11 @@ const RoomTypesList: React.FC = () => {
                             sx={{
                               color: '#FACC15',
                               bgcolor: '#fef9c3',
-                              '&:hover': {
-                                bgcolor: '#fff9c4',
-                                boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)',
-                              },
-                              transition: 'all 0.2s ease-in-out',
+                              p: '6px',
+                              '&:hover': { bgcolor: '#fff9c4', boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)' },
                             }}
                           >
-                            <EditIcon />
+                            <EditIcon fontSize="small" />
                           </IconButton>
                           <IconButton
                             title="Xóa loại phòng"
@@ -469,28 +461,25 @@ const RoomTypesList: React.FC = () => {
                             sx={{
                               color: '#d32f2f',
                               bgcolor: '#ffebee',
-                              '&:hover': {
-                                bgcolor: '#ffcdd2',
-                                boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)',
-                              },
-                              transition: 'all 0.2s ease-in-out',
+                              p: '6px',
+                              '&:hover': { bgcolor: '#ffcdd2', boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)' },
                             }}
                           >
-                            <DeleteIcon />
+                            <DeleteIcon fontSize="small" />
                           </IconButton>
                         </Box>
                       </TableCell>
                     </TableRow>
                     <TableRow>
-                      <TableCell colSpan={7} style={{ padding: 0 }}>
+                      <TableCell colSpan={6} style={{ padding: 0 }}>
                         <Collapse in={selectedRoomTypeId === rt.id}>
                           <div className="promotion-detail-container">
                             {editRoomTypeId === rt.id && editFormData ? (
-                              <>
+                              <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
                                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
                                   Chỉnh sửa loại phòng
                                 </Typography>
-                                <Box display="flex" flexDirection="column" gap={2} sx={{ p: 2, bgcolor: '#f4f6fa', borderRadius: '8px' }}>
+                                <Box display="flex" flexDirection="column" gap={2}>
                                   <Box display="flex" gap={2}>
                                     <TextField
                                       label="Mã"
@@ -502,7 +491,7 @@ const RoomTypesList: React.FC = () => {
                                       size="small"
                                       error={!!validationErrors.code}
                                       helperText={validationErrors.code}
-                                      sx={{ bgcolor: '#fff', borderRadius: '8px' }}
+                                      sx={{ bgcolor: '#fff', borderRadius: '4px' }}
                                     />
                                     <TextField
                                       label="Tên"
@@ -514,7 +503,7 @@ const RoomTypesList: React.FC = () => {
                                       size="small"
                                       error={!!validationErrors.name}
                                       helperText={validationErrors.name}
-                                      sx={{ bgcolor: '#fff', borderRadius: '8px' }}
+                                      sx={{ bgcolor: '#fff', borderRadius: '4px' }}
                                     />
                                   </Box>
                                   <Box display="flex" gap={2}>
@@ -530,7 +519,7 @@ const RoomTypesList: React.FC = () => {
                                       error={!!validationErrors.max_occupancy}
                                       helperText={validationErrors.max_occupancy}
                                       inputProps={{ min: 0 }}
-                                      sx={{ bgcolor: '#fff', borderRadius: '8px' }}
+                                      sx={{ bgcolor: '#fff', borderRadius: '4px' }}
                                     />
                                     <TextField
                                       label="Giá cơ bản"
@@ -544,25 +533,23 @@ const RoomTypesList: React.FC = () => {
                                       error={!!validationErrors.base_rate}
                                       helperText={validationErrors.base_rate}
                                       inputProps={{ min: 0 }}
-                                      sx={{ bgcolor: '#fff', borderRadius: '8px' }}
+                                      sx={{ bgcolor: '#fff', borderRadius: '4px' }}
                                     />
                                   </Box>
-                                  <Box display="flex" gap={2}>
-                                    <TextField
-                                      label="Mô tả"
-                                      name="description"
-                                      value={editFormData.description}
-                                      onChange={handleChange}
-                                      fullWidth
-                                      variant="outlined"
-                                      size="small"
-                                      multiline
-                                      rows={3}
-                                      error={!!validationErrors.description}
-                                      helperText={validationErrors.description}
-                                      sx={{ bgcolor: '#fff', borderRadius: '8px' }}
-                                    />
-                                  </Box>
+                                  <TextField
+                                    label="Mô tả"
+                                    name="description"
+                                    value={editFormData.description}
+                                    onChange={handleChange}
+                                    fullWidth
+                                    variant="outlined"
+                                    size="small"
+                                    multiline
+                                    rows={3}
+                                    error={!!validationErrors.description}
+                                    helperText={validationErrors.description}
+                                    sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                  />
                                   <Typography variant="h6" mb={1} sx={{ fontWeight: 600, color: '#333' }}>
                                     Tiện nghi
                                   </Typography>
@@ -575,26 +562,22 @@ const RoomTypesList: React.FC = () => {
                                             key={amenityId}
                                             label={amenity.name}
                                             onDelete={() => handleRemoveAmenity(amenityId)}
-                                            deleteIcon={
-                                              <CloseIcon sx={{ fontSize: 16, color: '#fff !important' }} />
-                                            }
+                                            deleteIcon={<CloseIcon sx={{ fontSize: 16, color: '#fff !important' }} />}
                                             sx={{
                                               bgcolor: '#4318FF',
                                               color: '#fff',
                                               fontWeight: 500,
-                                              borderRadius: '12px', // Increased from 8px to 12px for rounder edges
+                                              borderRadius: '12px',
                                               height: '32px',
-                                              pr: '5px', 
-                                              '&:hover': {
-                                                bgcolor: '#7B1FA2',
-                                              },
+                                              pr: '5px',
+                                              '&:hover': { bgcolor: '#7B1FA2' },
                                               '& .MuiChip-deleteIcon': {
                                                 bgcolor: '#d32f2f',
                                                 borderRadius: '50%',
                                                 width: '20px',
                                                 height: '20px',
                                                 p: '1px',
-                                                ml: '5px', // Kept margin to maintain separation
+                                                ml: '5px',
                                               },
                                             }}
                                           />
@@ -609,13 +592,7 @@ const RoomTypesList: React.FC = () => {
                                       color="primary"
                                       onClick={handleAddAmenityClick}
                                       size="small"
-                                      sx={{
-                                        color: '#4318FF',
-                                        '&:hover': {
-                                          bgcolor: '#f4f6fa',
-                                          color: '#7B1FA2',
-                                        },
-                                      }}
+                                      sx={{ color: '#4318FF', '&:hover': { bgcolor: '#f4f6fa', color: '#7B1FA2' } }}
                                     >
                                       <AddIcon fontSize="small" />
                                     </IconButton>
@@ -633,18 +610,11 @@ const RoomTypesList: React.FC = () => {
                                         borderRadius: '8px',
                                         px: 2.5,
                                         py: 0.7,
-                                        boxShadow: '0 2px 6px rgba(106, 27, 154, 0.3)',
-                                        '&:hover': {
-                                          backgroundColor: '#7B1FA2',
-                                          boxShadow: '0 4px 12px rgba(106, 27, 154, 0.4)',
-                                        },
-                                        '&:disabled': {
-                                          backgroundColor: '#a9a9a9',
-                                          boxShadow: 'none',
-                                        },
+                                        '&:hover': { backgroundColor: '#7B1FA2' },
+                                        '&:disabled': { backgroundColor: '#a9a9a9' },
                                       }}
                                     >
-                                      Lưu
+                                      {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
                                     </Button>
                                     <Button
                                       variant="outlined"
@@ -658,76 +628,48 @@ const RoomTypesList: React.FC = () => {
                                         borderRadius: '8px',
                                         px: 2.5,
                                         py: 0.7,
-                                        '&:hover': {
-                                          borderColor: '#d32f2f',
-                                          backgroundColor: '#ffebee',
-                                        },
-                                        '&:disabled': {
-                                          color: '#a9a9a9',
-                                          borderColor: '#a9a9a9',
-                                        },
+                                        '&:hover': { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
+                                        '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
                                       }}
                                     >
                                       Hủy
                                     </Button>
                                   </Box>
-                                  {editError && (
-                                    <Typography color="error" mt={1}>
-                                      {editError}
-                                    </Typography>
-                                  )}
+                                  {editError && <Typography color="error" mt={1}>{editError}</Typography>}
                                 </Box>
-                              </>
+                              </Box>
                             ) : (
-                              <>
+                              <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
                                 <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
                                   Thông tin loại phòng
                                 </Typography>
-                                <Table className="promotion-detail-table">
-                                  <TableBody>
-                                    <TableRow>
-                                      <TableCell><strong>Mã:</strong> {rt.code}</TableCell>
-                                      <TableCell><strong>Tên:</strong> {rt.name}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell><strong>Số người tối đa:</strong> {rt.max_occupancy}</TableCell>
-                                      <TableCell><strong>Giá cơ bản:</strong> {rt.base_rate.toLocaleString()} đ</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell colSpan={2}><strong>Mô tả:</strong> {rt.description}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                      <TableCell colSpan={2}>
-                                        <strong>Tiện nghi:</strong>
-                                        <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
-                                          {rt.amenities.length > 0 ? (
-                                            rt.amenities.map((amenity) => (
-                                              <Chip
-                                                key={amenity.id}
-                                                label={amenity.name}
-                                                size="small"
-                                                color="primary"
-                                                variant="outlined"
-                                                sx={{
-                                                  borderColor: '#4318FF',
-                                                  color: '#4318FF',
-                                                  '&:hover': {
-                                                    bgcolor: '#f4f6fa',
-                                                  },
-                                                }}
-                                              />
-                                            ))
-                                          ) : (
-                                            <Typography variant="body2" color="textSecondary">
-                                              Không có tiện nghi
-                                            </Typography>
-                                          )}
-                                        </Box>
-                                      </TableCell>
-                                    </TableRow>
-                                  </TableBody>
-                                </Table>
-                              </>
+                                <Box display="grid" gap={1}>
+                                  <Typography><strong>Mã:</strong> {rt.code}</Typography>
+                                  <Typography><strong>Tên:</strong> {rt.name}</Typography>
+                                  <Typography><strong>Số người tối đa:</strong> {rt.max_occupancy}</Typography>
+                                  <Typography><strong>Giá cơ bản:</strong> {rt.base_rate.toLocaleString()} đ</Typography>
+                                  <Typography><strong>Mô tả:</strong> {rt.description}</Typography>
+                                  <Typography><strong>Tiện nghi:</strong></Typography>
+                                  <Box display="flex" flexWrap="wrap" gap={1}>
+                                    {rt.amenities.length > 0 ? (
+                                      rt.amenities.map((amenity) => (
+                                        <Chip
+                                          key={amenity.id}
+                                          label={amenity.name}
+                                          size="small"
+                                          color="primary"
+                                          variant="outlined"
+                                          sx={{ borderColor: '#4318FF', color: '#4318FF', '&:hover': { bgcolor: '#f4f6fa' } }}
+                                        />
+                                      ))
+                                    ) : (
+                                      <Typography variant="body2" color="textSecondary">
+                                        Không có tiện nghi
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </Box>
+                              </Box>
                             )}
                           </div>
                         </Collapse>
@@ -748,6 +690,7 @@ const RoomTypesList: React.FC = () => {
                 shape="rounded"
                 showFirstButton
                 showLastButton
+                sx={{ '& .MuiPaginationItem-root': { fontSize: '14px' } }}
               />
             </Box>
           )}
@@ -761,9 +704,7 @@ const RoomTypesList: React.FC = () => {
       >
         <DialogTitle sx={{ fontWeight: 600 }}>Xác nhận xóa loại phòng</DialogTitle>
         <DialogContent>
-          <Typography>
-            Bạn có chắc chắn muốn xóa loại phòng này không? Hành động này không thể hoàn tác.
-          </Typography>
+          <Typography>Bạn có chắc chắn muốn xóa loại phòng này không? Hành động này không thể hoàn tác.</Typography>
         </DialogContent>
         <DialogActions>
           <Button
@@ -774,8 +715,8 @@ const RoomTypesList: React.FC = () => {
               textTransform: 'none',
               fontWeight: 600,
               borderRadius: '8px',
-              px: '2.5',
-              py: '0.7',
+              px: 2.5,
+              py: 0.7,
               '&:hover': { borderColor: '#b71c1c', backgroundColor: '#ffebee' },
             }}
           >
@@ -833,8 +774,8 @@ const RoomTypesList: React.FC = () => {
               textTransform: 'none',
               fontWeight: 600,
               borderRadius: '8px',
-              px: '2.5',
-              py: '0.7',
+              px: 2.5,
+              py: 0.7,
               '&:hover': { borderColor: '#b71c1c', backgroundColor: '#ffebee' },
             }}
           >

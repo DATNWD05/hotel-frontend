@@ -449,7 +449,7 @@ const Amenities: React.FC = () => {
           <Typography variant="h2" fontWeight={700}>
             Tiện ích
           </Typography>
-          <Box display="flex" gap={2} alignItems="center">
+          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
             <TextField
               variant="outlined"
               placeholder="Tìm kiếm tiện ích"
@@ -462,10 +462,9 @@ const Amenities: React.FC = () => {
                 ),
               }}
               sx={{
-                width: 300,
+                width: { xs: '100%', sm: 300 },
                 bgcolor: '#fff',
                 borderRadius: '8px',
-                mt: { xs: 2, sm: 0 },
                 '& input': { fontSize: '15px' },
               }}
               value={searchQuery}
@@ -487,20 +486,9 @@ const Amenities: React.FC = () => {
               anchorEl={filterAnchorEl}
               open={Boolean(filterAnchorEl)}
               onClose={handleFilterClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-              }}
-              sx={{
-                '& .MuiPaper-root': {
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                },
-              }}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              sx={{ '& .MuiPaper-root': { borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' } }}
             >
               {amenityCategories.map((cat) => (
                 <MenuItem
@@ -509,10 +497,7 @@ const Amenities: React.FC = () => {
                   selected={activeCategories.includes(cat.id)}
                   sx={{
                     '&:hover': { bgcolor: '#f0f0f0' },
-                    '&.Mui-selected': {
-                      bgcolor: '#e0f7fa',
-                      '&:hover': { bgcolor: '#b2ebf2' },
-                    },
+                    '&.Mui-selected': { bgcolor: '#e0f7fa', '&:hover': { bgcolor: '#b2ebf2' } },
                   }}
                 >
                   <Typography variant="body2" sx={{ color: activeCategories.includes(cat.id) ? '#00796b' : '#333' }}>
@@ -562,19 +547,19 @@ const Amenities: React.FC = () => {
         </Box>
       </div>
 
-      <Card elevation={3} sx={{ p: 0, mt: 0 }}>
+      <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: '8px' }}>
         <CardContent sx={{ p: 0 }}>
           {loading ? (
-            <div className="promotions-loading-container">
+            <Box display="flex" justifyContent="center" alignItems="center" p={4}>
               <CircularProgress />
-              <Typography>Đang tải danh sách tiện ích...</Typography>
-            </div>
+              <Typography ml={2}>Đang tải danh sách tiện ích...</Typography>
+            </Box>
           ) : error ? (
-            <Typography color="error" className="promotions-error-message">
+            <Typography color="error" p={2} textAlign="center">
               {error}
             </Typography>
           ) : filteredAmenities.length === 0 ? (
-            <Typography className="promotions-no-data">
+            <Typography p={2} textAlign="center">
               {searchQuery || activeCategories.length > 0
                 ? `Không tìm thấy tiện ích phù hợp trong danh mục: ${amenityCategories.find((c) => activeCategories.includes(c.id))?.name || 'Tất cả'}`
                 : 'Không tìm thấy tiện ích nào.'}
@@ -582,24 +567,22 @@ const Amenities: React.FC = () => {
           ) : (
             <>
               <TableContainer component={Paper} className="promotions-table-container" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
-                <Table className="promotions-table" sx={{ width: '100%' }}>
+                <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
                   <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
                     <TableRow>
-                      <TableCell><b>ID</b></TableCell>
-                      <TableCell><b>Nhóm</b></TableCell>
-                      <TableCell><b>Mã</b></TableCell>
-                      <TableCell><b>Tên</b></TableCell>
-                      <TableCell><b>Giá</b></TableCell>
-                      <TableCell><b>Số lượng</b></TableCell>
-                      <TableCell><b>Trạng thái</b></TableCell>
-                      <TableCell align="center" sx={{ width: '150px' }}><b>Hành động</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Nhóm</b></TableCell>
+                      <TableCell sx={{ minWidth: '100px' }}><b>Mã</b></TableCell>
+                      <TableCell sx={{ minWidth: '150px' }}><b>Tên</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Giá</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Số lượng mặc định</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Trạng thái</b></TableCell>
+                      <TableCell align="center" sx={{ minWidth: '150px' }}><b>Hành động</b></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {amenities.map((amenity) => (
                       <React.Fragment key={amenity.id}>
-                        <TableRow>
-                          <TableCell>{amenity.id}</TableCell>
+                        <TableRow hover>
                           <TableCell>{amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</TableCell>
                           <TableCell>{amenity.code}</TableCell>
                           <TableCell>{amenity.name}</TableCell>
@@ -610,7 +593,7 @@ const Amenities: React.FC = () => {
                               {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
                             </span>
                           </TableCell>
-                          <TableCell align="center" sx={{ width: '150px', padding: '8px' }}>
+                          <TableCell align="center">
                             <Box display="flex" justifyContent="center" gap={1} sx={{ flexWrap: 'wrap' }}>
                               <IconButton
                                 title={selectedAmenityId === amenity.id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
@@ -618,12 +601,8 @@ const Amenities: React.FC = () => {
                                 sx={{
                                   color: '#1976d2',
                                   bgcolor: '#e3f2fd',
-                                  padding: '6px',
-                                  '&:hover': {
-                                    bgcolor: '#bbdefb',
-                                    boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)',
-                                  },
-                                  transition: 'all 0.2s ease-in-out',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#bbdefb', boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)' },
                                 }}
                               >
                                 {selectedAmenityId === amenity.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
@@ -634,12 +613,8 @@ const Amenities: React.FC = () => {
                                 sx={{
                                   color: '#FACC15',
                                   bgcolor: '#fef9c3',
-                                  padding: '6px',
-                                  '&:hover': {
-                                    bgcolor: '#fff9c4',
-                                    boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)',
-                                  },
-                                  transition: 'all 0.2s ease-in-out',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#fff9c4', boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)' },
                                 }}
                               >
                                 <EditIcon fontSize="small" />
@@ -650,12 +625,8 @@ const Amenities: React.FC = () => {
                                 sx={{
                                   color: '#d32f2f',
                                   bgcolor: '#ffebee',
-                                  padding: '6px',
-                                  '&:hover': {
-                                    bgcolor: '#ffcdd2',
-                                    boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)',
-                                  },
-                                  transition: 'all 0.2s ease-in-out',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#ffcdd2', boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)' },
                                 }}
                               >
                                 <DeleteIcon fontSize="small" />
@@ -664,11 +635,11 @@ const Amenities: React.FC = () => {
                           </TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell colSpan={8} style={{ padding: 0 }}>
+                          <TableCell colSpan={7} style={{ padding: 0 }}>
                             <Collapse in={selectedAmenityId === amenity.id}>
                               <div className="promotion-detail-container">
                                 {editAmenityId === amenity.id && editFormData ? (
-                                  <Box sx={{ p: 2 }}>
+                                  <Box sx={{ p: 2, bgcolor: '#fff' }}>
                                     <Typography variant="h6" gutterBottom>
                                       Chỉnh sửa Tiện ích
                                     </Typography>
@@ -734,15 +705,8 @@ const Amenities: React.FC = () => {
                                             borderRadius: '8px',
                                             px: 2.5,
                                             py: 0.7,
-                                            boxShadow: '0 2px 6px rgba(106, 27, 154, 0.3)',
-                                            '&:hover': {
-                                              backgroundColor: '#7B1FA2',
-                                              boxShadow: '0 4px 12px rgba(106, 27, 154, 0.4)',
-                                            },
-                                            '&:disabled': {
-                                              backgroundColor: '#a9a9a9',
-                                              boxShadow: 'none',
-                                            },
+                                            '&:hover': { backgroundColor: '#7B1FA2' },
+                                            '&:disabled': { backgroundColor: '#a9a9a9' },
                                           }}
                                         >
                                           {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
@@ -760,52 +724,31 @@ const Amenities: React.FC = () => {
                                             borderRadius: '8px',
                                             px: 2.5,
                                             py: 0.7,
-                                            '&:hover': {
-                                              borderColor: '#d32f2f',
-                                              backgroundColor: '#ffebee',
-                                            },
-                                            '&:disabled': {
-                                              color: '#a9a9a9',
-                                              borderColor: '#a9a9a9',
-                                            },
+                                            '&:hover': { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
+                                            '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
                                           }}
                                         >
                                           Hủy
                                         </Button>
                                       </Box>
-                                      {editError && (
-                                        <Typography color="error" mt={1}>
-                                          {editError}
-                                        </Typography>
-                                      )}
+                                      {editError && <Typography color="error" mt={1}>{editError}</Typography>}
                                     </Box>
                                   </Box>
                                 ) : (
-                                  <Box sx={{ p: 2 }}>
+                                  <Box sx={{ p: 2, bgcolor: '#fff' }}>
                                     <Typography variant="h6" gutterBottom>
                                       Thông tin Tiện ích
                                     </Typography>
-                                    <div className="promotion-detail-content">
-                                      <div className="detail-row">
-                                        <div className="detail-item"><strong>ID:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.id}</span></div>
-                                        <div className="detail-item"><strong>Nhóm:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</span></div>
-                                      </div>
-                                      <div className="detail-row">
-                                        <div className="detail-item"><strong>Mã:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.code}</span></div>
-                                        <div className="detail-item"><strong>Tên:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.name}</span></div>
-                                      </div>
-                                      <div className="detail-row">
-                                        <div className="detail-item" style={{ gridColumn: '1 / span 2' }}><strong>Mô tả:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.description}</span></div>
-                                      </div>
-                                      <div className="detail-row">
-                                        <div className="detail-item"><strong>Biểu tượng:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.icon ? <img src={amenity.icon} alt={amenity.name} width="24" /> : 'Không có'}</span></div>
-                                        <div className="detail-item"><strong>Giá:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.price.toLocaleString('vi-VN')} đ</span></div>
-                                      </div>
-                                      <div className="detail-row">
-                                        <div className="detail-item"><strong>Số lượng mặc định:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.default_quantity}</span></div>
-                                        <div className="detail-item"><strong>Trạng thái:</strong> <span style={{ overflow: 'visible', whiteSpace: 'normal' }}>{amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}</span></div>
-                                      </div>
-                                    </div>
+                                    <Box display="grid" gap={1}>
+                                      <Typography><strong>Nhóm:</strong> {amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</Typography>
+                                      <Typography><strong>Mã:</strong> {amenity.code}</Typography>
+                                      <Typography><strong>Tên:</strong> {amenity.name}</Typography>
+                                      <Typography><strong>Mô tả:</strong> {amenity.description}</Typography>
+                                      <Typography><strong>Biểu tượng:</strong> {amenity.icon ? <img src={amenity.icon} alt={amenity.name} width="24" /> : 'Không có'}</Typography>
+                                      <Typography><strong>Giá:</strong> {amenity.price.toLocaleString('vi-VN')} đ</Typography>
+                                      <Typography><strong>Số lượng mặc định:</strong> {amenity.default_quantity}</Typography>
+                                      <Typography><strong>Trạng thái:</strong> {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}</Typography>
+                                    </Box>
                                   </Box>
                                 )}
                               </div>
@@ -826,6 +769,7 @@ const Amenities: React.FC = () => {
                   shape="rounded"
                   showFirstButton
                   showLastButton
+                  sx={{ '& .MuiPaginationItem-root': { fontSize: '14px' } }}
                 />
               </Box>
             </>
@@ -836,20 +780,11 @@ const Amenities: React.FC = () => {
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-        sx={{
-          '& .MuiDialog-paper': {
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-          },
-        }}
+        sx={{ '& .MuiDialog-paper': { borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' } }}
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>
-          Xác nhận xóa tiện ích
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Xác nhận xóa tiện ích</DialogTitle>
         <DialogContent>
-          <Typography>
-            Bạn có chắc chắn muốn xóa tiện ích này không? Hành động này không thể hoàn tác.
-          </Typography>
+          <Typography>Bạn có chắc chắn muốn xóa tiện ích này không? Hành động này không thể hoàn tác.</Typography>
         </DialogContent>
         <DialogActions>
           <Button
@@ -883,11 +818,7 @@ const Amenities: React.FC = () => {
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
-        >
+        <Alert onClose={handleSnackbarClose} severity={snackbarMessage.includes('thành công') ? 'success' : 'error'} sx={{ width: '100%' }}>
           {snackbarMessage}
         </Alert>
       </Snackbar>
