@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   CircularProgress,
   Typography,
@@ -21,13 +21,13 @@ import {
   ListItemText,
   Checkbox,
   TableHead,
-} from '@mui/material';
-import { useNavigate, useParams } from 'react-router-dom';
-import { format, parseISO, isValid } from 'date-fns';
-import numeral from 'numeral';
-import api from '../../api/axios';
-import '../../css/DetailBookings.css';
-import { TrashIcon, PlusIcon } from 'lucide-react';
+} from "@mui/material";
+import { useNavigate, useParams } from "react-router-dom";
+import { format, parseISO, isValid } from "date-fns";
+import numeral from "numeral";
+import api from "../../api/axios";
+import "../../css/DetailBookings.css";
+import { TrashIcon, PlusIcon } from "lucide-react";
 
 // Interface definitions
 interface Customer {
@@ -149,15 +149,15 @@ interface ApiResponse {
 
 const formatCurrency = (value: string): string => {
   const num = parseFloat(value);
-  return isNaN(num) ? 'N/A' : numeral(num).format('0,0') + ' VNĐ';
+  return isNaN(num) ? "N/A" : numeral(num).format("0,0") + " VNĐ";
 };
 
 const formatDateString = (date: string): string => {
   try {
     const parsedDate = parseISO(date);
-    return isValid(parsedDate) ? format(parsedDate, 'dd/MM/yyyy') : 'N/A';
+    return isValid(parsedDate) ? format(parsedDate, "dd/MM/yyyy") : "N/A";
   } catch {
-    return 'N/A';
+    return "N/A";
   }
 };
 
@@ -165,13 +165,19 @@ const DetailBookings: React.FC = () => {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [showAmenities, setShowAmenities] = useState<{ [key: number]: boolean }>({});
-  const [showServices, setShowServices] = useState<{ [key: number]: boolean }>({});
+  const [showAmenities, setShowAmenities] = useState<{
+    [key: number]: boolean;
+  }>({});
+  const [showServices, setShowServices] = useState<{ [key: number]: boolean }>(
+    {}
+  );
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [openServiceDialog, setOpenServiceDialog] = useState<boolean>(false);
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
-  const [selectedServices, setSelectedServices] = useState<{ service_id: number; quantity: number }[]>([]);
+  const [selectedServices, setSelectedServices] = useState<
+    { service_id: number; quantity: number }[]
+  >([]);
   const [currentRoomId, setCurrentRoomId] = useState<number | null>(null);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -180,7 +186,7 @@ const DetailBookings: React.FC = () => {
 
   const fetchBookingDetail = async () => {
     if (!bookingId) {
-      setError('Không tìm thấy ID đặt phòng');
+      setError("Không tìm thấy ID đặt phòng");
       setLoading(false);
       return;
     }
@@ -192,19 +198,33 @@ const DetailBookings: React.FC = () => {
       if (response.status === 200) {
         const data = response.data.booking || response.data;
         if (!data.customer || !data.rooms || !data.rooms.length) {
-          setError('Dữ liệu đặt phòng không đầy đủ');
+          setError("Dữ liệu đặt phòng không đầy đủ");
           setLoading(false);
           return;
         }
         const bookingData: Booking = {
           ...data,
-          check_in_date: data.check_in_date && isValid(parseISO(data.check_in_date)) ? data.check_in_date : new Date().toISOString(),
-          check_out_date: data.check_out_date && isValid(parseISO(data.check_out_date)) ? data.check_out_date : new Date().toISOString(),
-          deposit_amount: data.deposit_amount || '0.00',
-          raw_total: data.raw_total || '0.00',
-          discount_amount: data.discount_amount || '0.00',
-          total_amount: data.total_amount || '0.00',
-          status: ['Pending', 'Confirmed', 'Checked_in', 'Checked_out', 'Cancelled'].includes(data.status) ? data.status : 'Cancelled',
+          check_in_date:
+            data.check_in_date && isValid(parseISO(data.check_in_date))
+              ? data.check_in_date
+              : new Date().toISOString(),
+          check_out_date:
+            data.check_out_date && isValid(parseISO(data.check_out_date))
+              ? data.check_out_date
+              : new Date().toISOString(),
+          deposit_amount: data.deposit_amount || "0.00",
+          raw_total: data.raw_total || "0.00",
+          discount_amount: data.discount_amount || "0.00",
+          total_amount: data.total_amount || "0.00",
+          status: [
+            "Pending",
+            "Confirmed",
+            "Checked_in",
+            "Checked_out",
+            "Cancelled",
+          ].includes(data.status)
+            ? data.status
+            : "Cancelled",
           customer: data.customer || null,
           rooms: data.rooms.map((room: Room) => ({
             ...room,
@@ -213,16 +233,36 @@ const DetailBookings: React.FC = () => {
           services: data.services || [],
         };
         setBooking(bookingData);
-        const initialShowAmenities = data.rooms.reduce((acc: { [key: number]: boolean }, room: Room) => ({ ...acc, [room.id]: false }), {});
-        const initialShowServices = data.rooms.reduce((acc: { [key: number]: boolean }, room: Room) => ({ ...acc, [room.id]: false }), {});
+        const initialShowAmenities = data.rooms.reduce(
+          (acc: { [key: number]: boolean }, room: Room) => ({
+            ...acc,
+            [room.id]: false,
+          }),
+          {}
+        );
+        const initialShowServices = data.rooms.reduce(
+          (acc: { [key: number]: boolean }, room: Room) => ({
+            ...acc,
+            [room.id]: false,
+          }),
+          {}
+        );
         setShowAmenities(initialShowAmenities);
         setShowServices(initialShowServices);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Đã xảy ra lỗi khi tải chi tiết đặt phòng');
-      setSnackbarMessage(error instanceof Error ? error.message : 'Đã xảy ra lỗi khi tải chi tiết đặt phòng');
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng"
+      );
+      setSnackbarMessage(
+        error instanceof Error
+          ? error.message
+          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng"
+      );
       setSnackbarOpen(true);
     } finally {
       setLoading(false);
@@ -231,46 +271,48 @@ const DetailBookings: React.FC = () => {
 
   const fetchAvailableServices = async () => {
     try {
-      const response = await api.get('/service', {
+      const response = await api.get("/service", {
         headers: {
-          'Accept': 'application/json',
+          Accept: "application/json",
         },
       });
 
-      console.log('Dữ liệu thô từ API /service:', response.data);
+      console.log("Dữ liệu thô từ API /service:", response.data);
 
       if (response.status === 200) {
         const services: Service[] = response.data.data as Service[];
         if (!Array.isArray(services)) {
-          throw new Error('Cấu trúc dữ liệu từ API không hợp lệ.');
+          throw new Error("Cấu trúc dữ liệu từ API không hợp lệ.");
         }
 
-        console.log('Danh sách dịch vụ thô:', services);
+        console.log("Danh sách dịch vụ thô:", services);
 
-        const formattedServices: Service[] = services.map((service: Service) => ({
-          id: service.id,
-          service_id: service.service_id ?? service.id,
-          name: service.name || 'Unknown',
-          price: service.price ? String(service.price) : '0.00',
-          quantity: service.quantity || 1,
-          code: service.code || null,
-          category_id: service.category_id ?? null,
-          description: service.description ?? null,
-          status: service.status || 'active',
-          created_at: service.created_at ?? null,
-          updated_at: service.updated_at ?? null,
-          pivot: {
-            booking_id: 0,
-            service_id: service.id,
-            room_id: null,
+        const formattedServices: Service[] = services.map(
+          (service: Service) => ({
+            id: service.id,
+            service_id: service.service_id ?? service.id,
+            name: service.name || "Unknown",
+            price: service.price ? String(service.price) : "0.00",
             quantity: service.quantity || 1,
-          },
-        }));
+            code: service.code || null,
+            category_id: service.category_id ?? null,
+            description: service.description ?? null,
+            status: service.status || "active",
+            created_at: service.created_at ?? null,
+            updated_at: service.updated_at ?? null,
+            pivot: {
+              booking_id: 0,
+              service_id: service.id,
+              room_id: null,
+              quantity: service.quantity || 1,
+            },
+          })
+        );
 
-        console.log('Danh sách dịch vụ đã định dạng:', formattedServices);
+        console.log("Danh sách dịch vụ đã định dạng:", formattedServices);
 
         if (formattedServices.length === 0) {
-          console.warn('Không có dịch vụ nào sau khi xử lý.');
+          console.warn("Không có dịch vụ nào sau khi xử lý.");
         }
 
         setAvailableServices(formattedServices);
@@ -278,8 +320,8 @@ const DetailBookings: React.FC = () => {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (error) {
-      console.error('Lỗi khi lấy danh sách dịch vụ:', error);
-      setSnackbarMessage('Lỗi khi tải danh sách dịch vụ. Vui lòng thử lại.');
+      console.error("Lỗi khi lấy danh sách dịch vụ:", error);
+      setSnackbarMessage("Lỗi khi tải danh sách dịch vụ. Vui lòng thử lại.");
       setSnackbarOpen(true);
     }
   };
@@ -288,16 +330,16 @@ const DetailBookings: React.FC = () => {
     fetchBookingDetail();
   }, [bookingId]);
 
-  const handleBack = () => navigate('/listbookings');
+  const handleBack = () => navigate("/listbookings");
 
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { className: string; text: string } } = {
-      pending: { className: 'status-pending', text: 'Đang chờ' },
-      confirmed: { className: 'status-new', text: 'Mới' },
-      checked_in: { className: 'status-vip', text: 'Đã nhận phòng' },
-      checked_out: { className: 'status-vip', text: 'Đã trả phòng' },
-      cancelled: { className: 'status-vip', text: 'Đã hủy' },
-      default: { className: 'status-vip', text: 'Không xác định' },
+      pending: { className: "status-pending", text: "Đang chờ" },
+      confirmed: { className: "status-new", text: "Mới" },
+      checked_in: { className: "status-vip", text: "Đã nhận phòng" },
+      checked_out: { className: "status-vip", text: "Đã trả phòng" },
+      cancelled: { className: "status-vip", text: "Đã hủy" },
+      default: { className: "status-vip", text: "Không xác định" },
     };
     return statusMap[status.toLowerCase()] || statusMap.default;
   };
@@ -335,13 +377,17 @@ const DetailBookings: React.FC = () => {
 
   const handleQuantityChange = (serviceId: number, quantity: number) => {
     setSelectedServices((prev) =>
-      prev.map((s) => (s.service_id === serviceId ? { ...s, quantity: Math.max(1, quantity) } : s))
+      prev.map((s) =>
+        s.service_id === serviceId
+          ? { ...s, quantity: Math.max(1, quantity) }
+          : s
+      )
     );
   };
 
   const handleAddServices = async () => {
     if (!currentRoomId || selectedServices.length === 0) {
-      setSnackbarMessage('Vui lòng chọn ít nhất một dịch vụ.');
+      setSnackbarMessage("Vui lòng chọn ít nhất một dịch vụ.");
       setSnackbarOpen(true);
       return;
     }
@@ -355,7 +401,7 @@ const DetailBookings: React.FC = () => {
         })),
       });
 
-      console.log('Dữ liệu trả về từ API /add-services:', response.data);
+      console.log("Dữ liệu trả về từ API /add-services:", response.data);
 
       if (response.status === 200) {
         const apiResponse: ApiResponse = response.data;
@@ -365,10 +411,18 @@ const DetailBookings: React.FC = () => {
           let newServicesSource: Service[] = [];
           if (Array.isArray(apiResponse.data)) {
             newServicesSource = apiResponse.data;
-          } else if (apiResponse.data && typeof apiResponse.data === 'object' && 'services' in apiResponse.data) {
-            newServicesSource = (apiResponse.data as ServiceDataResponse).services || [];
+          } else if (
+            apiResponse.data &&
+            typeof apiResponse.data === "object" &&
+            "services" in apiResponse.data
+          ) {
+            newServicesSource =
+              (apiResponse.data as ServiceDataResponse).services || [];
           } else {
-            console.error('Không tìm thấy mảng dịch vụ trong response:', apiResponse);
+            console.error(
+              "Không tìm thấy mảng dịch vụ trong response:",
+              apiResponse
+            );
             return prev;
           }
 
@@ -378,13 +432,13 @@ const DetailBookings: React.FC = () => {
               id: s.id,
               service_id: s.service_id ?? s.id,
               room_id: s.room_id ?? null,
-              name: s.name || 'Unknown',
-              price: s.price ?? '0.00',
+              name: s.name || "Unknown",
+              price: s.price ?? "0.00",
               quantity: s.pivot?.quantity ?? 0,
               code: s.code ?? null,
               category_id: s.category_id ?? null,
               description: s.description ?? null,
-              status: s.status ?? 'active',
+              status: s.status ?? "active",
               created_at: s.created_at ?? null,
               updated_at: s.updated_at ?? null,
               pivot: {
@@ -396,14 +450,25 @@ const DetailBookings: React.FC = () => {
             }));
 
           if (newServices.length === 0) {
-            console.warn('Không có dịch vụ mới nào cho phòng hiện tại.');
+            console.warn("Không có dịch vụ mới nào cho phòng hiện tại.");
             return prev;
           }
 
-          const existingServices = (prev.rooms.find((room) => room.id === currentRoomId)?.services || [])
-            .filter((existingService) => !newServices.some((newService) => newService.service_id === existingService.service_id));
+          const existingServices = (
+            prev.rooms.find((room) => room.id === currentRoomId)?.services || []
+          ).filter(
+            (existingService) =>
+              !newServices.some(
+                (newService) =>
+                  newService.service_id === existingService.service_id
+              )
+          );
 
-          const dataResponse = !Array.isArray(apiResponse.data) && typeof apiResponse.data === 'object' ? apiResponse.data as ServiceDataResponse : null;
+          const dataResponse =
+            !Array.isArray(apiResponse.data) &&
+            typeof apiResponse.data === "object"
+              ? (apiResponse.data as ServiceDataResponse)
+              : null;
           return {
             ...prev,
             services: [...prev.services, ...newServices],
@@ -412,17 +477,23 @@ const DetailBookings: React.FC = () => {
                 ? { ...room, services: [...existingServices, ...newServices] }
                 : room
             ),
-            raw_total: dataResponse?.raw_total?.toString() || apiResponse.meta?.raw_total?.toString() || prev.raw_total,
-            total_amount: dataResponse?.total_amount?.toString() || apiResponse.meta?.total_amount?.toString() || prev.total_amount,
+            raw_total:
+              dataResponse?.raw_total?.toString() ||
+              apiResponse.meta?.raw_total?.toString() ||
+              prev.raw_total,
+            total_amount:
+              dataResponse?.total_amount?.toString() ||
+              apiResponse.meta?.total_amount?.toString() ||
+              prev.total_amount,
           };
         });
-        setSnackbarMessage('Thêm dịch vụ thành công!');
+        setSnackbarMessage("Thêm dịch vụ thành công!");
         setSnackbarOpen(true);
         handleCloseServiceDialog();
       }
     } catch (error) {
-      console.error('Lỗi khi thêm dịch vụ:', error);
-      setSnackbarMessage('Lỗi khi thêm dịch vụ. Vui lòng thử lại.');
+      console.error("Lỗi khi thêm dịch vụ:", error);
+      setSnackbarMessage("Lỗi khi thêm dịch vụ. Vui lòng thử lại.");
       setSnackbarOpen(true);
     }
   };
@@ -441,7 +512,12 @@ const DetailBookings: React.FC = () => {
             ...prev,
             rooms: prev.rooms.map((room) =>
               room.id === roomId
-                ? { ...room, services: room.services.filter((s) => s.service_id !== serviceId) }
+                ? {
+                    ...room,
+                    services: room.services.filter(
+                      (s) => s.service_id !== serviceId
+                    ),
+                  }
                 : room
             ),
             services: prev.services.filter((s) => s.id !== serviceId),
@@ -449,31 +525,26 @@ const DetailBookings: React.FC = () => {
             total_amount: response.data.data?.total_amount || prev.total_amount,
           };
         });
-        setSnackbarMessage('Xóa dịch vụ thành công!');
+        setSnackbarMessage("Xóa dịch vụ thành công!");
         setSnackbarOpen(true);
       }
     } catch (error) {
-      console.error('Lỗi khi xóa dịch vụ:', error);
-      setSnackbarMessage('Lỗi khi xóa dịch vụ.');
+      console.error("Lỗi khi xóa dịch vụ:", error);
+      setSnackbarMessage("Lỗi khi xóa dịch vụ.");
       setSnackbarOpen(true);
     }
   };
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
-    setSnackbarMessage('');
-  };
-
-  // Hàm lấy danh sách phòng liên kết với dịch vụ
-  const getLinkedRooms = (serviceId: number): string[] => {
-    return booking?.rooms
-      .filter((room) => room.services.some((s) => s.service_id === serviceId))
-      .map((room) => room.room_number) || [];
+    setSnackbarMessage("");
   };
 
   // Lọc dịch vụ duy nhất và tính tổng số lượng
   const uniqueServices = Array.from(
-    new Map(booking?.services.map((service) => [service.service_id, service])).values()
+    new Map(
+      booking?.services.map((service) => [service.service_id, service])
+    ).values()
   ).map((service) => ({
     ...service,
     totalQuantity: booking?.services
@@ -528,7 +599,11 @@ const DetailBookings: React.FC = () => {
                   <div className="info-item">
                     <div className="info-label">Giới tính</div>
                     <div className="info-value">
-                      {booking.customer.gender === 'male' ? 'Nam' : booking.customer.gender === 'female' ? 'Nữ' : 'Khác'}
+                      {booking.customer.gender === "male"
+                        ? "Nam"
+                        : booking.customer.gender === "female"
+                        ? "Nữ"
+                        : "Khác"}
                     </div>
                   </div>
                   <div className="info-item">
@@ -541,11 +616,15 @@ const DetailBookings: React.FC = () => {
                   </div>
                   <div className="info-item">
                     <div className="info-label">Ngày sinh</div>
-                    <div className="info-value">{formatDateString(booking.customer.date_of_birth)}</div>
+                    <div className="info-value">
+                      {formatDateString(booking.customer.date_of_birth)}
+                    </div>
                   </div>
                   <div className="info-item">
                     <div className="info-label">Quốc tịch</div>
-                    <div className="info-value">{booking.customer.nationality}</div>
+                    <div className="info-value">
+                      {booking.customer.nationality}
+                    </div>
                   </div>
                   <div className="info-item">
                     <div className="info-label">Địa chỉ</div>
@@ -553,7 +632,9 @@ const DetailBookings: React.FC = () => {
                   </div>
                   <div className="info-item">
                     <div className="info-label">Ghi chú</div>
-                    <div className="info-value">{booking.customer.note || 'Không có'}</div>
+                    <div className="info-value">
+                      {booking.customer.note || "Không có"}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -570,35 +651,51 @@ const DetailBookings: React.FC = () => {
                   </div>
                   <div className="info-item">
                     <div className="info-label">Ngày nhận phòng</div>
-                    <div className="info-value">{formatDateString(booking.check_in_date)}</div>
+                    <div className="info-value">
+                      {formatDateString(booking.check_in_date)}
+                    </div>
                   </div>
                   <div className="info-item">
                     <div className="info-label">Ngày trả phòng</div>
-                    <div className="info-value">{formatDateString(booking.check_out_date)}</div>
+                    <div className="info-value">
+                      {formatDateString(booking.check_out_date)}
+                    </div>
                   </div>
                   <div className="info-item">
                     <div className="info-label">Trạng thái</div>
                     <div className="info-value">
-                      <span className={`status-badge ${getStatusBadge(booking.status).className}`}>
+                      <span
+                        className={`status-badge ${
+                          getStatusBadge(booking.status).className
+                        }`}
+                      >
                         {getStatusBadge(booking.status).text}
                       </span>
                     </div>
                   </div>
                   <div className="info-item">
                     <div className="info-label">Tiền đặt cọc</div>
-                    <div className="info-value">{formatCurrency(booking.deposit_amount)}</div>
+                    <div className="info-value">
+                      {formatCurrency(booking.deposit_amount)}
+                    </div>
                   </div>
                   <div className="info-item">
                     <div className="info-label">Tổng tiền</div>
-                    <div className="info-value price-highlight">{formatCurrency(booking.raw_total)}</div>
+                    <div className="info-value price-highlight">
+                      {formatCurrency(booking.raw_total)}
+                    </div>
                   </div>
                   <div className="info-item">
                     <div className="info-label">Tổng giảm</div>
-                    <div className="info-value">{formatCurrency(booking.discount_amount)}</div>
+                    <div className="info-value">
+                      {formatCurrency(booking.discount_amount)}
+                    </div>
                   </div>
                   <div className="info-item">
                     <div className="info-label">Tổng giá cuối</div>
-                    <div className="info-value price-highlight">{formatCurrency(booking.total_amount)}</div>
+                    <div className="info-value price-highlight">
+                      {formatCurrency(booking.total_amount)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -631,23 +728,33 @@ const DetailBookings: React.FC = () => {
                           <tr>
                             <td>{room.room_number}</td>
                             <td>{room.room_type.name}</td>
-                            <td>{room.room_type.code || 'N/A'}</td>
+                            <td>{room.room_type.code || "N/A"}</td>
                             <td>{room.room_type.max_occupancy} người</td>
-                            <td className="price-highlight">{formatCurrency(room.room_type.base_rate)}</td>
-                            <td>{room.status === 'booked' ? 'Đã đặt' : room.status}</td>
+                            <td className="price-highlight">
+                              {formatCurrency(room.room_type.base_rate)}
+                            </td>
+                            <td>
+                              {room.status === "booked"
+                                ? "Đã đặt"
+                                : room.status}
+                            </td>
                             <td>
                               <div className="action-buttons">
                                 <Button
                                   className="view-amenities-button"
                                   onClick={() => toggleAmenities(room.id)}
                                 >
-                                  {showAmenities[room.id] ? 'Ẩn tiện nghi' : 'Xem tiện nghi'}
+                                  {showAmenities[room.id]
+                                    ? "Ẩn tiện nghi"
+                                    : "Xem tiện nghi"}
                                 </Button>
                                 <Button
                                   className="view-services-button"
                                   onClick={() => toggleServices(room.id)}
                                 >
-                                  {showServices[room.id] ? 'Ẩn dịch vụ' : 'Xem dịch vụ'}
+                                  {showServices[room.id]
+                                    ? "Ẩn dịch vụ"
+                                    : "Xem dịch vụ"}
                                 </Button>
                               </div>
                             </td>
@@ -660,16 +767,30 @@ const DetailBookings: React.FC = () => {
                                   <Table className="user-detail-table">
                                     <TableBody>
                                       {room.room_type.amenities.length > 0 ? (
-                                        room.room_type.amenities.map((amenity) => (
-                                          <TableRow key={amenity.id}>
-                                            <TableCell><strong>Tên tiện nghi:</strong> {amenity.name}</TableCell>
-                                            <TableCell><strong>Mã:</strong> {amenity.code || 'N/A'}</TableCell>
-                                            <TableCell><strong>Số lượng:</strong> {amenity.pivot.quantity}</TableCell>
-                                          </TableRow>
-                                        ))
+                                        room.room_type.amenities.map(
+                                          (amenity) => (
+                                            <TableRow key={amenity.id}>
+                                              <TableCell>
+                                                <strong>Tên tiện nghi:</strong>{" "}
+                                                {amenity.name}
+                                              </TableCell>
+                                              <TableCell>
+                                                <strong>Mã:</strong>{" "}
+                                                {amenity.code || "N/A"}
+                                              </TableCell>
+                                              <TableCell>
+                                                <strong>Số lượng:</strong>{" "}
+                                                {amenity.pivot.quantity}
+                                              </TableCell>
+                                            </TableRow>
+                                          )
+                                        )
                                       ) : (
                                         <TableRow>
-                                          <TableCell colSpan={3}>Không có tiện nghi nào cho phòng {room.room_number}.</TableCell>
+                                          <TableCell colSpan={3}>
+                                            Không có tiện nghi nào cho phòng{" "}
+                                            {room.room_number}.
+                                          </TableCell>
                                         </TableRow>
                                       )}
                                     </TableBody>
@@ -696,14 +817,25 @@ const DetailBookings: React.FC = () => {
                                       {room.services.length > 0 ? (
                                         room.services.map((service) => (
                                           <TableRow key={service.id}>
-                                            <TableCell>{service.name}</TableCell>
-                                            <TableCell>{formatCurrency(service.price)}</TableCell>
-                                            <TableCell>{service.quantity}</TableCell>
+                                            <TableCell>
+                                              {service.name}
+                                            </TableCell>
+                                            <TableCell>
+                                              {formatCurrency(service.price)}
+                                            </TableCell>
+                                            <TableCell>
+                                              {service.quantity}
+                                            </TableCell>
                                             <TableCell>
                                               <Button
                                                 variant="outlined"
                                                 startIcon={<TrashIcon />}
-                                                onClick={() => handleDeleteService(room.id, service.service_id!)}
+                                                onClick={() =>
+                                                  handleDeleteService(
+                                                    room.id,
+                                                    service.service_id!
+                                                  )
+                                                }
                                                 className="action-delete"
                                               >
                                                 Xóa
@@ -713,7 +845,10 @@ const DetailBookings: React.FC = () => {
                                         ))
                                       ) : (
                                         <TableRow>
-                                          <TableCell colSpan={4}>Không có dịch vụ nào cho phòng {room.room_number}.</TableCell>
+                                          <TableCell colSpan={4}>
+                                            Không có dịch vụ nào cho phòng{" "}
+                                            {room.room_number}.
+                                          </TableCell>
                                         </TableRow>
                                       )}
                                     </TableBody>
@@ -722,7 +857,9 @@ const DetailBookings: React.FC = () => {
                                     <Button
                                       variant="contained"
                                       startIcon={<PlusIcon />}
-                                      onClick={() => handleOpenServiceDialog(room.id)}
+                                      onClick={() =>
+                                        handleOpenServiceDialog(room.id)
+                                      }
                                       className="action-add-service"
                                     >
                                       Thêm dịch vụ
@@ -747,11 +884,10 @@ const DetailBookings: React.FC = () => {
                 <div className="table-container">
                   <table className="info-table">
                     <thead>
-                      <tr>
+                      <tr key="header">
                         <th>Tên dịch vụ</th>
                         <th>Giá</th>
                         <th>Tổng số lượng</th>
-                        <th>Phòng liên kết</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -759,18 +895,17 @@ const DetailBookings: React.FC = () => {
                         uniqueServices.map((service) => (
                           <TableRow key={service.id}>
                             <TableCell>{service.name}</TableCell>
-                            <TableCell className="price-highlight">{formatCurrency(service.price)}</TableCell>
-                            <TableCell>{service.totalQuantity}</TableCell>
-                            <TableCell>
-                              {getLinkedRooms(service.service_id!).length > 0
-                                ? getLinkedRooms(service.service_id!).join(', ')
-                                : 'Không liên kết phòng'}
+                            <TableCell className="price-highlight">
+                              {formatCurrency(service.price)}
                             </TableCell>
+                            <TableCell>{service.totalQuantity}</TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4}>Không có dịch vụ nào được thêm.</TableCell>
+                          <TableCell colSpan={4}>
+                            Không có dịch vụ nào được thêm.
+                          </TableCell>
                         </TableRow>
                       )}
                     </tbody>
@@ -780,27 +915,48 @@ const DetailBookings: React.FC = () => {
             </div>
           </div>
 
-          <Dialog open={openServiceDialog} onClose={handleCloseServiceDialog} maxWidth="sm" fullWidth>
-            <DialogTitle>Thêm dịch vụ cho phòng {booking?.rooms.find((r) => r.id === currentRoomId)?.room_number}</DialogTitle>
+          <Dialog
+            open={openServiceDialog}
+            onClose={handleCloseServiceDialog}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle>
+              Thêm dịch vụ cho phòng{" "}
+              {booking?.rooms.find((r) => r.id === currentRoomId)?.room_number}
+            </DialogTitle>
             <DialogContent>
               <List>
                 {availableServices.length > 0 ? (
                   availableServices.map((service) => (
                     <ListItem key={service.id}>
                       <Checkbox
-                        checked={selectedServices.some((s) => s.service_id === service.id)}
+                        checked={selectedServices.some(
+                          (s) => s.service_id === service.id
+                        )}
                         onChange={() => handleServiceSelection(service.id)}
                       />
                       <ListItemText
                         primary={service.name}
                         secondary={`Giá: ${formatCurrency(service.price)}`}
                       />
-                      {selectedServices.some((s) => s.service_id === service.id) && (
+                      {selectedServices.some(
+                        (s) => s.service_id === service.id
+                      ) && (
                         <TextField
                           label="Số lượng"
                           type="number"
-                          value={selectedServices.find((s) => s.service_id === service.id)?.quantity || 1}
-                          onChange={(e) => handleQuantityChange(service.id, Number(e.target.value))}
+                          value={
+                            selectedServices.find(
+                              (s) => s.service_id === service.id
+                            )?.quantity || 1
+                          }
+                          onChange={(e) =>
+                            handleQuantityChange(
+                              service.id,
+                              Number(e.target.value)
+                            )
+                          }
                           inputProps={{ min: 1 }}
                           size="small"
                           style={{ width: 100, marginLeft: 10 }}
@@ -832,12 +988,14 @@ const DetailBookings: React.FC = () => {
             open={snackbarOpen}
             autoHideDuration={3000}
             onClose={handleSnackbarClose}
-            anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            anchorOrigin={{ vertical: "top", horizontal: "center" }}
           >
             <Alert
               onClose={handleSnackbarClose}
-              severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-              sx={{ width: '100%' }}
+              severity={
+                snackbarMessage.includes("thành công") ? "success" : "error"
+              }
+              sx={{ width: "100%" }}
             >
               {snackbarMessage}
             </Alert>
