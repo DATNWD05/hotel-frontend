@@ -335,7 +335,7 @@ const DetailBookings: React.FC = () => {
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { className: string; text: string } } = {
       pending: { className: "status-pending", text: "Chờ xác nhận" },
-      confirmed: { className: "status-new", text: "Đã xác nhận" },
+      confirmed: { className: "status-confirmed", text: "Đã xác nhận" },
       "checked-in": { className: "status-checked-in", text: "Đã nhận phòng" },
       "checked-out": { className: "status-checked-out", text: "Đã trả phòng" },
       cancelled: { className: "status-cancelled", text: "Đã hủy" },
@@ -373,6 +373,35 @@ const DetailBookings: React.FC = () => {
       }
       return [...prev, { service_id: serviceId, quantity }];
     });
+  };
+
+  const getRoomStatus = (status: string): string => {
+    switch (status) {
+      case "available":
+        return "Đang Trống";
+      case "booked":
+        return "Đã đặt";
+      case "cleaning":
+        return "Đang dọn dẹp";
+      case "maintenance":
+        return "Bảo trì";
+      default:
+        return "Không xác định";
+    }
+  };
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case "available":
+        return "#4CAF50"; // xanh lá
+      case "booked":
+        return "#FF9800"; // cam
+      case "cleaning":
+        return "#03A9F4"; // xanh dương
+      case "maintenance":
+        return "#F44336"; // đỏ
+      default:
+        return "#9E9E9E"; // xám
+    }
   };
 
   const handleQuantityChange = (serviceId: number, quantity: number) => {
@@ -733,11 +762,15 @@ const DetailBookings: React.FC = () => {
                             <td className="price-highlight">
                               {formatCurrency(room.room_type.base_rate)}
                             </td>
-                            <td>
-                              {room.status === "booked"
-                                ? "Đã đặt"
-                                : room.status}
+                            <td
+                              style={{
+                                color: getStatusColor(room.status),
+                                fontWeight: "bold",
+                              }}
+                            >
+                              {getRoomStatus(room.status)}
                             </td>
+
                             <td>
                               <div className="action-buttons">
                                 <Button
