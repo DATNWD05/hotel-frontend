@@ -147,13 +147,34 @@
 }
 
 .status-pending {
-  background: #fff3cd;
-  color: #856404;
+  background: #fef3c7; /* Vàng nhạt - chờ đợi */
+  color: #92400e; /* Nâu đậm */
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.status-checked-in {
+  background: #dbeafe; /* Xanh dương nhạt - tích cực */
+  color: #1e40af; /* Xanh dương đậm */
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.status-checked-out {
+  background: #e2e8f0; /* Xám xanh nhạt - hoàn tất */
+  color: #2d3748; /* Xám đậm */
+}
+
+.status-cancelled {
+  background: #fed7d7; /* Đỏ nhạt - cảnh báo */
+  color: #9b2c2c; /* Đỏ đậm nhẹ */
 }
 
 .status-vip {
-  background: #f8d7da;
-  color: #721c24;
+  background: #e9d8fd; /* Tím nhạt - đặc biệt */
+  color: #5a2e87; /* Tím đậm */
 }
 
 .price-highlight {
