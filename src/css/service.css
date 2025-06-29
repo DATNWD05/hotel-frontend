@@ -1,272 +1,298 @@
-/* General container */
-.service-container {
-  padding: 24px;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f9f9f9;
+.promotion-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f0f4f8;
+  transition: background 0.3s ease;
 }
 
-/* Breadcrumb */
-.breadcrumb {
-  margin-bottom: 16px;
-  font-size: 14px;
-  color: #555;
-}
-.breadcrumb a {
-  color: #007bff;
-  text-decoration: none;
-}
-.breadcrumb span::before {
-  content: '›';
-  margin: 0 8px;
-  color: #999;
-}
-
-/* Header */
-.header {
+.promotion-title .promotion-header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
 }
-.header h1 {
+
+.promotion-title h2 {
+  margin: 0;
   font-size: 24px;
-  font-weight: bold;
-  color: #333;
-}
-.btn-add {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-}
-.btn-add:hover {
-  background-color: #007bff;
+  color: #1a73e8;
+  transition: color 0.3s ease;
 }
 
-/* Tabs */
-.tabs {
+.promotion-title h2 b {
+  color: #d93025;
+  transition: color 0.3s ease;
+}
+
+.promotion-filter-container {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
-  list-style: none;
-  padding: 0;
-}
-.tabs li {
-  padding: 8px 16px;
-  border-radius: 20px;
-  background-color: #e0e0e0;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-}
-.tabs li.active {
-  background-color: #007bff;
-  color: white;
-  font-weight: 500;
-}
-.tabs li:hover {
-  background-color: #d4d4d8;
-}
-
-/* Table */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-thead {
-  background-color: #f2f2f2;
-}
-th, td {
-  padding: 12px 20px;
-  text-align: center;
-  font-size: 14px;
-}
-th {
-  font-weight: 600;
-  color: #444;
-}
-tr:nth-child(even) {
-  background-color: #fafafa;
-}
-.group-header {
-  background-color: #e8f0fe;
-  font-weight: bold;
-  cursor: pointer;
-}
-.group-header td {
-  color: #333;
-}
-.arrow {
-  display: inline-block;
-  margin-right: 8px;
-  transform: rotate(-90deg);
-  transition: transform 0.3s ease;
-}
-.arrow.open {
-  transform: rotate(0deg);
-}
-.service-row td {
-  border-top: 1px solid #eee;
-}
-
-/* Actions */
-.actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
   align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 0; /* Đảm bảo không có khoảng cách */
+  padding: 0; /* Loại bỏ padding hoàn toàn */
+  background: #f0f4f8;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  max-width: 600px;
+  transition: all 0.3s ease;
 }
-.edit-btn, .delete-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition: transform 0.2s;
+
+.promotion-filter-container .MuiTextField-root,
+.promotion-filter-container .category-select,
+.promotion-filter-container .MuiButton-root {
+  margin: 0; /* Loại bỏ margin */
+  padding: 0; /* Loại bỏ padding */
 }
-.edit-btn:hover, .delete-btn:hover {
+
+.promotion-filter-container .MuiTextField-root {
+  background: #ffffff;
+  border-radius: 6px;
+  width: 150px;
+  flex: 0 0 auto;
+  transition: all 0.3s ease;
+  /* Loại bỏ khoảng cách nội tại của Material-UI */
+  & .MuiInputBase-root {
+    padding: 4px 8px; /* Tùy chỉnh padding nội tại */
+    margin: 0;
+  }
+}
+
+.promotion-filter-container .MuiTextField-root:hover {
+  background: #f1f5f9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.promotion-filter-container .category-select {
+  background: #ffffff;
+  border-radius: 6px;
+  width: 150px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+  /* Loại bỏ khoảng cách nội tại */
+  & > * {
+    margin: 0;
+    padding: 4px 8px;
+  }
+}
+
+.promotion-filter-container .category-select:hover {
+  background: #f1f5f9;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.promotion-filter-container .MuiButton-root {
+  border-radius: 6px;
+  text-transform: none;
+  color: #1a73e8;
+  border-color: #1a73e8;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  flex: 0 0 auto;
+  background: #ffffff;
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+.promotion-filter-container .MuiButton-root:hover {
+  background: #e0f2fe;
+  border-color: #104ea0;
+  color: #104ea0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.promotion-filter-container .MuiPopover-paper {
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  max-height: 280px;
+  padding: 8px;
+  background: #f0f4f8;
+  animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.promotion-filter-container .MuiTypography-root {
+  font-size: 14px;
+  color: #374151;
+  transition: color 0.3s ease;
+}
+
+.promotion-table-container {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.promotion-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.promotion-table th,
+.promotion-table td {
+  padding: 12px 15px;
+  font-size: 14px;
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.3s ease;
+}
+
+.promotion-table th {
+  background: #f5f5f5;
+  color: #333;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.promotion-table td {
+  color: #333;
+}
+
+.promotion-table tr:hover {
+  background-color: #f9fafb;
+}
+
+.promotion-wrapper .promotion-action-view {
+  color: #1a73e8;
+  transition: all 0.3s ease;
+}
+
+.promotion-wrapper .promotion-action-view:hover {
+  opacity: 0.8;
   transform: scale(1.1);
 }
-.edit-icon {
-  width: 20px;
-  height: 20px;
-  vertical-align: middle;
-  color: #ffc107; /* Yellow for pencil icon */
-  fill: #ffc107;
-}
-.delete-icon {
-  width: 20px;
-  height: 20px;
-  vertical-align: middle;
-  color: #dc3545; /* Red for trash icon */
-  fill: #dc3545
+
+.promotion-wrapper .promotion-action-edit {
+  color: #FACC15;
+  transition: all 0.3s ease;
 }
 
-/* Pagination */
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 24px;
-  gap: 12px;
-}
-.pagination button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-}
-.pagination button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-.pagination span {
-  font-size: 14px;
-  color: #444;
+.promotion-wrapper .promotion-action-edit:hover {
+  opacity: 0.8;
+  transform: scale(1.1);
 }
 
-/* Edit Form */
-.edit-form-container {
+.promotion-wrapper .promotion-action-delete {
+  color: #d32f2f;
+  transition: all 0.3s ease;
+}
+
+.promotion-wrapper .promotion-action-delete:hover {
+  opacity: 0.8;
+  transform: scale(1.1);
+}
+
+.promotion-wrapper .promotion-btn-cancel {
+  color: #d32f2f;
+  border-color: #d32f2f;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.promotion-wrapper .promotion-btn-cancel:hover {
+  background: #fef2f2;
+  border-color: #c62828;
+}
+
+.promotion-detail-container {
+  padding: 15px;
   background: #ffffff;
-  padding: 20px;
   border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
-.edit-form-title {
+
+.promotion-detail-container h3 {
+  margin: 10px 0;
+  color: #1a73e8;
   font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #333;
+  transition: color 0.3s ease;
 }
-.edit-form {
-  display: grid;
-  gap: 8px;
-}
-.form-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #444;
-  margin-bottom: 4px;
-}
-.form-input input,
-.form-select select,
-.form-textarea {
+
+.promotion-detail-table {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin: 10px 0;
   width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 14px;
-  background-color: #fff;
-  box-sizing: border-box;
+  transition: all 0.3s ease;
 }
-.form-input input:focus,
-.form-select select:focus,
-.form-textarea:focus {
-  border-color: #007bff;
-  outline: none;
-}
-.form-textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-.form-button {
-  background-color: #007bff;
-  color: white;
+
+.promotion-detail-table td {
+  padding: 8px 15px;
   border: none;
-  padding: 8px 16px;
+  color: #555;
+  transition: color 0.3s ease;
+}
+
+.promotion-detail-table th {
+  background: #f5f5f5;
+  color: #333;
+  font-weight: 600;
+}
+
+.promotion-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.promotion-error-message {
+  text-align: center;
+  padding: 10px;
+  color: #d32f2f;
+  font-size: 16px;
+  background: #ffebee;
   border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  margin-top: 8px;
-}
-.form-button:hover {
-  background-color: #0056b3;
-}
-.cancel-button {
-  background-color: #6c757d;
-  margin-left: 8px;
-}
-.cancel-button:hover {
-  background-color: #5a6268;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
 }
 
-/* Loading & Error */
-.loading, .error {
-  margin-top: 16px;
-  font-size: 14px;
+.promotion-no-data {
   text-align: center;
+  padding: 20px;
+  color: #666;
+  font-size: 16px;
+  transition: color 0.3s ease;
 }
-.loading {
-  color: #888;
-}
-.error {
-  color: #dc3545;
-}
-.detail-container {
+
+.promotion-dialog {
+  border-radius: 8px;
   padding: 16px;
-  background-color: #f9f9f9;
+  transition: all 0.3s ease;
 }
 
-.detail-table {
-  width: 100%;
-  margin-bottom: 16px;
+.MuiPaginationItem-root {
+  border-radius: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
-.service-table-container {
-  margin-top: 16px;
+.MuiPaginationItem-root.Mui-selected {
+  background-color: #1a73e8;
+  color: #fff;
 }
 
-.error-message {
-  text-align: center;
-  padding: 16px;
+.MuiPaginationItem-root:hover {
+  background-color: #e0f2fe;
 }

@@ -47,7 +47,17 @@
   border-bottom: 2px solid #e0e0e0;
 }
 
-.amenities-table td {
+.promotions-table th:first-child,
+.promotions-table td:first-child {
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.promotions-table td {
   color: #333;
 }
 
@@ -63,14 +73,52 @@
 
 .detail-table {
   width: 100%;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  max-width: 100%;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 16px 20px;
+  margin-top: 0px;
+  transition: opacity 0.3s ease-in-out;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
-.detail-table td {
-  padding: 8px 15px;
-  border: none;
-  color: #555;
+.promotions-detail-container h3 {
+  margin-bottom: 16px;
+  margin-top: 12px;
+}
+
+.promotions-detail-container > .MuiBox-root:first-of-type {
+  margin-top: 16px;
+}
+
+.promotion-detail-content {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin: 10px 0;
+  padding: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.detail-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.detail-item {
+  flex: 1;
+  min-width: 0; /* Đảm bảo không bị giới hạn chiều rộng tối thiểu */
+  overflow: visible; /* Hiển thị đầy đủ nội dung */
+  white-space: normal; /* Cho phép xuống dòng */
+}
+
+.detail-item strong {
+  margin-right: 10px;
 }
 
 .error-message {
