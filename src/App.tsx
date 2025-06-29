@@ -16,8 +16,6 @@ import AddCustomer from "./pages/Customer/AddCustomer";
 import CreateService from "./pages/Services/CreateService";
 import ServiceCategoryList from "./pages/Services/Service_category";
 import AddServiceCategory from "./pages/Services/AddServiceCategory";
-import RoomList from "./pages/Room/RoomList";
-import RoomView from "./pages/Room/RoomView";
 import RoomTypesList from "./pages/Room/RoomTypeList";
 import AddRoomType from "./pages/Room/AddRoomType";
 import Amenities from "./pages/Room/Amenities";
@@ -65,9 +63,6 @@ function App() {
         <Route path="service/add" element={<RoleBasedRoute allowedRoleIds={[1]}><CreateService /></RoleBasedRoute>} />
         <Route path="service-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><ServiceCategoryList /></RoleBasedRoute>} />
         <Route path="/service-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddServiceCategory /></RoleBasedRoute>} />
-
-        <Route path="/rooms" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomList /></RoleBasedRoute>} />
-        <Route path="/room/:id" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomView /></RoleBasedRoute>} />
 
         <Route path="/room-types" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomTypesList /></RoleBasedRoute>} />
         <Route path="/room-types/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRoomType /></RoleBasedRoute>} />

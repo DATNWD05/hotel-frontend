@@ -219,8 +219,8 @@ const DetailBookings: React.FC = () => {
           status: [
             "Pending",
             "Confirmed",
-            "Checked_in",
-            "Checked_out",
+            "Checked-in",
+            "Checked-out",
             "Cancelled",
           ].includes(data.status)
             ? data.status
@@ -334,11 +334,11 @@ const DetailBookings: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const statusMap: { [key: string]: { className: string; text: string } } = {
-      pending: { className: "status-pending", text: "Đang chờ" },
-      confirmed: { className: "status-new", text: "Mới" },
-      checked_in: { className: "status-vip", text: "Đã nhận phòng" },
-      checked_out: { className: "status-vip", text: "Đã trả phòng" },
-      cancelled: { className: "status-vip", text: "Đã hủy" },
+      pending: { className: "status-pending", text: "Chờ xác nhận" },
+      confirmed: { className: "status-new", text: "Đã xác nhận" },
+      "checked-in": { className: "status-checked-in", text: "Đã nhận phòng" },
+      "checked-out": { className: "status-checked-out", text: "Đã trả phòng" },
+      cancelled: { className: "status-cancelled", text: "Đã hủy" },
       default: { className: "status-vip", text: "Không xác định" },
     };
     return statusMap[status.toLowerCase()] || statusMap.default;
