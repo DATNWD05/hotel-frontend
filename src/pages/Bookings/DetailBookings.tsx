@@ -204,27 +204,13 @@ const DetailBookings: React.FC = () => {
         }
         const bookingData: Booking = {
           ...data,
-          check_in_date:
-            data.check_in_date && isValid(parseISO(data.check_in_date))
-              ? data.check_in_date
-              : new Date().toISOString(),
-          check_out_date:
-            data.check_out_date && isValid(parseISO(data.check_out_date))
-              ? data.check_out_date
-              : new Date().toISOString(),
-          deposit_amount: data.deposit_amount || "0.00",
-          raw_total: data.raw_total || "0.00",
-          discount_amount: data.discount_amount || "0.00",
-          total_amount: data.total_amount || "0.00",
-          status: [
-            "Pending",
-            "Confirmed",
-            "Checked_in",
-            "Checked_out",
-            "Cancelled",
-          ].includes(data.status)
-            ? data.status
-            : "Cancelled",
+          check_in_date: data.check_in_date && isValid(parseISO(data.check_in_date)) ? data.check_in_date : new Date().toISOString(),
+          check_out_date: data.check_out_date && isValid(parseISO(data.check_out_date)) ? data.check_out_date : new Date().toISOString(),
+          deposit_amount: data.deposit_amount || '0.00',
+          raw_total: data.raw_total || '0.00',
+          discount_amount: data.discount_amount || '0.00',
+          total_amount: data.total_amount || '0.00',
+          status: ['Pending', 'Confirmed', 'Checked-in', 'Checked-out', 'Cancelled'].includes(data.status) ? data.status : 'Cancelled',
           customer: data.customer || null,
           rooms: data.rooms.map((room: Room) => ({
             ...room,
@@ -233,19 +219,10 @@ const DetailBookings: React.FC = () => {
           services: data.services || [],
         };
         setBooking(bookingData);
+        // Khởi tạo trạng thái hiển thị tiện nghi cho từng phòng
         const initialShowAmenities = data.rooms.reduce(
-          (acc: { [key: number]: boolean }, room: Room) => ({
-            ...acc,
-            [room.id]: false,
-          }),
-          {}
-        );
-        const initialShowServices = data.rooms.reduce(
-          (acc: { [key: number]: boolean }, room: Room) => ({
-            ...acc,
-            [room.id]: false,
-          }),
-          {}
+          (acc: { [key: number]: boolean }, room: Room) => ({ ...acc, [room.id]: false }),
+          {} as { [key: number]: boolean }
         );
         setShowAmenities(initialShowAmenities);
         setShowServices(initialShowServices);
