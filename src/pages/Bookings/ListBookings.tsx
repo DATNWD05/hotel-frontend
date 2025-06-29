@@ -249,14 +249,6 @@ const getBookingStatus = (
   }
 };
 
-const getBookingStatus = (
-  status: string
-): { status: string; color: string } => {
-  const key = status.toLowerCase() as BookingStatusKey;
-  return bookingStatusMap[key] ?? { status: 'Không xác định', color: '#757575' };
-};
-
-
 const ListBookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
