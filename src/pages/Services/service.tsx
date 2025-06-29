@@ -444,7 +444,6 @@ const Service: React.FC = () => {
                 <Table sx={{ width: '100%' }}>
                   <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
                     <TableRow>
-                      <TableCell><b>ID</b></TableCell>
                       <TableCell><b>Nhóm dịch vụ</b></TableCell>
                       <TableCell><b>Tên dịch vụ</b></TableCell>
                       <TableCell><b>Giá mỗi đơn</b></TableCell>
@@ -456,7 +455,6 @@ const Service: React.FC = () => {
                     {services.map((service) => (
                       <React.Fragment key={service.id}>
                         <TableRow hover>
-                          <TableCell>{service.id}</TableCell>
                           <TableCell>{serviceCategories.find((c) => c.id === service.category.id)?.name || 'Không xác định'}</TableCell>
                           <TableCell>{service.name}</TableCell>
                           <TableCell>{service.price.toLocaleString('vi-VN')} đ</TableCell>
@@ -512,7 +510,7 @@ const Service: React.FC = () => {
                           </TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell colSpan={6} style={{ padding: 0 }}>
+                          <TableCell colSpan={5} style={{ padding: 0 }}>
                             <Collapse in={selectedServiceId === service.id}>
                               <div className="promotion-detail-container">
                                 <Box sx={{ p: 2 }}>
@@ -522,15 +520,12 @@ const Service: React.FC = () => {
                                   <Table className="promotion-detail-table">
                                     <TableBody>
                                       <TableRow>
-                                        <TableCell><strong>ID:</strong> {service.id}</TableCell>
                                         <TableCell><strong>Tên dịch vụ:</strong> {service.name}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
                                         <TableCell><strong>Nhóm dịch vụ:</strong> {serviceCategories.find((c) => c.id === service.category.id)?.name || 'Không xác định'}</TableCell>
-                                        <TableCell><strong>Giá mỗi đơn:</strong> {service.price.toLocaleString('vi-VN')} đ</TableCell>
                                       </TableRow>
                                       <TableRow>
-                                        <TableCell colSpan={2}><strong>Mô tả:</strong> {service.description}</TableCell>
+                                        <TableCell><strong>Giá mỗi đơn:</strong> {service.price.toLocaleString('vi-VN')} đ</TableCell>
+                                        <TableCell><strong>Mô tả:</strong> {service.description}</TableCell>
                                       </TableRow>
                                     </TableBody>
                                   </Table>

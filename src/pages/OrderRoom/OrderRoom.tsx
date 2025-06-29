@@ -30,6 +30,7 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import StarIcon from '@mui/icons-material/Star';
 import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import '../../css/OrderRoom.css';
 import api from '../../api/axios';
 import { Link } from 'react-router-dom';
@@ -410,6 +411,30 @@ const OrderRoom: React.FC = () => {
     }
   };
 
+  const handleSoftDeleteRoom = async () => {
+    if (!selectedRoom?.id) return;
+
+    try {
+      setLoading(true);
+      const response = await api.delete(`/rooms/${selectedRoom.id}`);
+      if (response.status === 200) {
+        await fetchRooms();
+        setOpenDialog(false);
+        setSnackbarMessage('Phòng đã được xóa (mềm) thành công!');
+        setSnackbarOpen(true);
+      }  else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi xóa phòng';
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+      console.error('Lỗi khi xóa phòng:', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
     setSnackbarMessage('');
@@ -629,22 +654,22 @@ const OrderRoom: React.FC = () => {
                       value={selectedRoom.room_number} 
                     />
                     <InfoRow 
-                      icon={<StarIcon />} 
+                      icon=<StarIcon /> 
                       label="Loại phòng" 
                       value={selectedRoom.room_type.name} 
                     />
                     <InfoRow 
-                      icon={<InfoIcon />} 
+                      icon=<InfoIcon /> 
                       label="Mã loại phòng" 
                       value={selectedRoom.room_type.code} 
                     />
                     <InfoRow 
-                      icon={<PersonIcon />} 
+                      icon=<PersonIcon /> 
                       label="Sức chứa tối đa" 
                       value={`${selectedRoom.room_type.max_occupancy} người`} 
                     />
                     <InfoRow 
-                      icon={<PaymentIcon />} 
+                      icon=<PaymentIcon /> 
                       label="Giá" 
                       value={`${Number(selectedRoom.room_type.base_rate).toLocaleString('vi-VN')} VNĐ`} 
                     />
@@ -668,22 +693,22 @@ const OrderRoom: React.FC = () => {
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
                       <InfoRow 
-                        icon={<PersonIcon />} 
+                        icon=<PersonIcon /> 
                         label="Người đặt phòng" 
                         value={selectedRoom.creator_name ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<CalendarTodayIcon />} 
+                        icon=<CalendarTodayIcon /> 
                         label="Ngày nhận phòng" 
                         value={formatDate(selectedRoom.check_in_date)} 
                       />
                       <InfoRow 
-                        icon={<CalendarTodayIcon />} 
+                        icon=<CalendarTodayIcon /> 
                         label="Ngày trả phòng" 
                         value={formatDate(selectedRoom.check_out_date)} 
                       />
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Trạng thái" 
                         value={
                           selectedRoom.booking_status === 'Pending' ? 'Đang chờ' :
@@ -694,22 +719,22 @@ const OrderRoom: React.FC = () => {
                         } 
                       />
                       <InfoRow 
-                        icon={<PaymentIcon />} 
+                        icon=<PaymentIcon /> 
                         label="Tiền đặt cọc" 
                         value={selectedRoom.deposit_amount ? `${Number(selectedRoom.deposit_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<PaymentIcon />} 
+                        icon=<PaymentIcon /> 
                         label="Tổng gốc" 
                         value={selectedRoom.raw_total ? `${Number(selectedRoom.raw_total).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<PaymentIcon />} 
+                        icon=<PaymentIcon /> 
                         label="Tổng giảm" 
                         value={selectedRoom.discount_amount ? `${Number(selectedRoom.discount_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<PaymentIcon />} 
+                        icon=<PaymentIcon /> 
                         label="Tổng giá cuối" 
                         value={selectedRoom.total_amount ? `${Number(selectedRoom.total_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
                       />
@@ -728,17 +753,17 @@ const OrderRoom: React.FC = () => {
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Số CCCD" 
                         value={selectedRoom.guest_id_number ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<PersonIcon />} 
+                        icon=<PersonIcon /> 
                         label="Tên" 
                         value={selectedRoom.guest_name ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Giới tính" 
                         value={
                           selectedRoom.guest_gender === 'male' ? 'Nam' : 
@@ -747,7 +772,7 @@ const OrderRoom: React.FC = () => {
                         } 
                       />
                       <InfoRow 
-                        icon={<ContactPhoneIcon />} 
+                        icon=<ContactPhoneIcon /> 
                         label="Số điện thoại" 
                         value={selectedRoom.guest_phone ?? 'N/A'} 
                       />
@@ -757,17 +782,17 @@ const OrderRoom: React.FC = () => {
                         value={formatDate(selectedRoom.guest_date_of_birth)} 
                       />
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Quốc tịch" 
                         value={selectedRoom.guest_country ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<HomeIcon />} 
+                        icon=<HomeIcon /> 
                         label="Địa chỉ" 
                         value={selectedRoom.guest_address ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Ghi chú" 
                         value={selectedRoom.guest_note ?? 'N/A'} 
                       />
@@ -849,6 +874,21 @@ const OrderRoom: React.FC = () => {
               startIcon={<EditIcon />}
             >
               Sửa phòng
+            </Button>
+          )}
+          {selectedRoom && (selectedRoom.status === 'available' || selectedRoom.status === 'maintenance') && (
+            <Button
+              onClick={handleSoftDeleteRoom}
+              variant="contained"
+              sx={{
+                backgroundColor: '#D32F2F',
+                color: 'white',
+                mr: 1,
+                '&:hover': { backgroundColor: '#B71C1C' },
+              }}
+              startIcon={<DeleteIcon />}
+            >
+              Ẩn phòng
             </Button>
           )}
           <Button 

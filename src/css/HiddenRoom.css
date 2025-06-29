@@ -1,0 +1,121 @@
+.hidden-room-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f0f2f5;
+}
+
+.hidden-room-title .hidden-room-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.hidden-room-title h2 {
+  margin: 0;
+  font-size: 24px;
+  color: #1a73e8;
+}
+
+.hidden-room-title h2 b {
+  color: #d93025;
+}
+
+.hidden-room-table-container {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.hidden-room-table {
+  background: #fff;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.hidden-room-table th,
+.hidden-room-table td {
+  padding: 12px 15px;
+  font-size: 14px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.hidden-room-table th {
+  background: #f5f5f5;
+  color: #333;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.hidden-room-table td {
+  color: #333;
+}
+
+.hidden-room-action-restore {
+  color: #4caf50;
+}
+
+.hidden-room-action-restore:hover {
+  opacity: 0.8;
+}
+
+.hidden-room-loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.hidden-room-error-message {
+  text-align: center;
+  padding: 10px;
+  color: #d32f2f;
+  font-size: 16px;
+  background: #ffebee;
+  border-radius: 5px;
+  margin-bottom: 20px;
+}
+
+.hidden-room-no-data {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-size: 16px;
+}
+.hidden-room-action-view {
+  color: #1a73e8;
+}
+.hidden-room-action-view:hover {
+  opacity: 0.8;
+}
+.hidden-room-detail-container {
+  padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.hidden-room-detail-container h3 {
+  margin: 10px 0;
+  color: #1a73e8;
+  font-size: 18px;
+}
+.hidden-room-detail-table {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin: 10px 0;
+  width: 100%;
+}
+.hidden-room-detail-table td {
+  padding: 8px 15px;
+  border: none;
+  color: #555;
+}
+.hidden-room-detail-table th {
+  background: #f5f5f5;
+  color: #333;
+  font-weight: 600;
+}
