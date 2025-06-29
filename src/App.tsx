@@ -27,6 +27,8 @@ import AddBookings from "./pages/Bookings/AddBookings";
 import DetailBookings from "./pages/Bookings/DetailBookings";
 import Statistics from "./pages/Statistics/Statistics";
 import Service from "./pages/Services/service";
+import Departments from "./pages/Departments/DepartmentList";
+import AddDepartment from "./pages/Departments/DepartmentAdd";
 import HiddenRoom from "./pages/Room/HiddenRoom";
 
 function App() {
@@ -73,6 +75,8 @@ function App() {
         <Route path="/amenity-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><AmenitiesCategoryList /></RoleBasedRoute>} />
         <Route path="/amenity-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddAmenityCategory /></RoleBasedRoute>} />
 
+        <Route path="/departments" element={<RoleBasedRoute allowedRoleIds={[1]}><Departments /></RoleBasedRoute>} />
+        <Route path="/departments/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddDepartment /></RoleBasedRoute>} />
 
         
         {/* Add more routes as needed */}

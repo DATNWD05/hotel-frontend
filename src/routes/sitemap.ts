@@ -63,8 +63,19 @@ const sitemap: MenuItem[] = [
   {
     id: 'user',
     subheader: 'Người Dùng',
-    path: '/user',
     icon: 'material-symbols:person',
+    items: [
+      {
+        name: 'Nhân viên',
+        pathName: 'user',
+        path: '/user',
+      },
+      {
+        name: 'Phòng ban',
+        pathName: 'departments',
+        path: '/departments',
+      },
+    ]
   },
   {
     id: 'customer',
