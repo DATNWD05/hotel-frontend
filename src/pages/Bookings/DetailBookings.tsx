@@ -204,27 +204,13 @@ const DetailBookings: React.FC = () => {
         }
         const bookingData: Booking = {
           ...data,
-          check_in_date:
-            data.check_in_date && isValid(parseISO(data.check_in_date))
-              ? data.check_in_date
-              : new Date().toISOString(),
-          check_out_date:
-            data.check_out_date && isValid(parseISO(data.check_out_date))
-              ? data.check_out_date
-              : new Date().toISOString(),
-          deposit_amount: data.deposit_amount || "0.00",
-          raw_total: data.raw_total || "0.00",
-          discount_amount: data.discount_amount || "0.00",
-          total_amount: data.total_amount || "0.00",
-          status: [
-            "Pending",
-            "Confirmed",
-            "Checked_in",
-            "Checked_out",
-            "Cancelled",
-          ].includes(data.status)
-            ? data.status
-            : "Cancelled",
+          check_in_date: data.check_in_date && isValid(parseISO(data.check_in_date)) ? data.check_in_date : new Date().toISOString(),
+          check_out_date: data.check_out_date && isValid(parseISO(data.check_out_date)) ? data.check_out_date : new Date().toISOString(),
+          deposit_amount: data.deposit_amount || '0.00',
+          raw_total: data.raw_total || '0.00',
+          discount_amount: data.discount_amount || '0.00',
+          total_amount: data.total_amount || '0.00',
+          status: ['Pending', 'Confirmed', 'Checked-in', 'Checked-out', 'Cancelled'].includes(data.status) ? data.status : 'Cancelled',
           customer: data.customer || null,
           rooms: data.rooms.map((room: Room) => ({
             ...room,
@@ -233,6 +219,7 @@ const DetailBookings: React.FC = () => {
           services: data.services || [],
         };
         setBooking(bookingData);
+<<<<<<< HEAD
         const initialShowAmenities = data.rooms.reduce(
           (acc: { [key: number]: boolean }, room: Room) => ({
             ...acc,
@@ -246,30 +233,20 @@ const DetailBookings: React.FC = () => {
             [room.id]: false,
           }),
           {}
+=======
+        // Khởi tạo trạng thái hiển thị tiện nghi cho từng phòng
+        const initialShowAmenities = data.rooms.reduce(
+          (acc: { [key: number]: boolean }, room: Room) => ({ ...acc, [room.id]: false }),
+          {} as { [key: number]: boolean }
+>>>>>>> b6692214f7983e53921eed5c91053bfba48fc695
         );
         setShowAmenities(initialShowAmenities);
         setShowServices(initialShowServices);
       } else {
-        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
-      }
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng"
-      );
-      setSnackbarMessage(
-        error instanceof Error
-          ? error.message
-          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng"
-      );
-      setSnackbarOpen(true);
-    } finally {
       setLoading(false);
     }
   };
 
-  const fetchAvailableServices = async () => {
     try {
       const response = await api.get("/service", {
         headers: {
