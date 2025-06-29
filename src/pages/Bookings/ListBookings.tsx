@@ -220,9 +220,9 @@ const formatDate = (date: string) => {
   }
 };
 
-<<<<<<< HEAD
-type BookingStatusKey =
-  | 'pending'
+const formatDateTime = (date: string) => {
+  try {
+    const parsedDate = parseISO(date);
     if (!isValid(parsedDate)) throw new Error("Invalid date");
     return format(parsedDate, "dd/MM/yyyy HH:mm:ss");
   } catch {
@@ -247,15 +247,7 @@ const getBookingStatus = (
     default:
       return { status: "Không xác định", color: "#757575" };
   }
->>>>>>> b6692214f7983e53921eed5c91053bfba48fc695
 };
-
-  status: string
-): { status: string; color: string } => {
-  const key = status.toLowerCase() as BookingStatusKey;
-  return bookingStatusMap[key] ?? { status: 'Không xác định', color: '#757575' };
-};
-
 
 const ListBookings: React.FC = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
