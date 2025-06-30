@@ -1086,6 +1086,7 @@ const ListBookings: React.FC = () => {
         <DialogContent dividers sx={{ px: 4, py: 3 }}>
           {checkinInfo ? (
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {/* Thông tin khách hàng và đặt phòng */}
               <Box
                 sx={{
                   display: "flex",
@@ -1157,6 +1158,7 @@ const ListBookings: React.FC = () => {
                 </Paper>
               </Box>
 
+              {/* Phòng */}
               <Paper
                 sx={{
                   p: 2,
@@ -1168,26 +1170,47 @@ const ListBookings: React.FC = () => {
                 <Typography variant="h6" fontWeight={700} gutterBottom>
                   🛏️ Phòng
                 </Typography>
-                {checkinInfo.rooms.map((room, index) => (
-                  <Box key={index} sx={{ mb: 2 }}>
-                    <Typography variant="body2">
-                      <b>Phòng:</b> {room.room_number} - {room.type.name}
-                    </Typography>
-                    <Typography variant="body2">
-                      <b>Giá:</b> {numeral(room.rate).format("0,0")} VNĐ
-                    </Typography>
-                    <Typography variant="body2">
-                      <b>Sức chứa:</b> {room.type.max_occupancy} người
-                    </Typography>
-                    {room.type.amenities.map((a, i) => (
-                      <Typography key={i} variant="body2">
-                        - {a.name} x{a.quantity}
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 2,
+                  }}
+                >
+                  {checkinInfo.rooms.map((room, index) => (
+                    <Box
+                      key={index}
+                      sx={{
+                        flex: "1 1 calc(50% - 16px)",
+                        minWidth: "260px",
+                        p: 2,
+                        borderRadius: 2,
+                        border: "1px solid #ccc",
+                        backgroundColor: "#fff",
+                      }}
+                    >
+                      <Typography fontWeight={700}>
+                        🏨 Phòng {room.room_number} - {room.type.name}
                       </Typography>
-                    ))}
-                  </Box>
-                ))}
+                      <Typography>
+                        <b>Giá:</b> {numeral(room.rate).format("0,0")} VNĐ
+                      </Typography>
+                      <Typography>
+                        <b>Sức chứa:</b> {room.type.max_occupancy} người
+                      </Typography>
+                      <Box sx={{ mt: 1 }}>
+                        {room.type.amenities.map((a, i) => (
+                          <Typography key={i} variant="body2">
+                            - {a.name} x{a.quantity}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
               </Paper>
 
+              {/* Dịch vụ đi kèm */}
               <Paper
                 sx={{
                   p: 2,
@@ -1217,6 +1240,7 @@ const ListBookings: React.FC = () => {
             <Typography>Đang tải thông tin...</Typography>
           )}
         </DialogContent>
+
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={handleCloseCheckinDialog} color="inherit">
             Đóng
@@ -1237,8 +1261,14 @@ const ListBookings: React.FC = () => {
       <Dialog
         open={openCheckoutDialog}
         onClose={() => setOpenCheckoutDialog(false)}
-        maxWidth="md"
         fullWidth
+        maxWidth={false} // Bỏ giới hạn
+        PaperProps={{
+          sx: {
+            width: "990px", // hoặc 1000px, 1100px tùy bạn
+            maxWidth: "none", // để bỏ max mặc định
+          },
+        }}
       >
         <DialogTitle
           sx={{ fontWeight: 700, fontSize: "24px", color: "#FF9800" }}
@@ -1342,7 +1372,7 @@ const ListBookings: React.FC = () => {
                 <Paper
                   elevation={1}
                   sx={{
-                    flex: 1,
+                    flex: 6,
                     p: 2,
                     borderRadius: 3,
                     border: "1px solid #e0e0e0",
@@ -1389,7 +1419,7 @@ const ListBookings: React.FC = () => {
                 <Paper
                   elevation={1}
                   sx={{
-                    flex: 1,
+                    flex: 4,
                     p: 2,
                     borderRadius: 3,
                     border: "1px solid #e0e0e0",
