@@ -35,7 +35,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../api/axios';
 import '../../css/Amenities.css';
 
 interface ServiceCategory {
@@ -45,9 +45,9 @@ interface ServiceCategory {
 }
 
 interface RawServiceCategory {
-  id: number | string;
-  name: string;
-  description?: string;
+  id?: number | string;
+  name?: string;
+  description?: string | null | undefined;
 }
 
 interface Meta {
@@ -65,26 +65,28 @@ interface ValidationErrors {
 const ServiceCategoryList: React.FC = () => {
   const [allCategories, setAllCategories] = useState<ServiceCategory[]>([]);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
-  const [meta, setMeta] = useState<Meta | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState<number>(1);
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState<ServiceCategory | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [editLoading, setEditLoading] = useState<boolean>(false);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [lastPage, setLastPage] = useState<number>(1);
   const navigate = useNavigate();
 
-  const fetchCategories = async (page: number = 1) => {
+  const API_URL = '/service-categories';
+  const PER_PAGE = 10;
+
+  const fetchCategories = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -93,40 +95,55 @@ const ServiceCategoryList: React.FC = () => {
         throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
       }
 
-      const response = await axios.get(`http://127.0.0.1:8000/api/service-categories?page=${page}`, {
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      let allData: ServiceCategory[] = [];
+      let page = 1;
 
-      if (!Array.isArray(response.data.data)) {
-        throw new Error('Dữ liệu danh mục không đúng định dạng.');
+      while (true) {
+        const response = await api.get<{ data: RawServiceCategory[]; meta: Meta }>(
+          `${API_URL}?page=${page}&per_page=${PER_PAGE}&search=${searchQuery}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.status !== 200) {
+          throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+        }
+
+        if (!Array.isArray(response.data.data)) {
+          throw new Error('Dữ liệu danh mục không đúng định dạng.');
+        }
+
+        const sanitizedData: ServiceCategory[] = response.data.data.map((cat) => ({
+          id: cat.id != null ? String(cat.id) : '',
+          name: cat.name?.trim() || 'Không xác định',
+          description: cat.description?.trim() ?? '–',
+        }));
+
+        allData = [...allData, ...sanitizedData];
+
+        if (page >= response.data.meta.last_page) break;
+        page++;
       }
 
-      const mappedCategories: ServiceCategory[] = response.data.data.map((cat: RawServiceCategory) => ({
-        id: cat.id.toString(),
-        name: cat.name || 'Không xác định',
-        description: cat.description || '–',
-      }));
-
-      setAllCategories((prev) => [...prev, ...mappedCategories]);
-      setCategories(mappedCategories);
-      setMeta(response.data.meta);
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.response?.status === 401
-          ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
-          : `Không thể tải danh mục dịch vụ: ${err.message}`
-        : err instanceof Error
-        ? err.message
-        : 'Lỗi không xác định';
+      setAllCategories(allData);
+      setCategories(allData.slice(0, PER_PAGE));
+      setLastPage(Math.ceil(allData.length / PER_PAGE));
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? `Không thể tải danh mục dịch vụ: ${err.message}`
+          : 'Đã xảy ra lỗi khi tải dữ liệu';
       setError(errorMessage);
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
-        navigate('/login');
-      }
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      if (err instanceof Error && err.message.includes('token')) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
+      console.error('Lỗi khi tải danh mục dịch vụ:', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -134,8 +151,8 @@ const ServiceCategoryList: React.FC = () => {
 
   useEffect(() => {
     document.title = 'Danh sách Danh mục Dịch vụ';
-    fetchCategories(page);
-  }, [page, navigate]);
+    fetchCategories();
+  }, [searchQuery]);
 
   useEffect(() => {
     let filtered = [...allCategories];
@@ -147,16 +164,16 @@ const ServiceCategoryList: React.FC = () => {
     }
 
     if (activeFilters.length > 0 && !activeFilters.includes('all')) {
-      // Nếu API hỗ trợ trạng thái, thêm logic lọc ở đây
+      // Placeholder for status filtering if API supports it
     }
 
-    setCategories(filtered.slice((page - 1) * (meta?.per_page || 10), page * (meta?.per_page || 10)));
-    setMeta((prev) => (prev ? { ...prev, last_page: Math.ceil(filtered.length / (prev.per_page || 10)) } : prev));
-  }, [searchQuery, activeFilters, allCategories, page, meta]);
+    setCategories(filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE));
+    setLastPage(Math.ceil(filtered.length / PER_PAGE));
+  }, [searchQuery, activeFilters, currentPage, allCategories]);
 
   const validateForm = (data: ServiceCategory): ValidationErrors => {
     const errors: ValidationErrors = {};
-    if (!data.name.trim()) errors.name = 'Tên danh mục không được để trống';
+    if (!data.name?.trim()) errors.name = 'Tên danh mục không được để trống';
     else if (data.name.length > 50) errors.name = 'Tên danh mục không được vượt quá 50 ký tự';
     if (data.description && data.description.length > 500)
       errors.description = 'Mô tả không được vượt quá 500 ký tự';
@@ -168,8 +185,11 @@ const ServiceCategoryList: React.FC = () => {
     if (editFormData) {
       const updatedData = { ...editFormData, [name]: value };
       setEditFormData(updatedData);
-      const errors = validateForm(updatedData);
-      setValidationErrors(errors);
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name as keyof ValidationErrors];
+        return newErrors;
+      });
     }
   };
 
@@ -178,7 +198,6 @@ const ServiceCategoryList: React.FC = () => {
     setEditCategoryId(category.id);
     setEditFormData({ ...category });
     setValidationErrors({});
-    setEditError(null);
   };
 
   const handleSave = async () => {
@@ -195,39 +214,40 @@ const ServiceCategoryList: React.FC = () => {
       const token = localStorage.getItem('auth_token');
       if (!token) throw new Error('Không tìm thấy token xác thực');
 
-      const response = await axios.put(
-        `http://127.0.0.1:8000/api/service-categories/${editFormData.id}`,
-        {
-          name: editFormData.name,
-          description: editFormData.description,
+      const payload = {
+        name: editFormData.name.trim(),
+        description: editFormData.description?.trim() || '–',
+      };
+
+      const response = await api.put(`${API_URL}/${editFormData.id}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      });
 
       if (response.status === 200) {
-        setAllCategories((prev) =>
-          prev.map((category) => (category.id === editFormData.id ? { ...editFormData } : category))
-        );
-        setCategories((prev) =>
-          prev.map((category) => (category.id === editFormData.id ? { ...editFormData } : category))
-        );
+        await fetchCategories();
         setEditCategoryId(null);
         setEditFormData(null);
         setSelectedCategoryId(null);
         setSnackbarMessage('Cập nhật danh mục thành công!');
         setSnackbarOpen(true);
       } else {
-        throw new Error('Không thể cập nhật danh mục');
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.message
-        : err instanceof Error
-        ? err.message
-        : 'Đã xảy ra lỗi khi cập nhật danh mục';
-      setEditError(errorMessage);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? `Đã xảy ra lỗi khi cập nhật danh mục: ${err.message}`
+          : 'Đã xảy ra lỗi khi cập nhật danh mục';
+      setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      if (err instanceof Error && err.message.includes('token')) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
+      console.error('Lỗi khi cập nhật danh mục:', errorMessage);
     } finally {
       setEditLoading(false);
     }
@@ -238,7 +258,6 @@ const ServiceCategoryList: React.FC = () => {
     setEditFormData(null);
     setSelectedCategoryId(null);
     setValidationErrors({});
-    setEditError(null);
   };
 
   const handleViewDetails = (id: string) => {
@@ -247,11 +266,16 @@ const ServiceCategoryList: React.FC = () => {
       setEditCategoryId(null);
       setEditFormData(null);
       setValidationErrors({});
-      setEditError(null);
     }
   };
 
   const handleDelete = (id: string) => {
+    const category = allCategories.find((cat) => cat.id === id);
+    if (!category) {
+      setSnackbarMessage('Không tìm thấy danh mục để xóa');
+      setSnackbarOpen(true);
+      return;
+    }
     setCategoryToDelete(id);
     setDeleteDialogOpen(true);
   };
@@ -260,39 +284,44 @@ const ServiceCategoryList: React.FC = () => {
     if (!categoryToDelete) return;
 
     try {
+      setLoading(true);
+      setError(null);
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        setError('Không tìm thấy token xác thực');
-        setSnackbarMessage('Không tìm thấy token xác thực');
-        setSnackbarOpen(true);
-        return;
+        throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
       }
 
-      const response = await axios.delete(`http://127.0.0.1:8000/api/service-categories/${categoryToDelete}`, {
+      const category = allCategories.find((cat) => cat.id === categoryToDelete);
+      const response = await api.delete(`${API_URL}/${categoryToDelete}`, {
         headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      if (response.status === 200) {
-        setAllCategories((prev) => prev.filter((cat) => cat.id !== categoryToDelete));
-        fetchCategories(page);
-        setSnackbarMessage('Xóa danh mục thành công!');
+      if (response.status === 200 || response.status === 204) {
+        await fetchCategories();
+        setSnackbarMessage(`Xóa danh mục "${category?.name || 'Không xác định'}" thành công!`);
         setSnackbarOpen(true);
       } else {
-        throw new Error('Không thể xóa danh mục');
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? `Không thể xóa danh mục: ${err.message}`
-        : err instanceof Error
-        ? `Không thể xóa danh mục: ${err.message}`
-        : 'Lỗi không xác định';
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message.includes('token')
+            ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+            : `Không thể xóa danh mục: ${err.message}`
+          : 'Đã xảy ra lỗi khi xóa danh mục';
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      if (err instanceof Error && err.message.includes('token')) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
+      console.error('Lỗi khi xóa danh mục:', errorMessage);
     } finally {
+      setLoading(false);
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
     }
@@ -304,7 +333,8 @@ const ServiceCategoryList: React.FC = () => {
   };
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
-    setPage(newPage);
+    setCurrentPage(newPage);
+    setCategories(allCategories.slice((newPage - 1) * PER_PAGE, newPage * PER_PAGE));
   };
 
   const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -323,6 +353,7 @@ const ServiceCategoryList: React.FC = () => {
         return [...prev, filter].filter((f) => f !== 'all');
       }
     });
+    setCurrentPage(1);
     handleFilterClose();
   };
 
@@ -353,6 +384,13 @@ const ServiceCategoryList: React.FC = () => {
                 bgcolor: '#fff',
                 borderRadius: '8px',
                 '& input': { fontSize: '15px' },
+                '& .MuiOutlinedInput-root': {
+                  '& fieldset': { borderColor: '#ccc' },
+                  '&:hover fieldset': { borderColor: '#888' },
+                  '&.Mui-focused fieldset': { borderColor: '#1976d2', borderWidth: '2px' },
+                },
+                '& label': { backgroundColor: '#fff', padding: '0 4px' },
+                '& label.Mui-focused': { color: '#1976d2' },
               }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -364,6 +402,7 @@ const ServiceCategoryList: React.FC = () => {
                 borderRadius: '8px',
                 p: 1,
                 '&:hover': { bgcolor: '#f0f0f0' },
+                transition: 'all 0.2s ease-in-out',
               }}
               className="filter-button"
             >
@@ -426,6 +465,7 @@ const ServiceCategoryList: React.FC = () => {
                   backgroundColor: '#7B1FA2',
                   boxShadow: '0 4px 12px rgba(106, 27, 154, 0.4)',
                 },
+                transition: 'all 0.2s ease-in-out',
               }}
             >
               + Thêm mới
@@ -478,6 +518,7 @@ const ServiceCategoryList: React.FC = () => {
                                   bgcolor: '#e3f2fd',
                                   p: '6px',
                                   '&:hover': { bgcolor: '#bbdefb', boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)' },
+                                  transition: 'all 0.2s ease-in-out',
                                 }}
                               >
                                 {selectedCategoryId === cat.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
@@ -490,6 +531,7 @@ const ServiceCategoryList: React.FC = () => {
                                   bgcolor: '#fef9c3',
                                   p: '6px',
                                   '&:hover': { bgcolor: '#fff9c4', boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)' },
+                                  transition: 'all 0.2s ease-in-out',
                                 }}
                               >
                                 <EditIcon fontSize="small" />
@@ -502,6 +544,7 @@ const ServiceCategoryList: React.FC = () => {
                                   bgcolor: '#ffebee',
                                   p: '6px',
                                   '&:hover': { bgcolor: '#ffcdd2', boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)' },
+                                  transition: 'all 0.2s ease-in-out',
                                 }}
                               >
                                 <DeleteIcon fontSize="small" />
@@ -529,7 +572,15 @@ const ServiceCategoryList: React.FC = () => {
                                         size="small"
                                         error={!!validationErrors.name}
                                         helperText={validationErrors.name}
-                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                        sx={{
+                                          '& .MuiOutlinedInput-root': {
+                                            '& fieldset': { borderColor: '#ccc' },
+                                            '&:hover fieldset': { borderColor: '#888' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2', borderWidth: '2px' },
+                                          },
+                                          '& label': { backgroundColor: '#fff', padding: '0 4px' },
+                                          '& label.Mui-focused': { color: '#1976d2' },
+                                        }}
                                       />
                                       <TextField
                                         label="Mô tả"
@@ -543,7 +594,15 @@ const ServiceCategoryList: React.FC = () => {
                                         rows={3}
                                         error={!!validationErrors.description}
                                         helperText={validationErrors.description}
-                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                        sx={{
+                                          '& .MuiOutlinedInput-root': {
+                                            '& fieldset': { borderColor: '#ccc' },
+                                            '&:hover fieldset': { borderColor: '#888' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2', borderWidth: '2px' },
+                                          },
+                                          '& label': { backgroundColor: '#fff', padding: '0 4px' },
+                                          '& label.Mui-focused': { color: '#1976d2' },
+                                        }}
                                       />
                                       <Box mt={2} display="flex" gap={2}>
                                         <Button
@@ -560,6 +619,7 @@ const ServiceCategoryList: React.FC = () => {
                                             py: 0.7,
                                             '&:hover': { backgroundColor: '#7B1FA2' },
                                             '&:disabled': { backgroundColor: '#a9a9a9' },
+                                            transition: 'all 0.2s ease-in-out',
                                           }}
                                         >
                                           {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
@@ -578,12 +638,13 @@ const ServiceCategoryList: React.FC = () => {
                                             py: 0.7,
                                             '&:hover': { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
                                             '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
+                                            transition: 'all 0.2s ease-in-out',
                                           }}
                                         >
                                           Hủy
                                         </Button>
                                       </Box>
-                                      {editError && <Typography color="error" mt={1}>{editError}</Typography>}
+                                      {error && <Typography color="error" mt={1}>{error}</Typography>}
                                     </Box>
                                   </Box>
                                 ) : (
@@ -591,10 +652,14 @@ const ServiceCategoryList: React.FC = () => {
                                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
                                       Thông tin danh mục
                                     </Typography>
-                                    <Box display="grid" gap={1}>
-                                      <Typography><strong>Tên danh mục:</strong> {cat.name}</Typography>
-                                      <Typography><strong>Mô tả:</strong> {cat.description}</Typography>
-                                    </Box>
+                                    <Table className="promotions-detail-table">
+                                      <TableBody>
+                                        <TableRow>
+                                          <TableCell><strong>Tên danh mục:</strong> {cat.name}</TableCell>
+                                          <TableCell><strong>Mô tả:</strong> {cat.description}</TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
                                   </Box>
                                 )}
                               </div>
@@ -606,11 +671,11 @@ const ServiceCategoryList: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              {meta && meta.last_page > 1 && (
+              {lastPage > 1 && (
                 <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
                   <Pagination
-                    count={meta.last_page}
-                    page={page}
+                    count={lastPage}
+                    page={currentPage}
                     onChange={handlePageChange}
                     color="primary"
                     shape="rounded"
@@ -635,6 +700,23 @@ const ServiceCategoryList: React.FC = () => {
           <Typography>
             Bạn có chắc chắn muốn xóa danh mục này không? Hành động này không thể hoàn tác.
           </Typography>
+          <Typography variant="body2" color="textSecondary" mt={1}>
+            Lưu ý: Nếu danh mục có dịch vụ liên kết, bạn cần xóa hoặc chuyển các dịch vụ sang danh mục khác trước.
+          </Typography>
+          {categoryToDelete && (
+            <Button
+              variant="text"
+              onClick={() => navigate(`/service?category_id=${categoryToDelete}`)}
+              sx={{
+                mt: 2,
+                color: '#1976d2',
+                textTransform: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Xem danh sách dịch vụ liên kết
+            </Button>
+          )}
         </DialogContent>
         <DialogActions>
           <Button
@@ -648,6 +730,7 @@ const ServiceCategoryList: React.FC = () => {
               px: 2.5,
               py: 0.7,
               '&:hover': { borderColor: '#b71c1c', backgroundColor: '#ffebee' },
+              transition: 'all 0.2s ease-in-out',
             }}
           >
             Hủy
@@ -663,6 +746,7 @@ const ServiceCategoryList: React.FC = () => {
               borderRadius: '8px',
               px: 2.5,
               py: 0.7,
+              transition: 'all 0.2s ease-in-out',
             }}
           >
             Xác nhận
@@ -672,7 +756,7 @@ const ServiceCategoryList: React.FC = () => {
 
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000}
+        autoHideDuration={6000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >

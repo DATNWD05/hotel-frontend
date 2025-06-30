@@ -36,7 +36,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios, { AxiosError } from 'axios';
-import '../../css/Amenities.css'; // Sử dụng cùng file CSS với Amenities
+import '../../css/Amenities.css';
 
 interface AmenityCategory {
   id: string;
@@ -82,24 +82,24 @@ const AmenitiesCategoryList: React.FC = () => {
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
-  const [searchQuery, setSearchQuery] = useState<string>(''); // Thêm state tìm kiếm
-  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null); // Thêm state cho bộ lọc
-  const [activeFilters, setActiveFilters] = useState<string[]>([]); // Thêm state cho bộ lọc
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const API_URL = 'http://127.0.0.1:8000/api/amenity-categories';
   const PER_PAGE = 10;
 
-  const fetchCategories = async (page: number = 1) => {
+  const fetchCategories = async (page: number = 1, search: string = '') => {
     try {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        throw new Error('Không tìm thấy token xác thực');
+        throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
       }
 
-      const response = await axios.get<ApiResponse>(`${API_URL}?page=${page}&per_page=${PER_PAGE}`, {
+      const response = await axios.get<ApiResponse>(`${API_URL}?page=${page}&per_page=${PER_PAGE}&search=${search}&t=${Date.now()}`, {
         headers: {
           Accept: 'application/json',
           Authorization: `Bearer ${token}`,
@@ -112,7 +112,7 @@ const AmenitiesCategoryList: React.FC = () => {
         description: cat.description ?? '',
       }));
 
-      setAllCategories((prev) => [...prev, ...mapped]); // Lưu tất cả danh mục
+      setAllCategories(page === 1 ? mapped : [...allCategories, ...mapped]);
       setCategories(mapped);
       setLastPage(response.data.meta.last_page);
       setCurrentPage(response.data.meta.current_page);
@@ -120,14 +120,17 @@ const AmenitiesCategoryList: React.FC = () => {
       const errorMessage = err instanceof AxiosError
         ? err.response?.status === 401
           ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
-          : `Không thể tải danh mục tiện ích: ${err.message}`
+          : `Không thể tải danh mục tiện ích: ${err.response?.data?.message || err.message}`
+        : err instanceof Error
+        ? err.message
         : 'Lỗi không xác định';
       setError(errorMessage);
-      if (err instanceof AxiosError && err.response?.status === 401) {
-        navigate('/login');
-      }
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
     } finally {
       setLoading(false);
     }
@@ -135,23 +138,20 @@ const AmenitiesCategoryList: React.FC = () => {
 
   useEffect(() => {
     document.title = 'Danh sách Danh Mục Tiện Ích';
-    fetchCategories(1);
-  }, []);
+    fetchCategories(1, searchQuery);
+  }, [searchQuery]);
 
   useEffect(() => {
     let filtered = [...allCategories];
 
-    // Lọc theo searchQuery
     if (searchQuery.trim() !== '') {
       filtered = filtered.filter((cat) =>
         cat.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // Lọc theo activeFilters (giả định lọc theo trạng thái, nếu có)
     if (activeFilters.length > 0 && !activeFilters.includes('all')) {
-      // Có thể thêm logic lọc nếu API trả về trạng thái hoặc thuộc tính khác
-      // Ví dụ: filtered = filtered.filter((cat) => activeFilters.includes(cat.status));
+      // Placeholder cho lọc trạng thái nếu API hỗ trợ
     }
 
     setCategories(filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE));
@@ -229,13 +229,19 @@ const AmenitiesCategoryList: React.FC = () => {
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof AxiosError
-        ? err.message
+        ? err.response?.status === 401
+          ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+          : err.response?.data?.message || `Không thể cập nhật danh mục: ${err.message}`
         : err instanceof Error
         ? err.message
         : 'Đã xảy ra lỗi khi cập nhật danh mục';
       setEditError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
     } finally {
       setEditLoading(false);
     }
@@ -260,45 +266,82 @@ const AmenitiesCategoryList: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    setCategoryToDelete(id);
-    setDeleteDialogOpen(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      }
+      else{ allCategories.find((cat) => cat.id === id);
+      setCategoryToDelete(id);
+      setDeleteDialogOpen(true);
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error
+        ? err.message
+        : 'Lỗi không xác định';
+      console.error('Lỗi trong handleDelete:', errorMessage, err);
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+    }
   };
 
   const confirmDelete = async () => {
     if (!categoryToDelete) return;
 
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
-      setError('Không tìm thấy token xác thực');
-      return;
-    }
-
     try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      }
+
+      const category = allCategories.find((cat) => cat.id === categoryToDelete);
+      console.log(`Xóa danh mục ID: ${categoryToDelete}, Tên: ${category?.name || 'Không xác định'}`);
+
       const response = await axios.delete(`${API_URL}/${categoryToDelete}`, {
         headers: {
           Accept: 'application/json',
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
       });
 
-      if (response.status === 200) {
+      if (response.status === 204 || response.status === 200) {
         setAllCategories((prev) => prev.filter((cat) => cat.id !== categoryToDelete));
-        fetchCategories(currentPage);
-        setSnackbarMessage('Xóa danh mục thành công!');
+        setCategories((prev) => prev.filter((cat) => cat.id !== categoryToDelete));
+        setSnackbarMessage(`Xóa danh mục "${category?.name || 'Không xác định'}" thành công!`);
         setSnackbarOpen(true);
+        if (categories.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+          fetchCategories(currentPage - 1, searchQuery);
+        } else {
+          fetchCategories(currentPage, searchQuery);
+        }
       } else {
-        throw new Error('Không thể xóa danh mục');
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof AxiosError
-        ? `Không thể xóa danh mục: ${err.message}`
+        ? err.response?.status === 401
+          ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+          : err.response?.status === 400
+          ? err.response?.data?.message || 'Không thể xóa danh mục vì vẫn còn tiện ích liên kết.'
+          : err.response?.data?.message || `Không thể xóa danh mục: ${err.message}`
         : err instanceof Error
         ? `Không thể xóa danh mục: ${err.message}`
         : 'Lỗi không xác định';
+      console.error('Lỗi trong confirmDelete:', errorMessage, err);
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
     } finally {
+      setLoading(false);
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
     }
@@ -311,7 +354,7 @@ const AmenitiesCategoryList: React.FC = () => {
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
     setCurrentPage(newPage);
-    fetchCategories(newPage);
+    fetchCategories(newPage, searchQuery);
   };
 
   const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -330,6 +373,7 @@ const AmenitiesCategoryList: React.FC = () => {
         return [...prev, filter].filter((f) => f !== 'all');
       }
     });
+    setCurrentPage(1);
     handleFilterClose();
   };
 
@@ -613,18 +657,20 @@ const AmenitiesCategoryList: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
-                <Pagination
-                  count={lastPage}
-                  page={currentPage}
-                  onChange={handlePageChange}
-                  color="primary"
-                  shape="rounded"
-                  showFirstButton
-                  showLastButton
-                  sx={{ '& .MuiPaginationItem-root': { fontSize: '14px' } }}
-                />
-              </Box>
+              {lastPage > 1 && (
+                <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+                  <Pagination
+                    count={lastPage}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                    shape="rounded"
+                    showFirstButton
+                    showLastButton
+                    sx={{ '& .MuiPaginationItem-root': { fontSize: '14px' } }}
+                  />
+                </Box>
+              )}
             </>
           )}
         </CardContent>
@@ -640,6 +686,23 @@ const AmenitiesCategoryList: React.FC = () => {
           <Typography>
             Bạn có chắc chắn muốn xóa danh mục này không? Hành động này không thể hoàn tác.
           </Typography>
+          <Typography variant="body2" color="textSecondary" mt={1}>
+            Lưu ý: Nếu danh mục có tiện ích liên kết, bạn cần xóa hoặc chuyển các tiện ích sang danh mục khác trước.
+          </Typography>
+          {categoryToDelete && (
+            <Button
+              variant="text"
+              onClick={() => navigate(`/amenities?category_id=${categoryToDelete}`)}
+              sx={{
+                mt: 2,
+                color: '#1976d2',
+                textTransform: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Xem danh sách tiện ích liên kết
+            </Button>
+          )}
         </DialogContent>
         <DialogActions>
           <Button

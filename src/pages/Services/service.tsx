@@ -35,7 +35,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import axios from 'axios';
+import api from '../../api/axios'; // Use the same api module as Promotions
 import '../../css/Service.css';
 
 interface Service {
@@ -66,6 +66,12 @@ interface Meta {
   total: number;
 }
 
+interface ValidationErrors {
+  name?: string;
+  price?: string;
+  description?: string;
+}
+
 const Service: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [allServices, setAllServices] = useState<Service[]>([]);
@@ -83,6 +89,10 @@ const Service: React.FC = () => {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [editServiceId, setEditServiceId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<Service | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [editLoading, setEditLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const API_URL = 'http://127.0.0.1:8000/api/service';
@@ -103,11 +113,9 @@ const Service: React.FC = () => {
         const url = `${API_URL}?page=${page}${
           activeCategories.length > 0 ? `&category_id=${activeCategories.join(',')}` : ''
         }`;
-        const response = await axios.get<{ data: RawService[]; meta: Meta }>(url, {
+        const response = await api.get<{ data: RawService[]; meta: Meta }>(url, {
           headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
 
@@ -115,18 +123,18 @@ const Service: React.FC = () => {
           throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
         }
 
-        const mapped: Service[] = response.data.data.map((item) => ({
+        const sanitizedData: Service[] = response.data.data.map((item) => ({
           id: String(item.id),
-          name: item.name || 'Không xác định',
+          name: item.name?.trim() || 'Không xác định',
           category: {
-            id: String(item.category.id),
-            name: item.category.name || 'Không xác định',
+            id: String(item.category?.id || '0'),
+            name: item.category?.name?.trim() || 'Không xác định',
           },
-          price: item.price || 0,
-          description: item.description || '–',
+          price: Number(item.price) || 0,
+          description: item.description?.trim() || '–',
         }));
 
-        allData = [...allData, ...mapped];
+        allData = [...allData, ...sanitizedData];
 
         if (page >= response.data.meta.last_page) break;
         page++;
@@ -140,10 +148,11 @@ const Service: React.FC = () => {
       const errorMessage =
         err instanceof Error
           ? `Không thể tải danh sách dịch vụ: ${err.message}`
-          : 'Lỗi không xác định';
+          : 'Đã xảy ra lỗi khi tải dữ liệu';
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      console.error('Lỗi khi tải danh sách dịch vụ:', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -160,35 +169,38 @@ const Service: React.FC = () => {
       return;
     }
 
-    axios
-      .get('http://127.0.0.1:8000/api/service-categories', {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      .then((response) => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/service-categories', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
         const data = response.data.data || response.data;
         if (!Array.isArray(data)) {
           throw new Error('Dữ liệu danh mục không đúng định dạng');
         }
-        const categories: ServiceCategory[] = data.map((cat: { id: number | string; name: string }) => ({
+
+        const sanitizedCategories: ServiceCategory[] = data.map((cat: { id: number | string; name: string }) => ({
           id: String(cat.id),
-          name: cat.name || 'Không xác định',
+          name: cat.name?.trim() || 'Không xác định',
         }));
-        setServiceCategories(categories);
-      })
-      .catch((err) => {
+
+        setServiceCategories(sanitizedCategories);
+      } catch (err) {
         const errorMessage =
           err instanceof Error
             ? `Không thể tải danh mục dịch vụ: ${err.message}`
-            : 'Lỗi không xác định';
+            : 'Đã xảy ra lỗi khi tải danh mục';
         setError(errorMessage);
         setSnackbarMessage(errorMessage);
         setSnackbarOpen(true);
-      });
+        console.error('Lỗi khi tải danh mục dịch vụ:', errorMessage);
+      }
+    };
 
+    fetchCategories();
     fetchAllServices();
   }, [activeCategories]);
 
@@ -210,6 +222,97 @@ const Service: React.FC = () => {
     setServices(filtered.slice((currentPage - 1) * 10, currentPage * 10));
   }, [searchQuery, activeCategories, allServices, currentPage]);
 
+  const validateForm = (data: Service): ValidationErrors => {
+    const errors: ValidationErrors = {};
+    if (!data.name?.trim()) errors.name = 'Tên dịch vụ không được để trống';
+    else if (data.name.length > 50) errors.name = 'Tên dịch vụ không được vượt quá 50 ký tự';
+    if (data.price < 0) errors.price = 'Giá không được nhỏ hơn 0';
+    if (data.description && data.description.length > 500)
+      errors.description = 'Mô tả không được vượt quá 500 ký tự';
+    return errors;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (editFormData) {
+      const updatedData = {
+        ...editFormData,
+        [name]: name === 'price' ? Number(value) || 0 : value,
+      };
+      setEditFormData(updatedData);
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name as keyof ValidationErrors];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleEdit = (service: Service) => {
+    setSelectedServiceId(service.id);
+    setEditServiceId(service.id);
+    setEditFormData({ ...service });
+    setValidationErrors({});
+  };
+
+  const handleSave = async () => {
+    if (!editFormData) return;
+
+    const errors = validateForm(editFormData);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    try {
+      setEditLoading(true);
+      const token = localStorage.getItem('auth_token');
+      if (!token) throw new Error('Không tìm thấy token xác thực');
+
+      const payload = {
+        name: editFormData.name.trim(),
+        category_id: editFormData.category.id,
+        price: Number(editFormData.price) || 0,
+        description: editFormData.description?.trim() || '–',
+      };
+
+      const response = await api.put(`${API_URL}/${editFormData.id}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 200) {
+        await fetchAllServices();
+        setEditServiceId(null);
+        setEditFormData(null);
+        setSelectedServiceId(null);
+        setSnackbarMessage('Cập nhật dịch vụ thành công!');
+        setSnackbarOpen(true);
+      } else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? `Đã xảy ra lỗi khi cập nhật dịch vụ: ${err.message}`
+          : 'Đã xảy ra lỗi khi cập nhật dịch vụ';
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+      console.error('Lỗi khi cập nhật dịch vụ:', errorMessage);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditServiceId(null);
+    setEditFormData(null);
+    setSelectedServiceId(null);
+    setValidationErrors({});
+  };
+
   const handleDeleteService = (id: string) => {
     setServiceToDelete(id);
     setDeleteDialogOpen(true);
@@ -226,15 +329,13 @@ const Service: React.FC = () => {
         throw new Error('Không tìm thấy token xác thực');
       }
 
-      const response = await axios.delete(`${API_URL}/${serviceToDelete}`, {
+      const response = await api.delete(`${API_URL}/${serviceToDelete}`, {
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      if (response.status === 204) {
+      if (response.status === 200 || response.status === 204) {
         await fetchAllServices();
         setSnackbarMessage('Xóa dịch vụ thành công!');
         setSnackbarOpen(true);
@@ -245,10 +346,11 @@ const Service: React.FC = () => {
       const errorMessage =
         err instanceof Error
           ? `Không thể xóa dịch vụ: ${err.message}`
-          : 'Lỗi không xác định';
+          : 'Đã xảy ra lỗi khi xóa dịch vụ';
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      console.error('Lỗi khi xóa dịch vụ:', errorMessage);
     } finally {
       setLoading(false);
       setDeleteDialogOpen(false);
@@ -256,12 +358,13 @@ const Service: React.FC = () => {
     }
   };
 
-  const handleEditService = (id: string) => {
-    navigate(`/service/edit/${id}`);
-  };
-
   const handleViewDetails = (id: string) => {
-    setSelectedServiceId(selectedServiceId === id ? null : id);
+    setSelectedServiceId((prev) => (prev === id && editServiceId !== id ? null : id));
+    if (editServiceId === id) {
+      setEditServiceId(null);
+      setEditFormData(null);
+      setValidationErrors({});
+    }
   };
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
@@ -416,7 +519,7 @@ const Service: React.FC = () => {
         </Box>
       </div>
 
-      <Card elevation={3} sx={{ p: 0, mt: 0 }}>
+      <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: '8px' }}>
         <CardContent sx={{ p: 0 }}>
           {loading ? (
             <Box display="flex" justifyContent="center" alignItems="center" p={4}>
@@ -424,11 +527,11 @@ const Service: React.FC = () => {
               <Typography ml={2}>Đang tải danh sách dịch vụ...</Typography>
             </Box>
           ) : error ? (
-            <Typography color="error" p={2}>
+            <Typography color="error" p={2} textAlign="center">
               {error}
             </Typography>
           ) : filteredServices.length === 0 ? (
-            <Typography p={2}>
+            <Typography p={2} textAlign="center">
               {searchQuery || activeCategories.length > 0
                 ? `Không tìm thấy dịch vụ phù hợp trong danh mục: ${
                     serviceCategories
@@ -440,15 +543,15 @@ const Service: React.FC = () => {
             </Typography>
           ) : (
             <>
-              <TableContainer component={Paper} className="promotions-table-container">
-                <Table sx={{ width: '100%' }}>
+              <TableContainer component={Paper} className="promotions-table-container" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+                <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
                   <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
                     <TableRow>
-                      <TableCell><b>Nhóm dịch vụ</b></TableCell>
-                      <TableCell><b>Tên dịch vụ</b></TableCell>
-                      <TableCell><b>Giá mỗi đơn</b></TableCell>
-                      <TableCell><b>Mô tả</b></TableCell>
-                      <TableCell align="center"><b>Hành động</b></TableCell>
+                      <TableCell sx={{ minWidth: '150px' }}><b>Nhóm dịch vụ</b></TableCell>
+                      <TableCell sx={{ minWidth: '150px' }}><b>Tên dịch vụ</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Giá mỗi đơn</b></TableCell>
+                      <TableCell sx={{ minWidth: '200px' }}><b>Mô tả</b></TableCell>
+                      <TableCell align="center" sx={{ minWidth: '150px' }}><b>Hành động</b></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -467,42 +570,36 @@ const Service: React.FC = () => {
                                 sx={{
                                   color: '#1976d2',
                                   bgcolor: '#e3f2fd',
-                                  '&:hover': {
-                                    bgcolor: '#bbdefb',
-                                    boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)',
-                                  },
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#bbdefb', boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)' },
                                   transition: 'all 0.2s ease-in-out',
                                 }}
                               >
                                 {selectedServiceId === service.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
                               </IconButton>
                               <IconButton
-                                title="Chỉnh sửa"
+                                title="Chỉnh sửa dịch vụ"
+                                onClick={() => handleEdit(service)}
                                 sx={{
                                   color: '#FACC15',
                                   bgcolor: '#fef9c3',
-                                  '&:hover': {
-                                    bgcolor: '#fff9c4',
-                                    boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)',
-                                  },
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#fff9c4', boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)' },
                                   transition: 'all 0.2s ease-in-out',
                                 }}
-                                onClick={() => handleEditService(service.id)}
                               >
                                 <EditIcon fontSize="small" />
                               </IconButton>
                               <IconButton
-                                title="Xóa"
+                                title="Xóa dịch vụ"
+                                onClick={() => handleDeleteService(service.id)}
                                 sx={{
                                   color: '#d32f2f',
                                   bgcolor: '#ffebee',
-                                  '&:hover': {
-                                    bgcolor: '#ffcdd2',
-                                    boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)',
-                                  },
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#ffcdd2', boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)' },
                                   transition: 'all 0.2s ease-in-out',
                                 }}
-                                onClick={() => handleDeleteService(service.id)}
                               >
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -513,23 +610,135 @@ const Service: React.FC = () => {
                           <TableCell colSpan={5} style={{ padding: 0 }}>
                             <Collapse in={selectedServiceId === service.id}>
                               <div className="promotion-detail-container">
-                                <Box sx={{ p: 2 }}>
-                                  <Typography variant="h6" gutterBottom>
-                                    Thông tin dịch vụ
-                                  </Typography>
-                                  <Table className="promotion-detail-table">
-                                    <TableBody>
-                                      <TableRow>
-                                        <TableCell><strong>Tên dịch vụ:</strong> {service.name}</TableCell>
-                                        <TableCell><strong>Nhóm dịch vụ:</strong> {serviceCategories.find((c) => c.id === service.category.id)?.name || 'Không xác định'}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell><strong>Giá mỗi đơn:</strong> {service.price.toLocaleString('vi-VN')} đ</TableCell>
-                                        <TableCell><strong>Mô tả:</strong> {service.description}</TableCell>
-                                      </TableRow>
-                                    </TableBody>
-                                  </Table>
-                                </Box>
+                                {editServiceId === service.id && editFormData ? (
+                                  <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
+                                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
+                                      Chỉnh sửa dịch vụ
+                                    </Typography>
+                                    <Box display="flex" flexDirection="column" gap={2}>
+                                      <TextField
+                                        label="Tên dịch vụ"
+                                        name="name"
+                                        value={editFormData.name}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!validationErrors.name}
+                                        helperText={validationErrors.name}
+                                        sx={{
+                                          '& .MuiOutlinedInput-root': {
+                                            '& fieldset': { borderColor: '#ccc' },
+                                            '&:hover fieldset': { borderColor: '#888' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2', borderWidth: '2px' },
+                                          },
+                                          '& label': { backgroundColor: '#fff', padding: '0 4px' },
+                                          '& label.Mui-focused': { color: '#1976d2' },
+                                        }}
+                                      />
+                                      <TextField
+                                        label="Giá mỗi đơn"
+                                        name="price"
+                                        type="number"
+                                        value={editFormData.price}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!validationErrors.price}
+                                        helperText={validationErrors.price}
+                                        sx={{
+                                          '& .MuiOutlinedInput-root': {
+                                            '& fieldset': { borderColor: '#ccc' },
+                                            '&:hover fieldset': { borderColor: '#888' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2', borderWidth: '2px' },
+                                          },
+                                          '& label': { backgroundColor: '#fff', padding: '0 4px' },
+                                          '& label.Mui-focused': { color: '#1976d2' },
+                                        }}
+                                      />
+                                      <TextField
+                                        label="Mô tả"
+                                        name="description"
+                                        value={editFormData.description}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        multiline
+                                        rows={3}
+                                        error={!!validationErrors.description}
+                                        helperText={validationErrors.description}
+                                        sx={{
+                                          '& .MuiOutlinedInput-root': {
+                                            '& fieldset': { borderColor: '#ccc' },
+                                            '&:hover fieldset': { borderColor: '#888' },
+                                            '&.Mui-focused fieldset': { borderColor: '#1976d2', borderWidth: '2px' },
+                                          },
+                                          '& label': { backgroundColor: '#fff', padding: '0 4px' },
+                                          '& label.Mui-focused': { color: '#1976d2' },
+                                        }}
+                                      />
+                                      <Box mt={2} display="flex" gap={2}>
+                                        <Button
+                                          variant="contained"
+                                          onClick={handleSave}
+                                          disabled={editLoading}
+                                          sx={{
+                                            backgroundColor: '#4318FF',
+                                            color: '#fff',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            borderRadius: '8px',
+                                            px: 2.5,
+                                            py: 0.7,
+                                            '&:hover': { backgroundColor: '#7B1FA2' },
+                                            '&:disabled': { backgroundColor: '#a9a9a9' },
+                                          }}
+                                        >
+                                          {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
+                                        </Button>
+                                        <Button
+                                          variant="outlined"
+                                          onClick={handleCancel}
+                                          disabled={editLoading}
+                                          sx={{
+                                            color: '#f44336',
+                                            borderColor: '#f44336',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            borderRadius: '8px',
+                                            px: 2.5,
+                                            py: 0.7,
+                                            '&:hover': { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
+                                            '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
+                                          }}
+                                        >
+                                          Hủy
+                                        </Button>
+                                      </Box>
+                                      {error && <Typography color="error" mt={1}>{error}</Typography>}
+                                    </Box>
+                                  </Box>
+                                ) : (
+                                  <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
+                                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
+                                      Thông tin dịch vụ
+                                    </Typography>
+                                    <Table className="promotions-detail-table">
+                                      <TableBody>
+                                        <TableRow>
+                                          <TableCell><strong>Tên dịch vụ:</strong> {service.name}</TableCell>
+                                          <TableCell><strong>Nhóm dịch vụ:</strong> {serviceCategories.find((c) => c.id === service.category.id)?.name || 'Không xác định'}</TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell><strong>Giá mỗi đơn:</strong> {service.price.toLocaleString('vi-VN')} đ</TableCell>
+                                          <TableCell><strong>Mô tả:</strong> {service.description}</TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
+                                  </Box>
+                                )}
                               </div>
                             </Collapse>
                           </TableCell>
@@ -539,17 +748,20 @@ const Service: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
-                <Pagination
-                  count={lastPage}
-                  page={currentPage}
-                  onChange={handlePageChange}
-                  color="primary"
-                  shape="rounded"
-                  showFirstButton
-                  showLastButton
-                />
-              </Box>
+              {lastPage > 1 && (
+                <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+                  <Pagination
+                    count={lastPage}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                    shape="rounded"
+                    showFirstButton
+                    showLastButton
+                    sx={{ '& .MuiPaginationItem-root': { fontSize: '14px' } }}
+                  />
+                </Box>
+              )}
             </>
           )}
         </CardContent>
@@ -592,7 +804,15 @@ const Service: React.FC = () => {
           <Button
             onClick={confirmDelete}
             variant="contained"
-            sx={{ bgcolor: '#d32f2f', '&:hover': { bgcolor: '#b71c1c' } }}
+            sx={{
+              bgcolor: '#d32f2f',
+              '&:hover': { bgcolor: '#b71c1c' },
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.7,
+            }}
           >
             Xác nhận
           </Button>
