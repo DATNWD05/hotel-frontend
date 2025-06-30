@@ -75,6 +75,15 @@ body *::-webkit-scrollbar {
   color: #333;
 }
 
+.promotions-table th:first-child,
+.promotions-table td:first-child {
+  width: auto !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+}
+
 .promotions-wrapper .promotions-btn-cancel {
   border-radius: 5px; 
   height: 35px;

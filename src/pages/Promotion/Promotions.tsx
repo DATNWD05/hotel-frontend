@@ -505,7 +505,7 @@ const Promotions: React.FC = () => {
           flexWrap="wrap"
           mb={2}
         >
-          <Typography variant="h2" fontWeight={700} >
+          <Typography variant="h2" fontWeight={700}>
             Khuyến Mãi
           </Typography>
           <Box display="flex" gap={2} alignItems="center">
@@ -538,7 +538,7 @@ const Promotions: React.FC = () => {
                 p: 1,
                 "&:hover": { bgcolor: "#f0f0f0" },
               }}
-              className="filter-button" // Thêm class để tùy chỉnh trong CSS
+              className="filter-button"
             >
               <FilterListIcon />
             </IconButton>
@@ -609,7 +609,7 @@ const Promotions: React.FC = () => {
               to="/promotions/add"
               variant="contained"
               sx={{
-                backgroundColor: "#4318FF", // tím sang
+                backgroundColor: "#4318FF",
                 color: "#fff",
                 textTransform: "none",
                 fontWeight: 600,
@@ -659,9 +659,6 @@ const Promotions: React.FC = () => {
                         <b>Mã Khuyến Mãi</b>
                       </TableCell>
                       <TableCell>
-                        <b>Mô tả</b>
-                      </TableCell>
-                      <TableCell>
                         <b>Giá trị giảm</b>
                       </TableCell>
                       <TableCell>
@@ -689,16 +686,6 @@ const Promotions: React.FC = () => {
                               }}
                             >
                               {promotion.code}
-                            </TableCell>
-                            <TableCell
-                              sx={{
-                                maxHeight: "60px",
-                                overflowY: "auto",
-                                whiteSpace: "normal",
-                                wordWrap: "break-word",
-                              }}
-                            >
-                              {promotion.description}
                             </TableCell>
                             <TableCell
                               sx={{
@@ -783,7 +770,7 @@ const Promotions: React.FC = () => {
                             </TableCell>
                           </TableRow>
                           <TableRow>
-                            <TableCell colSpan={5} style={{ padding: 0 }}>
+                            <TableCell colSpan={4} style={{ padding: 0 }}>
                               <Collapse
                                 in={viewDetailId === promotion.id}
                                 timeout="auto"

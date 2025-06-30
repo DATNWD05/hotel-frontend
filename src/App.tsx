@@ -63,8 +63,8 @@ function App() {
 
         <Route path="/service" element={<RoleBasedRoute allowedRoleIds={[1]}><Service /></RoleBasedRoute>} />
         <Route path="service/add" element={<RoleBasedRoute allowedRoleIds={[1]}><CreateService /></RoleBasedRoute>} />
-        <Route path="service-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><ServiceCategoryList /></RoleBasedRoute>} />
-        <Route path="/service-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddServiceCategory /></RoleBasedRoute>} />
+        <Route path="/service-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><ServiceCategoryList /></RoleBasedRoute>} />
+        <Route path="service-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddServiceCategory /></RoleBasedRoute>} />
 
         <Route path="/room-types" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomTypesList /></RoleBasedRoute>} />
         <Route path="/room-types/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRoomType /></RoleBasedRoute>} />

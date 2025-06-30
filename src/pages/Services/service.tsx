@@ -66,6 +66,12 @@ interface Meta {
   total: number;
 }
 
+interface ValidationErrors {
+  name?: string;
+  price?: string;
+  description?: string;
+}
+
 const Service: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [allServices, setAllServices] = useState<Service[]>([]);
@@ -83,6 +89,11 @@ const Service: React.FC = () => {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const [editServiceId, setEditServiceId] = useState<string | null>(null);
+  const [editFormData, setEditFormData] = useState<Service | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [editLoading, setEditLoading] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const API_URL = 'http://127.0.0.1:8000/api/service';
@@ -210,6 +221,105 @@ const Service: React.FC = () => {
     setServices(filtered.slice((currentPage - 1) * 10, currentPage * 10));
   }, [searchQuery, activeCategories, allServices, currentPage]);
 
+  const validateForm = (data: Service): ValidationErrors => {
+    const errors: ValidationErrors = {};
+    if (!data.name.trim()) errors.name = 'Tên dịch vụ không được để trống';
+    else if (data.name.length > 50) errors.name = 'Tên dịch vụ không được vượt quá 50 ký tự';
+    if (data.price < 0) errors.price = 'Giá không được nhỏ hơn 0';
+    if (data.description && data.description.length > 500)
+      errors.description = 'Mô tả không được vượt quá 500 ký tự';
+    return errors;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    if (editFormData) {
+      const updatedData = { ...editFormData, [name]: name === 'price' ? parseFloat(value) : value };
+      setEditFormData(updatedData);
+      const errors = validateForm(updatedData);
+      setValidationErrors(errors);
+    }
+  };
+
+  const handleEdit = (service: Service) => {
+    setSelectedServiceId(service.id);
+    setEditServiceId(service.id);
+    setEditFormData({ ...service });
+    setValidationErrors({});
+    setEditError(null);
+  };
+
+  const handleSave = async () => {
+    if (!editFormData) return;
+
+    const errors = validateForm(editFormData);
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    try {
+      setEditLoading(true);
+      const token = localStorage.getItem('auth_token');
+      if (!token) throw new Error('Không tìm thấy token xác thực');
+
+      const response = await axios.put(
+        `${API_URL}/${editFormData.id}`,
+        {
+          name: editFormData.name,
+          category_id: editFormData.category.id,
+          price: editFormData.price,
+          description: editFormData.description,
+        },
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        setAllServices((prev) =>
+          prev.map((service) => (service.id === editFormData.id ? { ...editFormData } : service))
+        );
+        setFilteredServices((prev) =>
+          prev.map((service) => (service.id === editFormData.id ? { ...editFormData } : service))
+        );
+        setServices((prev) =>
+          prev.map((service) => (service.id === editFormData.id ? { ...editFormData } : service))
+        );
+        setEditServiceId(null);
+        setEditFormData(null);
+        setSelectedServiceId(null);
+        setSnackbarMessage('Cập nhật dịch vụ thành công!');
+        setSnackbarOpen(true);
+      } else {
+        throw new Error('Không thể cập nhật dịch vụ');
+      }
+    } catch (err: unknown) {
+      const errorMessage = axios.isAxiosError(err)
+        ? err.message
+        : err instanceof Error
+        ? err.message
+        : 'Đã xảy ra lỗi khi cập nhật dịch vụ';
+      setEditError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditServiceId(null);
+    setEditFormData(null);
+    setSelectedServiceId(null);
+    setValidationErrors({});
+    setEditError(null);
+  };
+
   const handleDeleteService = (id: string) => {
     setServiceToDelete(id);
     setDeleteDialogOpen(true);
@@ -256,12 +366,14 @@ const Service: React.FC = () => {
     }
   };
 
-  const handleEditService = (id: string) => {
-    navigate(`/service/edit/${id}`);
-  };
-
   const handleViewDetails = (id: string) => {
-    setSelectedServiceId(selectedServiceId === id ? null : id);
+    setSelectedServiceId((prev) => (prev === id && editServiceId !== id ? null : id));
+    if (editServiceId === id) {
+      setEditServiceId(null);
+      setEditFormData(null);
+      setValidationErrors({});
+      setEditError(null);
+    }
   };
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
@@ -416,7 +528,7 @@ const Service: React.FC = () => {
         </Box>
       </div>
 
-      <Card elevation={3} sx={{ p: 0, mt: 0 }}>
+      <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: '8px' }}>
         <CardContent sx={{ p: 0 }}>
           {loading ? (
             <Box display="flex" justifyContent="center" alignItems="center" p={4}>
@@ -424,11 +536,11 @@ const Service: React.FC = () => {
               <Typography ml={2}>Đang tải danh sách dịch vụ...</Typography>
             </Box>
           ) : error ? (
-            <Typography color="error" p={2}>
+            <Typography color="error" p={2} textAlign="center">
               {error}
             </Typography>
           ) : filteredServices.length === 0 ? (
-            <Typography p={2}>
+            <Typography p={2} textAlign="center">
               {searchQuery || activeCategories.length > 0
                 ? `Không tìm thấy dịch vụ phù hợp trong danh mục: ${
                     serviceCategories
@@ -440,15 +552,15 @@ const Service: React.FC = () => {
             </Typography>
           ) : (
             <>
-              <TableContainer component={Paper} className="promotions-table-container">
-                <Table sx={{ width: '100%' }}>
+              <TableContainer component={Paper} className="promotions-table-container" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+                <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
                   <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
                     <TableRow>
-                      <TableCell><b>Nhóm dịch vụ</b></TableCell>
-                      <TableCell><b>Tên dịch vụ</b></TableCell>
-                      <TableCell><b>Giá mỗi đơn</b></TableCell>
-                      <TableCell><b>Mô tả</b></TableCell>
-                      <TableCell align="center"><b>Hành động</b></TableCell>
+                      <TableCell sx={{ minWidth: '150px' }}><b>Nhóm dịch vụ</b></TableCell>
+                      <TableCell sx={{ minWidth: '150px' }}><b>Tên dịch vụ</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Giá mỗi đơn</b></TableCell>
+                      <TableCell sx={{ minWidth: '200px' }}><b>Mô tả</b></TableCell>
+                      <TableCell align="center" sx={{ minWidth: '150px' }}><b>Hành động</b></TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -467,42 +579,33 @@ const Service: React.FC = () => {
                                 sx={{
                                   color: '#1976d2',
                                   bgcolor: '#e3f2fd',
-                                  '&:hover': {
-                                    bgcolor: '#bbdefb',
-                                    boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)',
-                                  },
-                                  transition: 'all 0.2s ease-in-out',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#bbdefb', boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)' },
                                 }}
                               >
                                 {selectedServiceId === service.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
                               </IconButton>
                               <IconButton
-                                title="Chỉnh sửa"
+                                title="Chỉnh sửa dịch vụ"
+                                onClick={() => handleEdit(service)}
                                 sx={{
                                   color: '#FACC15',
                                   bgcolor: '#fef9c3',
-                                  '&:hover': {
-                                    bgcolor: '#fff9c4',
-                                    boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)',
-                                  },
-                                  transition: 'all 0.2s ease-in-out',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#fff9c4', boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)' },
                                 }}
-                                onClick={() => handleEditService(service.id)}
                               >
                                 <EditIcon fontSize="small" />
                               </IconButton>
                               <IconButton
-                                title="Xóa"
+                                title="Xóa dịch vụ"
+                                onClick={() => handleDeleteService(service.id)}
                                 sx={{
                                   color: '#d32f2f',
                                   bgcolor: '#ffebee',
-                                  '&:hover': {
-                                    bgcolor: '#ffcdd2',
-                                    boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)',
-                                  },
-                                  transition: 'all 0.2s ease-in-out',
+                                  p: '6px',
+                                  '&:hover': { bgcolor: '#ffcdd2', boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)' },
                                 }}
-                                onClick={() => handleDeleteService(service.id)}
                               >
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -513,23 +616,105 @@ const Service: React.FC = () => {
                           <TableCell colSpan={5} style={{ padding: 0 }}>
                             <Collapse in={selectedServiceId === service.id}>
                               <div className="promotion-detail-container">
-                                <Box sx={{ p: 2 }}>
-                                  <Typography variant="h6" gutterBottom>
-                                    Thông tin dịch vụ
-                                  </Typography>
-                                  <Table className="promotion-detail-table">
-                                    <TableBody>
-                                      <TableRow>
-                                        <TableCell><strong>Tên dịch vụ:</strong> {service.name}</TableCell>
-                                        <TableCell><strong>Nhóm dịch vụ:</strong> {serviceCategories.find((c) => c.id === service.category.id)?.name || 'Không xác định'}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell><strong>Giá mỗi đơn:</strong> {service.price.toLocaleString('vi-VN')} đ</TableCell>
-                                        <TableCell><strong>Mô tả:</strong> {service.description}</TableCell>
-                                      </TableRow>
-                                    </TableBody>
-                                  </Table>
-                                </Box>
+                                {editServiceId === service.id && editFormData ? (
+                                  <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
+                                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
+                                      Chỉnh sửa dịch vụ
+                                    </Typography>
+                                    <Box display="flex" flexDirection="column" gap={2}>
+                                      <TextField
+                                        label="Tên dịch vụ"
+                                        name="name"
+                                        value={editFormData.name}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!validationErrors.name}
+                                        helperText={validationErrors.name}
+                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                      />
+                                      <TextField
+                                        label="Giá mỗi đơn"
+                                        name="price"
+                                        type="number"
+                                        value={editFormData.price}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        error={!!validationErrors.price}
+                                        helperText={validationErrors.price}
+                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                      />
+                                      <TextField
+                                        label="Mô tả"
+                                        name="description"
+                                        value={editFormData.description}
+                                        onChange={handleChange}
+                                        fullWidth
+                                        variant="outlined"
+                                        size="small"
+                                        multiline
+                                        rows={3}
+                                        error={!!validationErrors.description}
+                                        helperText={validationErrors.description}
+                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                      />
+                                      <Box mt={2} display="flex" gap={2}>
+                                        <Button
+                                          variant="contained"
+                                          onClick={handleSave}
+                                          disabled={editLoading}
+                                          sx={{
+                                            backgroundColor: '#4318FF',
+                                            color: '#fff',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            borderRadius: '8px',
+                                            px: 2.5,
+                                            py: 0.7,
+                                            '&:hover': { backgroundColor: '#7B1FA2' },
+                                            '&:disabled': { backgroundColor: '#a9a9a9' },
+                                          }}
+                                        >
+                                          {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
+                                        </Button>
+                                        <Button
+                                          variant="outlined"
+                                          onClick={handleCancel}
+                                          disabled={editLoading}
+                                          sx={{
+                                            color: '#f44336',
+                                            borderColor: '#f44336',
+                                            textTransform: 'none',
+                                            fontWeight: 600,
+                                            borderRadius: '8px',
+                                            px: 2.5,
+                                            py: 0.7,
+                                            '&:hover': { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
+                                            '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
+                                          }}
+                                        >
+                                          Hủy
+                                        </Button>
+                                      </Box>
+                                      {editError && <Typography color="error" mt={1}>{editError}</Typography>}
+                                    </Box>
+                                  </Box>
+                                ) : (
+                                  <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
+                                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
+                                      Thông tin dịch vụ
+                                    </Typography>
+                                    <Box display="grid" gap={1}>
+                                      <Typography><strong>Tên dịch vụ:</strong> {service.name}</Typography>
+                                      <Typography><strong>Nhóm dịch vụ:</strong> {serviceCategories.find((c) => c.id === service.category.id)?.name || 'Không xác định'}</Typography>
+                                      <Typography><strong>Giá mỗi đơn:</strong> {service.price.toLocaleString('vi-VN')} đ</Typography>
+                                      <Typography><strong>Mô tả:</strong> {service.description}</Typography>
+                                    </Box>
+                                  </Box>
+                                )}
                               </div>
                             </Collapse>
                           </TableCell>
@@ -539,17 +724,20 @@ const Service: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
-                <Pagination
-                  count={lastPage}
-                  page={currentPage}
-                  onChange={handlePageChange}
-                  color="primary"
-                  shape="rounded"
-                  showFirstButton
-                  showLastButton
-                />
-              </Box>
+              {lastPage > 1 && (
+                <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+                  <Pagination
+                    count={lastPage}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    color="primary"
+                    shape="rounded"
+                    showFirstButton
+                    showLastButton
+                    sx={{ '& .MuiPaginationItem-root': { fontSize: '14px' } }}
+                  />
+                </Box>
+              )}
             </>
           )}
         </CardContent>
@@ -592,7 +780,15 @@ const Service: React.FC = () => {
           <Button
             onClick={confirmDelete}
             variant="contained"
-            sx={{ bgcolor: '#d32f2f', '&:hover': { bgcolor: '#b71c1c' } }}
+            sx={{
+              bgcolor: '#d32f2f',
+              '&:hover': { bgcolor: '#b71c1c' },
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.7,
+            }}
           >
             Xác nhận
           </Button>

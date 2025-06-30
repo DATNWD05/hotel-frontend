@@ -35,7 +35,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import '../../css/Amenities.css';
 
 interface ServiceCategory {
@@ -45,9 +45,9 @@ interface ServiceCategory {
 }
 
 interface RawServiceCategory {
-  id: number | string;
-  name: string;
-  description?: string;
+  id?: number | string;
+  name?: string;
+  description?: string | null | undefined;
 }
 
 interface Meta {
@@ -55,6 +55,16 @@ interface Meta {
   last_page: number;
   per_page: number;
   total: number;
+}
+
+interface ApiResponse {
+  data: RawServiceCategory[];
+  meta: Meta;
+}
+
+interface ServiceApiResponse {
+  status: string;
+  data: { id: string; name: string; category_id?: string }[];
 }
 
 interface ValidationErrors {
@@ -66,7 +76,7 @@ const ServiceCategoryList: React.FC = () => {
   const [allCategories, setAllCategories] = useState<ServiceCategory[]>([]);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [meta, setMeta] = useState<Meta | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(1);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -84,7 +94,11 @@ const ServiceCategoryList: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const navigate = useNavigate();
 
-  const fetchCategories = async (page: number = 1) => {
+  const API_URL = 'http://127.0.0.1:8000/api/service-categories';
+  const SERVICE_API_URL = 'http://127.0.0.1:8000/api/service';
+  const PER_PAGE = 10;
+
+  const fetchCategories = async (page: number = 1, search: string = '') => {
     try {
       setLoading(true);
       setError(null);
@@ -93,36 +107,39 @@ const ServiceCategoryList: React.FC = () => {
         throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
       }
 
-      const response = await axios.get(`http://127.0.0.1:8000/api/service-categories?page=${page}`, {
+      const response = await axios.get<ApiResponse>(`${API_URL}?page=${page}&per_page=${PER_PAGE}&search=${search}&t=${Date.now()}`, {
         headers: {
           'Accept': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
       });
+      
 
       if (!Array.isArray(response.data.data)) {
         throw new Error('Dữ liệu danh mục không đúng định dạng.');
       }
 
       const mappedCategories: ServiceCategory[] = response.data.data.map((cat: RawServiceCategory) => ({
-        id: cat.id.toString(),
+        id: cat.id != null ? String(cat.id) : '',
         name: cat.name || 'Không xác định',
-        description: cat.description || '–',
+        description: cat.description ?? '–',
       }));
 
-      setAllCategories((prev) => [...prev, ...mappedCategories]);
+      setAllCategories(page === 1 ? mappedCategories : [...allCategories, ...mappedCategories]);
       setCategories(mappedCategories);
       setMeta(response.data.meta);
+      setPage(response.data.meta.current_page);
     } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
+      const errorMessage = err instanceof AxiosError
         ? err.response?.status === 401
           ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
-          : `Không thể tải danh mục dịch vụ: ${err.message}`
+          : `Không thể tải danh mục dịch vụ: ${err.response?.data?.message || err.message}`
         : err instanceof Error
         ? err.message
         : 'Lỗi không xác định';
       setError(errorMessage);
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem('auth_token');
         navigate('/login');
       }
       setSnackbarMessage(errorMessage);
@@ -134,8 +151,8 @@ const ServiceCategoryList: React.FC = () => {
 
   useEffect(() => {
     document.title = 'Danh sách Danh mục Dịch vụ';
-    fetchCategories(page);
-  }, [page, navigate]);
+    fetchCategories(page, searchQuery);
+  }, [page, searchQuery]);
 
   useEffect(() => {
     let filtered = [...allCategories];
@@ -147,12 +164,12 @@ const ServiceCategoryList: React.FC = () => {
     }
 
     if (activeFilters.length > 0 && !activeFilters.includes('all')) {
-      // Nếu API hỗ trợ trạng thái, thêm logic lọc ở đây
+      // Placeholder cho lọc trạng thái nếu API hỗ trợ
     }
 
-    setCategories(filtered.slice((page - 1) * (meta?.per_page || 10), page * (meta?.per_page || 10)));
-    setMeta((prev) => (prev ? { ...prev, last_page: Math.ceil(filtered.length / (prev.per_page || 10)) } : prev));
-  }, [searchQuery, activeFilters, allCategories, page, meta]);
+    setCategories(filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE));
+    setMeta((prev) => (prev ? { ...prev, last_page: Math.ceil(filtered.length / PER_PAGE) } : null));
+  }, [searchQuery, activeFilters, page, allCategories]);
 
   const validateForm = (data: ServiceCategory): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -196,20 +213,20 @@ const ServiceCategoryList: React.FC = () => {
       if (!token) throw new Error('Không tìm thấy token xác thực');
 
       const response = await axios.put(
-        `http://127.0.0.1:8000/api/service-categories/${editFormData.id}`,
+        `${API_URL}/${editFormData.id}`,
         {
           name: editFormData.name,
-          description: editFormData.description,
+          description: editFormData.description || '',
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.status === 200) {
         setAllCategories((prev) =>
-          prev.map((category) => (category.id === editFormData.id ? { ...editFormData } : category))
+          prev.map((cat) => (cat.id === editFormData.id ? { ...editFormData } : cat))
         );
         setCategories((prev) =>
-          prev.map((category) => (category.id === editFormData.id ? { ...editFormData } : category))
+          prev.map((cat) => (cat.id === editFormData.id ? { ...editFormData } : cat))
         );
         setEditCategoryId(null);
         setEditFormData(null);
@@ -220,14 +237,20 @@ const ServiceCategoryList: React.FC = () => {
         throw new Error('Không thể cập nhật danh mục');
       }
     } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? err.message
+      const errorMessage = err instanceof AxiosError
+        ? err.response?.status === 401
+          ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+          : err.response?.data?.message || `Không thể cập nhật danh mục: ${err.message}`
         : err instanceof Error
         ? err.message
         : 'Đã xảy ra lỗi khi cập nhật danh mục';
       setEditError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
     } finally {
       setEditLoading(false);
     }
@@ -251,48 +274,132 @@ const ServiceCategoryList: React.FC = () => {
     }
   };
 
-  const handleDelete = (id: string) => {
-    setCategoryToDelete(id);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!categoryToDelete) return;
-
+  const handleDelete = async (id: string) => {
     try {
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        setError('Không tìm thấy token xác thực');
-        setSnackbarMessage('Không tìm thấy token xác thực');
-        setSnackbarOpen(true);
-        return;
+        throw new Error('Không tìm thấy token xác thực');
       }
 
-      const response = await axios.delete(`http://127.0.0.1:8000/api/service-categories/${categoryToDelete}`, {
+      const category = allCategories.find((cat) => cat.id === id);
+      console.log(`Kiểm tra dịch vụ liên kết cho danh mục ID: ${id}, Tên: ${category?.name || 'Không xác định'}`);
+      console.log(`Gọi API: ${SERVICE_API_URL}?category_id=${id}&t=${Date.now()}`);
+
+      const checkResponse = await axios.get<ServiceApiResponse>(`${SERVICE_API_URL}?category_id=${id}&t=${Date.now()}`, {
         headers: {
           'Accept': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
       });
 
-      if (response.status === 200) {
-        setAllCategories((prev) => prev.filter((cat) => cat.id !== categoryToDelete));
-        fetchCategories(page);
-        setSnackbarMessage('Xóa danh mục thành công!');
-        setSnackbarOpen(true);
-      } else {
-        throw new Error('Không thể xóa danh mục');
+      console.log('Phản hồi API kiểm tra dịch vụ:', JSON.stringify(checkResponse.data, null, 2));
+
+      if (checkResponse.data.status !== 'success') {
+        throw new Error(`API trả về trạng thái không hợp lệ: ${checkResponse.data.status}`);
       }
+
+      if (checkResponse.data.data && Array.isArray(checkResponse.data.data) && checkResponse.data.data.length > 0) {
+        // Kiểm tra xem các dịch vụ có thực sự thuộc category_id yêu cầu
+        const validServices = checkResponse.data.data.filter(
+          (service) => service.category_id && service.category_id === id
+        );
+        const invalidServices = checkResponse.data.data.filter(
+          (service) => !service.category_id || service.category_id !== id
+        );
+
+        if (invalidServices.length > 0) {
+          console.warn('Cảnh báo: API trả về dịch vụ không thuộc category_id yêu cầu:', invalidServices);
+          setSnackbarMessage(
+            `API trả về dữ liệu sai: Một số dịch vụ không thuộc danh mục "${category?.name || 'Không xác định'}". Vui lòng kiểm tra backend.`
+          );
+          setSnackbarOpen(true);
+          return;
+        }
+
+        if (validServices.length > 0) {
+          const serviceNames = validServices.map((service) => service.name).join(', ');
+          setSnackbarMessage(
+            `Không thể xóa danh mục "${category?.name || 'Không xác định'}" vì vẫn còn dịch vụ liên kết: ${serviceNames}. Vui lòng xóa hoặc chuyển các dịch vụ này trước.`
+          );
+          setSnackbarOpen(true);
+          return;
+        }
+      }
+
+      setCategoryToDelete(id);
+      setDeleteDialogOpen(true);
     } catch (err: unknown) {
-      const errorMessage = axios.isAxiosError(err)
-        ? `Không thể xóa danh mục: ${err.message}`
+      const errorMessage = err instanceof AxiosError
+        ? err.response?.status === 401
+          ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+          : err.response?.data?.message || `Không thể kiểm tra dịch vụ liên kết: ${err.message}`
         : err instanceof Error
-        ? `Không thể xóa danh mục: ${err.message}`
+        ? err.message
         : 'Lỗi không xác định';
+      console.error('Lỗi trong handleDelete:', errorMessage, err);
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!categoryToDelete) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error('Không tìm thấy token xác thực');
+      }
+
+      const category = allCategories.find((cat) => cat.id === categoryToDelete);
+      console.log(`Xóa danh mục ID: ${categoryToDelete}, Tên: ${category?.name || 'Không xác định'}`);
+
+      const response = await axios.delete(`${API_URL}/${categoryToDelete}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 204) {
+        setAllCategories((prev) => prev.filter((cat) => cat.id !== categoryToDelete));
+        setCategories((prev) => prev.filter((cat) => cat.id !== categoryToDelete));
+        setSnackbarMessage(`Xóa danh mục "${category?.name || 'Không xác định'}" thành công!`);
+        setSnackbarOpen(true);
+        if (categories.length === 1 && page > 1) {
+          setPage(page - 1);
+        } else {
+          fetchCategories(page, searchQuery);
+        }
+      } else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof AxiosError
+        ? err.response?.status === 401
+          ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+          : err.response?.data?.message || `Không thể xóa danh mục: ${err.message}`
+        : err instanceof Error
+        ? `Không thể xóa danh mục: ${err.message}`
+        : 'Lỗi không xác định';
+      console.error('Lỗi trong confirmDelete:', errorMessage, err);
+      setError(errorMessage);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
     } finally {
+      setLoading(false);
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
     }
@@ -305,6 +412,7 @@ const ServiceCategoryList: React.FC = () => {
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
     setPage(newPage);
+    fetchCategories(newPage, searchQuery);
   };
 
   const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -323,6 +431,7 @@ const ServiceCategoryList: React.FC = () => {
         return [...prev, filter].filter((f) => f !== 'all');
       }
     });
+    setPage(1);
     handleFilterClose();
   };
 
@@ -635,6 +744,23 @@ const ServiceCategoryList: React.FC = () => {
           <Typography>
             Bạn có chắc chắn muốn xóa danh mục này không? Hành động này không thể hoàn tác.
           </Typography>
+          <Typography variant="body2" color="textSecondary" mt={1}>
+            Lưu ý: Nếu danh mục có dịch vụ liên kết, bạn cần xóa hoặc chuyển các dịch vụ sang danh mục khác trước.
+          </Typography>
+          {categoryToDelete && (
+            <Button
+              variant="text"
+              onClick={() => navigate(`/service?category_id=${categoryToDelete}`)}
+              sx={{
+                mt: 2,
+                color: '#1976d2',
+                textTransform: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Xem danh sách dịch vụ liên kết
+            </Button>
+          )}
         </DialogContent>
         <DialogActions>
           <Button
@@ -672,7 +798,7 @@ const ServiceCategoryList: React.FC = () => {
 
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={3000}
+        autoHideDuration={6000}
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
