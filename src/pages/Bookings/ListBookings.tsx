@@ -273,17 +273,16 @@ const ListBookings: React.FC = () => {
   const [checkoutInfo, setCheckoutInfo] = useState<CheckoutInfo | null>(null);
   const [openCheckoutDialog, setOpenCheckoutDialog] = useState(false);
   const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
-  const [invoiceInfo, setInvoiceInfo] = useState<Invoice | null>(null); // Thêm state cho invoice
-  const [invoiceLoading, setInvoiceLoading] = useState<boolean>(false); // Thêm loading state cho invoice
+  const [invoiceInfo, setInvoiceInfo] = useState<Invoice | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "vnpay" | null>(
     null
   );
-  const [isPaying, setIsPaying] = useState<boolean>(false);
+  const [isPaying, setWorking] = useState<boolean>(false);
   const callbackProcessed = useRef(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Các function khác giữ nguyên...
   const handleOpenCheckoutDialog = async (bookingId: number) => {
     try {
       const res = await api.get(`/check-out/${bookingId}`);
@@ -304,7 +303,7 @@ const ListBookings: React.FC = () => {
     }
 
     try {
-      setIsPaying(true);
+      setWorking(true);
       const res = await api.post(`/pay-cash/${checkoutInfo.booking_id}`);
       setCheckoutInfo({
         ...checkoutInfo,
@@ -321,13 +320,13 @@ const ListBookings: React.FC = () => {
       console.error("Lỗi khi thanh toán tiền mặt:", err);
       setSnackbarOpen(true);
     } finally {
-      setIsPaying(false);
+      setWorking(false);
     }
   };
 
   const handleVNPayCheckout = async (bookingId: number) => {
     try {
-      setIsPaying(true);
+      setWorking(true);
       const res = await api.post("/vnpay/create-payment", {
         booking_id: bookingId,
       });
@@ -341,7 +340,7 @@ const ListBookings: React.FC = () => {
       console.error("Lỗi khi khởi tạo thanh toán VNPay:", error);
       setSnackbarOpen(true);
     } finally {
-      setIsPaying(false);
+      setWorking(false);
     }
   };
 
@@ -457,17 +456,13 @@ const ListBookings: React.FC = () => {
     }
   };
 
-  // Cập nhật function để handle opening invoice dialog
   const handleOpenInvoiceDialog = async (bookingId: number) => {
     try {
       setInvoiceLoading(true);
       setSelectedBookingId(bookingId);
       setOpenInvoiceDialog(true);
 
-      // Gọi API để lấy thông tin hóa đơn
       const response = await api.get(`/invoices/${bookingId}`);
-
-      console.log("Thông tin hóa đơn:", response.data);
       setInvoiceInfo(response.data);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin hóa đơn:", error);
@@ -479,109 +474,31 @@ const ListBookings: React.FC = () => {
     }
   };
 
-  // Cập nhật function để handle closing invoice dialog
   const handleCloseInvoiceDialog = () => {
     setOpenInvoiceDialog(false);
     setSelectedBookingId(null);
     setInvoiceInfo(null);
   };
 
-  // Function để in hóa đơn
-  const handlePrintInvoice = () => {
-    if (!invoiceInfo) return;
+  const handlePrintInvoice = async () => {
+    if (!selectedBookingId) return;
 
-    // Tạo nội dung HTML để in
-    const printContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #0288d1; margin-bottom: 10px;">HÓA ĐƠN THANH TOÁN</h1>
-          <h2 style="color: #666; margin: 0;">Mã hóa đơn: ${
-            invoiceInfo.invoice_code
-          }</h2>
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #333; border-bottom: 2px solid #0288d1; padding-bottom: 5px;">Thông tin đặt phòng</h3>
-          <p><strong>Mã đặt phòng:</strong> #${invoiceInfo.booking_id}</p>
-          <p><strong>Ngày nhận phòng:</strong> ${formatDate(
-            invoiceInfo.booking.check_in_date
-          )}</p>
-          <p><strong>Ngày trả phòng:</strong> ${formatDate(
-            invoiceInfo.booking.check_out_date
-          )}</p>
-          <p><strong>Thời gian check-in:</strong> ${formatDateTime(
-            invoiceInfo.booking.check_in_at
-          )}</p>
-          <p><strong>Thời gian check-out:</strong> ${formatDateTime(
-            invoiceInfo.booking.check_out_at
-          )}</p>
-        </div>
-
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #333; border-bottom: 2px solid #0288d1; padding-bottom: 5px;">Chi tiết thanh toán</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-            <tr style="background-color: #f5f5f5;">
-              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Tiền phòng</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(
-                invoiceInfo.room_amount
-              )}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Tiền dịch vụ</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(
-                invoiceInfo.service_amount
-              )}</td>
-            </tr>
-            <tr style="background-color: #f5f5f5;">
-              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Giảm giá</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(
-                invoiceInfo.discount_amount
-              )}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Tiền đặt cọc</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(
-                invoiceInfo.deposit_amount
-              )}</td>
-            </tr>
-            <tr style="background-color: #e3f2fd; font-size: 18px;">
-              <td style="padding: 15px; border: 2px solid #0288d1;"><strong>TỔNG CỘNG</strong></td>
-              <td style="padding: 15px; border: 2px solid #0288d1; text-align: right;"><strong>${formatCurrency(
-                invoiceInfo.total_amount
-              )}</strong></td>
-            </tr>
-          </table>
-        </div>
-
-        <div style="margin-top: 30px; text-align: center; color: #666;">
-          <p>Ngày xuất hóa đơn: ${formatDateTime(invoiceInfo.issued_date)}</p>
-          <p style="margin-top: 20px;"><em>Cảm ơn quý khách đã sử dụng dịch vụ!</em></p>
-        </div>
-      </div>
-    `;
-
-    // Mở cửa sổ in
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Hóa đơn ${invoiceInfo.invoice_code}</title>
-            <style>
-              @media print {
-                body { margin: 0; }
-                @page { margin: 1cm; }
-              }
-            </style>
-          </head>
-          <body>
-            ${printContent}
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
+    try {
+      setInvoiceLoading(true);
+      console.log("Calling print API for bookingId:", selectedBookingId);
+      const response = await api.get(
+        `/invoices/booking/${selectedBookingId}/print`
+      );
+      setSuccessMessage(
+        response.data.message || "Đã gửi yêu cầu in hóa đơn và email!"
+      );
+      setSnackbarOpen(true);
+      setOpenInvoiceDialog(false);
+    } catch (error) {
+      console.error("Lỗi khi gửi yêu cầu in hóa đơn:", error);
+      setSnackbarOpen(true);
+    } finally {
+      setInvoiceLoading(false);
     }
   };
 
@@ -1066,7 +983,7 @@ const ListBookings: React.FC = () => {
         </MenuItem>
       </Menu>
 
-      {/* Check-in Dialog - giữ nguyên */}
+      {/* Check-in Dialog */}
       <Dialog
         open={openCheckinDialog}
         onClose={handleCloseCheckinDialog}
@@ -1257,7 +1174,7 @@ const ListBookings: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Check-out Dialog - giữ nguyên */}
+      {/* Check-out Dialog */}
       <Dialog
         open={openCheckoutDialog}
         onClose={() => setOpenCheckoutDialog(false)}
@@ -1615,7 +1532,7 @@ const ListBookings: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Updated Invoice Dialog */}
+      {/* Invoice Dialog */}
       <Dialog
         open={openInvoiceDialog}
         onClose={handleCloseInvoiceDialog}
@@ -1883,7 +1800,7 @@ const ListBookings: React.FC = () => {
             variant="contained"
             color="primary"
             onClick={handlePrintInvoice}
-            disabled={!invoiceInfo}
+            disabled={!selectedBookingId || invoiceLoading}
             sx={{
               borderRadius: 2,
               px: 3,
@@ -1892,7 +1809,7 @@ const ListBookings: React.FC = () => {
               fontSize: "15px",
             }}
           >
-            🖨️ In hóa đơn
+            {invoiceLoading ? <CircularProgress size={24} /> : "🖨️ In hóa đơn"}
           </Button>
         </DialogActions>
       </Dialog>
