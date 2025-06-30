@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -71,11 +71,17 @@ const AmenitiesCategoryList: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
-  const [editFormData, setEditFormData] = useState<AmenityCategory | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [editFormData, setEditFormData] = useState<AmenityCategory | null>(
+    null
+  );
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -87,14 +93,14 @@ const AmenitiesCategoryList: React.FC = () => {
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const navigate = useNavigate();
 
-  const API_URL = 'http://127.0.0.1:8000/api/amenity-categories';
+  const API_URL = "http://127.0.0.1:8000/api/amenity-categories";
   const PER_PAGE = 10;
 
   const fetchCategories = async (page: number = 1, search: string = '') => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem("auth_token");
       if (!token) {
         throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
       }
@@ -106,11 +112,13 @@ const AmenitiesCategoryList: React.FC = () => {
         },
       });
 
-      const mapped: AmenityCategory[] = response.data.data.map((cat: RawAmenityCategory) => ({
-        id: cat.id != null ? String(cat.id) : '',
-        name: cat.name || 'Không xác định',
-        description: cat.description ?? '',
-      }));
+      const mapped: AmenityCategory[] = response.data.data.map(
+        (cat: RawAmenityCategory) => ({
+          id: cat.id != null ? String(cat.id) : "",
+          name: cat.name || "Không xác định",
+          description: cat.description ?? "",
+        })
+      );
 
       setAllCategories(page === 1 ? mapped : [...allCategories, ...mapped]);
       setCategories(mapped);
@@ -154,24 +162,39 @@ const AmenitiesCategoryList: React.FC = () => {
       // Placeholder cho lọc trạng thái nếu API hỗ trợ
     }
 
-    setCategories(filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE));
+    setCategories(
+      filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE)
+    );
     setLastPage(Math.ceil(filtered.length / PER_PAGE));
   }, [searchQuery, activeFilters, currentPage, allCategories]);
+
+  useEffect(() => {
+    let filtered = [...allCategories];
+    if (searchQuery.trim() !== "") {
+      filtered = filtered.filter((cat) =>
+        cat.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    setLastPage(Math.ceil(filtered.length / 10));
+    setCategories(filtered.slice((currentPage - 1) * 10, currentPage * 10));
+  }, [searchQuery, currentPage, allCategories]);
 
   const validateForm = (data: AmenityCategory): ValidationErrors => {
     const errors: ValidationErrors = {};
     if (!data.name.trim()) {
-      errors.name = 'Tên danh mục không được để trống';
+      errors.name = "Tên danh mục không được để trống";
     } else if (data.name.length > 50) {
-      errors.name = 'Tên danh mục không được vượt quá 50 ký tự';
+      errors.name = "Tên danh mục không được vượt quá 50 ký tự";
     }
     if (data.description && data.description.length > 500) {
-      errors.description = 'Mô tả không được vượt quá 500 ký tự';
+      errors.description = "Mô tả không được vượt quá 500 ký tự";
     }
     return errors;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     if (editFormData) {
       const updatedData = { ...editFormData, [name]: value };
@@ -200,32 +223,36 @@ const AmenitiesCategoryList: React.FC = () => {
 
     setEditLoading(true);
     try {
-      const token = localStorage.getItem('auth_token');
-      if (!token) throw new Error('Không tìm thấy token xác thực');
+      const token = localStorage.getItem("auth_token");
+      if (!token) throw new Error("Không tìm thấy token xác thực");
 
       const response = await axios.put(
         `${API_URL}/${editFormData.id}`,
         {
           name: editFormData.name,
-          description: editFormData.description || '',
+          description: editFormData.description || "",
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (response.status === 200) {
         setAllCategories((prev) =>
-          prev.map((cat) => (cat.id === editFormData.id ? { ...editFormData } : cat))
+          prev.map((cat) =>
+            cat.id === editFormData.id ? { ...editFormData } : cat
+          )
         );
         setCategories((prev) =>
-          prev.map((cat) => (cat.id === editFormData.id ? { ...editFormData } : cat))
+          prev.map((cat) =>
+            cat.id === editFormData.id ? { ...editFormData } : cat
+          )
         );
         setEditCategoryId(null);
         setEditFormData(null);
         setSelectedCategoryId(null);
-        setSnackbarMessage('Cập nhật danh mục thành công!');
+        setSnackbarMessage("Cập nhật danh mục thành công!");
         setSnackbarOpen(true);
       } else {
-        throw new Error('Không thể cập nhật danh mục');
+        throw new Error("Không thể cập nhật danh mục");
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof AxiosError
@@ -256,7 +283,9 @@ const AmenitiesCategoryList: React.FC = () => {
   };
 
   const handleViewDetails = (id: string) => {
-    setSelectedCategoryId((prev) => (prev === id && editCategoryId !== id ? null : id));
+    setSelectedCategoryId((prev) =>
+      prev === id && editCategoryId !== id ? null : id
+    );
     if (editCategoryId === id) {
       setEditCategoryId(null);
       setEditFormData(null);
@@ -349,10 +378,13 @@ const AmenitiesCategoryList: React.FC = () => {
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
-    setSnackbarMessage('');
+    setSnackbarMessage("");
   };
 
-  const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    newPage: number
+  ) => {
     setCurrentPage(newPage);
     fetchCategories(newPage, searchQuery);
   };
@@ -370,7 +402,7 @@ const AmenitiesCategoryList: React.FC = () => {
       if (prev.includes(filter)) {
         return prev.filter((f) => f !== filter);
       } else {
-        return [...prev, filter].filter((f) => f !== 'all');
+        return [...prev, filter].filter((f) => f !== "all");
       }
     });
     setCurrentPage(1);
@@ -380,10 +412,16 @@ const AmenitiesCategoryList: React.FC = () => {
   return (
     <div className="promotions-wrapper">
       <div className="promotions-title">
-        <Typography variant="body2" sx={{ color: 'gray', mb: 1 }}>
-          Tiện ích {'>'} Danh sách Danh Mục
+        <Typography variant="body2" sx={{ color: "gray", mb: 1 }}>
+          Tiện ích {">"} Danh sách Danh Mục
         </Typography>
-        <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          mb={2}
+        >
           <Typography variant="h2" fontWeight={700}>
             Danh Mục Tiện Ích
           </Typography>
@@ -400,10 +438,10 @@ const AmenitiesCategoryList: React.FC = () => {
                 ),
               }}
               sx={{
-                width: { xs: '100%', sm: 300 },
-                bgcolor: '#fff',
-                borderRadius: '8px',
-                '& input': { fontSize: '15px' },
+                width: { xs: "100%", sm: 300 },
+                bgcolor: "#fff",
+                borderRadius: "8px",
+                "& input": { fontSize: "15px" },
               }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -411,10 +449,10 @@ const AmenitiesCategoryList: React.FC = () => {
             <IconButton
               onClick={handleFilterClick}
               sx={{
-                bgcolor: '#fff',
-                borderRadius: '8px',
+                bgcolor: "#fff",
+                borderRadius: "8px",
                 p: 1,
-                '&:hover': { bgcolor: '#f0f0f0' },
+                "&:hover": { bgcolor: "#f0f0f0" },
               }}
               className="filter-button"
             >
@@ -424,58 +462,84 @@ const AmenitiesCategoryList: React.FC = () => {
               anchorEl={filterAnchorEl}
               open={Boolean(filterAnchorEl)}
               onClose={handleFilterClose}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              sx={{ '& .MuiPaper-root': { borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' } }}
+              anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+              transformOrigin={{ vertical: "top", horizontal: "left" }}
+              sx={{
+                "& .MuiPaper-root": {
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                },
+              }}
             >
-              {['all', 'active', 'inactive'].map((filter) => (
+              {["all", "active", "inactive"].map((filter) => (
                 <MenuItem
                   key={filter}
                   onClick={() => handleFilterSelect(filter)}
                   selected={activeFilters.includes(filter)}
                   sx={{
-                    '&:hover': { bgcolor: '#f0f0f0' },
-                    '&.Mui-selected': { bgcolor: '#e0f7fa', '&:hover': { bgcolor: '#b2ebf2' } },
+                    "&:hover": { bgcolor: "#f0f0f0" },
+                    "&.Mui-selected": {
+                      bgcolor: "#e0f7fa",
+                      "&:hover": { bgcolor: "#b2ebf2" },
+                    },
                   }}
                 >
-                  <Typography variant="body2" sx={{ color: activeFilters.includes(filter) ? '#00796b' : '#333' }}>
-                    {filter === 'all' ? 'Tất cả' : filter === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: activeFilters.includes(filter)
+                        ? "#00796b"
+                        : "#333",
+                    }}
+                  >
+                    {filter === "all"
+                      ? "Tất cả"
+                      : filter === "active"
+                      ? "Hoạt động"
+                      : "Không hoạt động"}
                   </Typography>
                 </MenuItem>
               ))}
             </Menu>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 0.5,
+                alignItems: "center",
+              }}
+            >
               {activeFilters.length > 0 && (
                 <Chip
                   label={`Bộ lọc: ${activeFilters.length} đã chọn`}
                   onDelete={() => setActiveFilters([])}
                   onClick={handleFilterClick}
                   sx={{
-                    bgcolor: '#e0f7fa',
-                    color: '#00796b',
-                    fontWeight: 'bold',
-                    height: '28px',
-                    cursor: 'pointer',
-                    '& .MuiChip-deleteIcon': { color: '#00796b' },
+                    bgcolor: "#e0f7fa",
+                    color: "#00796b",
+                    fontWeight: "bold",
+                    height: "28px",
+                    cursor: "pointer",
+                    "& .MuiChip-deleteIcon": { color: "#00796b" },
                   }}
                 />
               )}
             </Box>
             <Button
               variant="contained"
-              onClick={() => navigate('/amenity-categories/add')}
+              onClick={() => navigate("/amenity-categories/add")}
               sx={{
-                backgroundColor: '#4318FF',
-                color: '#fff',
-                textTransform: 'none',
+                backgroundColor: "#4318FF",
+                color: "#fff",
+                textTransform: "none",
                 fontWeight: 600,
-                borderRadius: '8px',
+                borderRadius: "8px",
                 px: 2.5,
                 py: 0.7,
-                boxShadow: '0 2px 6px rgba(106, 27, 154, 0.3)',
-                '&:hover': {
-                  backgroundColor: '#7B1FA2',
-                  boxShadow: '0 4px 12px rgba(106, 27, 154, 0.4)',
+                boxShadow: "0 2px 6px rgba(106, 27, 154, 0.3)",
+                "&:hover": {
+                  backgroundColor: "#7B1FA2",
+                  boxShadow: "0 4px 12px rgba(106, 27, 154, 0.4)",
                 },
               }}
             >
@@ -485,10 +549,15 @@ const AmenitiesCategoryList: React.FC = () => {
         </Box>
       </div>
 
-      <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: '8px' }}>
+      <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: "8px" }}>
         <CardContent sx={{ p: 0 }}>
           {loading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" p={4}>
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              p={2}
+            >
               <CircularProgress />
               <Typography ml={2}>Đang tải danh sách danh mục...</Typography>
             </Box>
@@ -499,18 +568,28 @@ const AmenitiesCategoryList: React.FC = () => {
           ) : categories.length === 0 ? (
             <Typography p={2} textAlign="center">
               {searchQuery || activeFilters.length > 0
-                ? 'Không tìm thấy danh mục phù hợp'
-                : 'Không tìm thấy danh mục tiện ích nào.'}
+                ? "Không tìm thấy danh mục phù hợp"
+                : "Không tìm thấy danh mục tiện ích nào."}
             </Typography>
           ) : (
             <>
-              <TableContainer component={Paper} className="promotions-table-container" sx={{ maxWidth: '100%', overflowX: 'auto' }}>
-                <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
-                  <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
+              <TableContainer
+                component={Paper}
+                className="promotions-table-container"
+                sx={{ maxWidth: "100%", overflowX: "auto" }}
+              >
+                <Table sx={{ width: "100%", tableLayout: "fixed" }}>
+                  <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
                     <TableRow>
-                      <TableCell sx={{ minWidth: '150px' }}><b>Tên</b></TableCell>
-                      <TableCell sx={{ minWidth: '200px' }}><b>Mô tả</b></TableCell>
-                      <TableCell align="center" sx={{ minWidth: '150px' }}><b>Hành động</b></TableCell>
+                      <TableCell sx={{ minWidth: "150px" }}>
+                        <b>Tên</b>
+                      </TableCell>
+                      <TableCell sx={{ minWidth: "200px" }}>
+                        <b>Mô tả</b>
+                      </TableCell>
+                      <TableCell align="center" sx={{ minWidth: "150px" }}>
+                        <b>Hành động</b>
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -518,29 +597,50 @@ const AmenitiesCategoryList: React.FC = () => {
                       <React.Fragment key={category.id}>
                         <TableRow hover>
                           <TableCell>{category.name}</TableCell>
-                          <TableCell>{category.description || '–'}</TableCell>
+                          <TableCell>{category.description || "–"}</TableCell>
                           <TableCell align="center">
-                            <Box display="flex" justifyContent="center" gap={1} sx={{ flexWrap: 'wrap' }}>
+                            <Box
+                              display="flex"
+                              justifyContent="center"
+                              gap={1}
+                              sx={{ flexWrap: "wrap" }}
+                            >
                               <IconButton
-                                title={selectedCategoryId === category.id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                                title={
+                                  selectedCategoryId === category.id
+                                    ? "Ẩn chi tiết"
+                                    : "Xem chi tiết"
+                                }
                                 onClick={() => handleViewDetails(category.id)}
                                 sx={{
-                                  color: '#1976d2',
-                                  bgcolor: '#e3f2fd',
-                                  p: '6px',
-                                  '&:hover': { bgcolor: '#bbdefb', boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)' },
+                                  color: "#1976d2",
+                                  bgcolor: "#e3f2fd",
+                                  p: "6px",
+                                  "&:hover": {
+                                    bgcolor: "#bbdefb",
+                                    boxShadow:
+                                      "0 2px 6px rgba(25, 118, 210, 0.4)",
+                                  },
                                 }}
                               >
-                                {selectedCategoryId === category.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                                {selectedCategoryId === category.id ? (
+                                  <VisibilityOffIcon fontSize="small" />
+                                ) : (
+                                  <VisibilityIcon fontSize="small" />
+                                )}
                               </IconButton>
                               <IconButton
                                 title="Chỉnh sửa danh mục"
                                 onClick={() => handleEdit(category)}
                                 sx={{
-                                  color: '#FACC15',
-                                  bgcolor: '#fef9c3',
-                                  p: '6px',
-                                  '&:hover': { bgcolor: '#fff9c4', boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)' },
+                                  color: "#FACC15",
+                                  bgcolor: "#fef9c3",
+                                  p: "6px",
+                                  "&:hover": {
+                                    bgcolor: "#fff9c4",
+                                    boxShadow:
+                                      "0 2px 6px rgba(250, 204, 21, 0.4)",
+                                  },
                                 }}
                               >
                                 <EditIcon fontSize="small" />
@@ -549,10 +649,14 @@ const AmenitiesCategoryList: React.FC = () => {
                                 title="Xóa danh mục"
                                 onClick={() => handleDelete(category.id)}
                                 sx={{
-                                  color: '#d32f2f',
-                                  bgcolor: '#ffebee',
-                                  p: '6px',
-                                  '&:hover': { bgcolor: '#ffcdd2', boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)' },
+                                  color: "#d32f2f",
+                                  bgcolor: "#ffebee",
+                                  p: "6px",
+                                  "&:hover": {
+                                    bgcolor: "#ffcdd2",
+                                    boxShadow:
+                                      "0 2px 6px rgba(211, 47, 47, 0.4)",
+                                  },
                                 }}
                               >
                                 <DeleteIcon fontSize="small" />
@@ -564,12 +668,27 @@ const AmenitiesCategoryList: React.FC = () => {
                           <TableCell colSpan={3} style={{ padding: 0 }}>
                             <Collapse in={selectedCategoryId === category.id}>
                               <div className="promotion-detail-container">
-                                {editCategoryId === category.id && editFormData ? (
-                                  <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
-                                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
+                                {editCategoryId === category.id &&
+                                editFormData ? (
+                                  <Box
+                                    sx={{
+                                      p: 2,
+                                      bgcolor: "#fff",
+                                      borderRadius: "8px",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="h6"
+                                      gutterBottom
+                                      sx={{ fontWeight: 600, color: "#333" }}
+                                    >
                                       Chỉnh sửa danh mục
                                     </Typography>
-                                    <Box display="flex" flexDirection="column" gap={2}>
+                                    <Box
+                                      display="flex"
+                                      flexDirection="column"
+                                      gap={2}
+                                    >
                                       <TextField
                                         label="Tên"
                                         name="name"
@@ -580,7 +699,10 @@ const AmenitiesCategoryList: React.FC = () => {
                                         size="small"
                                         error={!!validationErrors.name}
                                         helperText={validationErrors.name}
-                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                        sx={{
+                                          bgcolor: "#fff",
+                                          borderRadius: "4px",
+                                        }}
                                       />
                                       <TextField
                                         label="Mô tả"
@@ -593,8 +715,13 @@ const AmenitiesCategoryList: React.FC = () => {
                                         multiline
                                         rows={3}
                                         error={!!validationErrors.description}
-                                        helperText={validationErrors.description}
-                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                        helperText={
+                                          validationErrors.description
+                                        }
+                                        sx={{
+                                          bgcolor: "#fff",
+                                          borderRadius: "4px",
+                                        }}
                                       />
                                       <Box mt={2} display="flex" gap={2}>
                                         <Button
@@ -602,49 +729,82 @@ const AmenitiesCategoryList: React.FC = () => {
                                           onClick={handleSave}
                                           disabled={editLoading}
                                           sx={{
-                                            backgroundColor: '#4318FF',
-                                            color: '#fff',
-                                            textTransform: 'none',
+                                            backgroundColor: "#4318FF",
+                                            color: "#fff",
+                                            textTransform: "none",
                                             fontWeight: 600,
-                                            borderRadius: '8px',
+                                            borderRadius: "8px",
                                             px: 2.5,
                                             py: 0.7,
-                                            '&:hover': { backgroundColor: '#7B1FA2' },
-                                            '&:disabled': { backgroundColor: '#a9a9a9' },
+                                            "&:hover": {
+                                              backgroundColor: "#7B1FA2",
+                                            },
+                                            "&:disabled": {
+                                              backgroundColor: "#a9a9a9",
+                                            },
                                           }}
                                         >
-                                          {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
+                                          {editLoading ? (
+                                            <CircularProgress size={24} />
+                                          ) : (
+                                            "Lưu"
+                                          )}
                                         </Button>
                                         <Button
                                           variant="outlined"
                                           onClick={handleCancel}
                                           disabled={editLoading}
                                           sx={{
-                                            color: '#f44336',
-                                            borderColor: '#f44336',
-                                            textTransform: 'none',
+                                            color: "#f44336",
+                                            borderColor: "#f44336",
+                                            textTransform: "none",
                                             fontWeight: 600,
-                                            borderRadius: '8px',
+                                            borderRadius: "8px",
                                             px: 2.5,
                                             py: 0.7,
-                                            '&:hover': { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
-                                            '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
+                                            "&:hover": {
+                                              borderColor: "#d32f2f",
+                                              backgroundColor: "#ffebee",
+                                            },
+                                            "&:disabled": {
+                                              color: "#a9a9a9",
+                                              borderColor: "#a9a9a9",
+                                            },
                                           }}
                                         >
                                           Hủy
                                         </Button>
                                       </Box>
-                                      {editError && <Typography color="error" mt={1}>{editError}</Typography>}
+                                      {editError && (
+                                        <Typography color="error" mt={1}>
+                                          {editError}
+                                        </Typography>
+                                      )}
                                     </Box>
                                   </Box>
                                 ) : (
-                                  <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
-                                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: '#333' }}>
+                                  <Box
+                                    sx={{
+                                      p: 2,
+                                      bgcolor: "#fff",
+                                      borderRadius: "8px",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="h6"
+                                      gutterBottom
+                                      sx={{ fontWeight: 600, color: "#333" }}
+                                    >
                                       Thông tin danh mục
                                     </Typography>
                                     <Box display="grid" gap={1}>
-                                      <Typography><strong>Tên:</strong> {category.name}</Typography>
-                                      <Typography><strong>Mô tả:</strong> {category.description || '–'}</Typography>
+                                      <Typography>
+                                        <strong>Tên:</strong> {category.name}
+                                      </Typography>
+                                      <Typography>
+                                        <strong>Mô tả:</strong>{" "}
+                                        {category.description || "–"}
+                                      </Typography>
                                     </Box>
                                   </Box>
                                 )}
@@ -679,12 +839,20 @@ const AmenitiesCategoryList: React.FC = () => {
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-        sx={{ '& .MuiDialog-paper': { borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)' } }}
+        sx={{
+          "& .MuiDialog-paper": {
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+          },
+        }}
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>Xác nhận xóa danh mục</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Xác nhận xóa danh mục
+        </DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn xóa danh mục này không? Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn xóa danh mục này không? Hành động này không
+            thể hoàn tác.
           </Typography>
           <Typography variant="body2" color="textSecondary" mt={1}>
             Lưu ý: Nếu danh mục có tiện ích liên kết, bạn cần xóa hoặc chuyển các tiện ích sang danh mục khác trước.
@@ -708,14 +876,14 @@ const AmenitiesCategoryList: React.FC = () => {
           <Button
             onClick={() => setDeleteDialogOpen(false)}
             sx={{
-              color: '#d32f2f',
-              borderColor: '#d32f2f',
-              textTransform: 'none',
+              color: "#d32f2f",
+              borderColor: "#d32f2f",
+              textTransform: "none",
               fontWeight: 600,
-              borderRadius: '8px',
+              borderRadius: "8px",
               px: 2.5,
               py: 0.7,
-              '&:hover': { borderColor: '#b71c1c', backgroundColor: '#ffebee' },
+              "&:hover": { borderColor: "#b71c1c", backgroundColor: "#ffebee" },
             }}
           >
             Hủy
@@ -724,11 +892,11 @@ const AmenitiesCategoryList: React.FC = () => {
             onClick={confirmDelete}
             variant="contained"
             sx={{
-              bgcolor: '#d32f2f',
-              '&:hover': { bgcolor: '#b71c1c' },
-              textTransform: 'none',
+              bgcolor: "#d32f2f",
+              "&:hover": { bgcolor: "#b71c1c" },
+              textTransform: "none",
               fontWeight: 600,
-              borderRadius: '8px',
+              borderRadius: "8px",
               px: 2.5,
               py: 0.7,
             }}
@@ -742,12 +910,14 @@ const AmenitiesCategoryList: React.FC = () => {
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
+          severity={
+            snackbarMessage.includes("thành công") ? "success" : "error"
+          }
+          sx={{ width: "100%" }}
         >
           {snackbarMessage}
         </Alert>
