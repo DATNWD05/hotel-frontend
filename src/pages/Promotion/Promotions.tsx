@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -27,20 +27,27 @@ import {
   DialogActions,
   Chip,
   Tooltip,
-} from '@mui/material';
-import { SelectChangeEvent } from '@mui/material/Select';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { format, parseISO, isValid } from 'date-fns';
-import numeral from 'numeral';
-import api from '../../api/axios';
-import '../../css/Promotion.css';
-import { JSX } from 'react/jsx-runtime';
-import { Link } from 'react-router-dom';
+  Card,
+  CardContent,
+  InputAdornment,
+  Menu,
+  MenuItem as MenuItemMenu,
+} from "@mui/material";
+import { SelectChangeEvent } from "@mui/material/Select";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { SearchIcon } from "lucide-react";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import { format, parseISO, isValid } from "date-fns";
+import numeral from "numeral";
+import api from "../../api/axios";
+import "../../css/Promotion.css";
+import { JSX } from "react/jsx-runtime";
+import { Link } from "react-router-dom";
 
-type DiscountType = 'percent' | 'amount';
-type StatusType = 'scheduled' | 'active' | 'expired' | 'cancelled' | 'depleted';
+type DiscountType = "percent" | "amount";
+type StatusType = "scheduled" | "active" | "expired" | "cancelled" | "depleted";
 
 interface Promotion {
   id: number;
@@ -72,19 +79,22 @@ interface Meta {
   total: number;
 }
 
-const formatCurrency = (value: number | null, discountType: DiscountType): string => {
-  if (value === null || value === undefined) return 'N/A';
-  if (discountType === 'percent') return `${value}%`;
-  return numeral(value).format('0,0') + ' VNĐ';
+const formatCurrency = (
+  value: number | null,
+  discountType: DiscountType
+): string => {
+  if (value === null || value === undefined) return "N/A";
+  if (discountType === "percent") return `${value}%`;
+  return numeral(value).format("0,0") + " VNĐ";
 };
 
 const formatDate = (date: string): JSX.Element => {
   try {
     const parsedDate = parseISO(date);
-    if (!isValid(parsedDate)) throw new Error('Invalid date');
+    if (!isValid(parsedDate)) throw new Error("Invalid date");
     return (
-      <Tooltip title={format(parsedDate, 'dd/MM/yyyy HH:mm:ss')}>
-        <span>{format(parsedDate, 'dd/MM/yyyy')}</span>
+      <Tooltip title={format(parsedDate, "dd/MM/yyyy HH:mm:ss")}>
+        <span>{format(parsedDate, "dd/MM/yyyy")}</span>
       </Tooltip>
     );
   } catch {
@@ -95,27 +105,29 @@ const formatDate = (date: string): JSX.Element => {
 const formatDateForInput = (date: string): string => {
   try {
     const parsedDate = parseISO(date);
-    if (!isValid(parsedDate)) return '';
-    return format(parsedDate, 'yyyy-MM-dd');
+    if (!isValid(parsedDate)) return "";
+    return format(parsedDate, "yyyy-MM-dd");
   } catch {
-    return '';
+    return "";
   }
 };
 
-const getPromotionStatus = (status: StatusType): { status: string; color: string } => {
+const getPromotionStatus = (
+  status: StatusType
+): { status: string; color: string } => {
   switch (status) {
-    case 'scheduled':
-      return { status: 'Chưa bắt đầu', color: '#757575' };
-    case 'active':
-      return { status: 'Đang hoạt động', color: '#388E3C' };
-    case 'expired':
-      return { status: 'Hết hạn', color: '#D32F2F' };
-    case 'cancelled':
-      return { status: 'Bị hủy', color: '#757575' };
-    case 'depleted':
-      return { status: 'Hết lượt', color: '#FF8F00' };
+    case "scheduled":
+      return { status: "Chưa bắt đầu", color: "#757575" };
+    case "active":
+      return { status: "Đang hoạt động", color: "#388E3C" };
+    case "expired":
+      return { status: "Hết hạn", color: "#D32F2F" };
+    case "cancelled":
+      return { status: "Bị hủy", color: "#757575" };
+    case "depleted":
+      return { status: "Hết lượt", color: "#FF8F00" };
     default:
-      return { status: 'Không xác định', color: '#757575' };
+      return { status: "Không xác định", color: "#757575" };
   }
 };
 
@@ -123,20 +135,27 @@ const Promotions: React.FC = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [allPromotions, setAllPromotions] = useState<Promotion[]>([]);
   const [filteredPromotions, setFilteredPromotions] = useState<Promotion[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Promotion>>({});
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [promotionToDelete, setPromotionToDelete] = useState<number | null>(null);
+  const [promotionToDelete, setPromotionToDelete] = useState<number | null>(
+    null
+  );
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(
+    null
+  );
 
   const fetchAllPromotions = async () => {
     try {
@@ -146,17 +165,35 @@ const Promotions: React.FC = () => {
       let page = 1;
 
       while (true) {
-        const response = await api.get('/promotions', { params: { page } });
+        const response = await api.get("/promotions", { params: { page } });
         if (response.status === 200) {
           const data: { data: Promotion[]; meta: Meta } = response.data;
           const sanitizedData = data.data.map((item) => ({
             ...item,
-            discount_type: item.discount_type === 'percent' || item.discount_type === 'amount' ? item.discount_type : 'amount',
-            status: ['scheduled', 'active', 'expired', 'cancelled', 'depleted'].includes(item.status) ? item.status : 'cancelled',
+            discount_type:
+              item.discount_type === "percent" ||
+              item.discount_type === "amount"
+                ? item.discount_type
+                : "amount",
+            status: [
+              "scheduled",
+              "active",
+              "expired",
+              "cancelled",
+              "depleted",
+            ].includes(item.status)
+              ? item.status
+              : "cancelled",
             usage_limit: Number(item.usage_limit),
             used_count: Number(item.used_count),
-            start_date: item.start_date && isValid(parseISO(item.start_date)) ? item.start_date : new Date().toISOString(),
-            end_date: item.end_date && isValid(parseISO(item.end_date)) ? item.end_date : new Date().toISOString(),
+            start_date:
+              item.start_date && isValid(parseISO(item.start_date))
+                ? item.start_date
+                : new Date().toISOString(),
+            end_date:
+              item.end_date && isValid(parseISO(item.end_date))
+                ? item.end_date
+                : new Date().toISOString(),
           }));
           allData = [...allData, ...sanitizedData];
 
@@ -171,9 +208,10 @@ const Promotions: React.FC = () => {
       setPromotions(allData.slice(0, 10));
       setLastPage(Math.ceil(allData.length / 10));
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
+      const errorMessage =
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu";
       setError(errorMessage);
-      console.error('Lỗi khi tải danh sách khuyến mãi:', errorMessage);
+      console.error("Lỗi khi tải danh sách khuyến mãi:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -186,7 +224,7 @@ const Promotions: React.FC = () => {
   useEffect(() => {
     let filtered = [...allPromotions];
 
-    if (searchQuery.trim() !== '') {
+    if (searchQuery.trim() !== "") {
       filtered = filtered.filter((prev) =>
         prev.code.toLowerCase().includes(searchQuery.toLowerCase())
       );
@@ -206,24 +244,35 @@ const Promotions: React.FC = () => {
 
   const validateForm = (data: Partial<Promotion>): ValidationErrors => {
     const errors: ValidationErrors = {};
-    if (!data.code?.trim()) errors.code = 'Mã CTKM không được để trống';
-    else if (data.code && data.code.length > 20) errors.code = 'Mã CTKM không được vượt quá 20 ký tự';
-    if (!data.description?.trim()) errors.description = 'Mô tả không được để trống';
-    else if (data.description && data.description.length > 200) errors.description = 'Mô tả không được vượt quá 200 ký tự';
-    if (!data.discount_type) errors.discount_type = 'Vui lòng chọn loại giảm';
-    if (data.discount_value === undefined || data.discount_value <= 0) errors.discount_value = 'Giá trị giảm phải lớn hơn 0';
-    else if (data.discount_type === 'percent' && data.discount_value > 100) {
-      errors.discount_value = 'Giá trị giảm không được vượt quá 100%';
+    if (!data.code?.trim()) errors.code = "Mã CTKM không được để trống";
+    else if (data.code && data.code.length > 20)
+      errors.code = "Mã CTKM không được vượt quá 20 ký tự";
+    if (!data.description?.trim())
+      errors.description = "Mô tả không được để trống";
+    else if (data.description && data.description.length > 200)
+      errors.description = "Mô tả không được vượt quá 200 ký tự";
+    if (!data.discount_type) errors.discount_type = "Vui lòng chọn loại giảm";
+    if (data.discount_value === undefined || data.discount_value <= 0)
+      errors.discount_value = "Giá trị giảm phải lớn hơn 0";
+    else if (data.discount_type === "percent" && data.discount_value > 100) {
+      errors.discount_value = "Giá trị giảm không được vượt quá 100%";
     }
-    if (!data.start_date) errors.start_date = 'Ngày bắt đầu không được để trống';
-    else if (!isValid(parseISO(data.start_date))) errors.start_date = 'Ngày bắt đầu không hợp lệ';
-    if (!data.end_date) errors.end_date = 'Ngày kết thúc không được để trống';
-    else if (!isValid(parseISO(data.end_date))) errors.end_date = 'Ngày kết thúc không hợp lệ';
-    else if (data.start_date && data.end_date && data.start_date > data.end_date) {
-      errors.end_date = 'Ngày kết thúc phải sau ngày bắt đầu';
+    if (!data.start_date)
+      errors.start_date = "Ngày bắt đầu không được để trống";
+    else if (!isValid(parseISO(data.start_date)))
+      errors.start_date = "Ngày bắt đầu không hợp lệ";
+    if (!data.end_date) errors.end_date = "Ngày kết thúc không được để trống";
+    else if (!isValid(parseISO(data.end_date)))
+      errors.end_date = "Ngày kết thúc không hợp lệ";
+    else if (
+      data.start_date &&
+      data.end_date &&
+      data.start_date > data.end_date
+    ) {
+      errors.end_date = "Ngày kết thúc phải sau ngày bắt đầu";
     }
     if (data.usage_limit === undefined || data.usage_limit <= 0) {
-      errors.usage_limit = 'Giới hạn số lần dùng phải lớn hơn 0';
+      errors.usage_limit = "Giới hạn số lần dùng phải lớn hơn 0";
     }
     return errors;
   };
@@ -257,9 +306,13 @@ const Promotions: React.FC = () => {
     setValidationErrors({});
   };
 
-  const handleChangeDetail = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChangeDetail = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setEditedDetail((prev) => ({ ...prev, [name]: value } as Partial<Promotion>));
+    setEditedDetail(
+      (prev) => ({ ...prev, [name]: value } as Partial<Promotion>)
+    );
     setValidationErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[name as keyof typeof prev];
@@ -270,7 +323,9 @@ const Promotions: React.FC = () => {
   const handleSelectChange = (e: SelectChangeEvent<DiscountType>) => {
     const { name, value } = e.target;
     if (name && editedDetail) {
-      setEditedDetail((prev) => ({ ...prev, [name]: value } as Partial<Promotion>));
+      setEditedDetail(
+        (prev) => ({ ...prev, [name]: value } as Partial<Promotion>)
+      );
       setValidationErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[name as keyof typeof prev];
@@ -291,15 +346,22 @@ const Promotions: React.FC = () => {
     try {
       setLoading(true);
       const payload = {
-        code: editedDetail.code?.trim() ?? '',
-        description: editedDetail.description?.trim() ?? '',
-        discount_type: editedDetail.discount_type ?? 'amount',
-        discount_value: editedDetail.discount_value != null ? Number(editedDetail.discount_value) : 0,
+        code: editedDetail.code?.trim() ?? "",
+        description: editedDetail.description?.trim() ?? "",
+        discount_type: editedDetail.discount_type ?? "amount",
+        discount_value:
+          editedDetail.discount_value != null
+            ? Number(editedDetail.discount_value)
+            : 0,
         start_date: editedDetail.start_date ?? new Date().toISOString(),
         end_date: editedDetail.end_date ?? new Date().toISOString(),
-        usage_limit: editedDetail.usage_limit !== undefined ? Number(editedDetail.usage_limit) : 0,
-        used_count: editedDetail.used_count != null ? Number(editedDetail.used_count) : 0,
-        status: editedDetail.status ?? 'cancelled',
+        usage_limit:
+          editedDetail.usage_limit !== undefined
+            ? Number(editedDetail.usage_limit)
+            : 0,
+        used_count:
+          editedDetail.used_count != null ? Number(editedDetail.used_count) : 0,
+        status: editedDetail.status ?? "cancelled",
       };
 
       const response = await api.put(`/promotions/${editedDetail.id}`, payload);
@@ -308,17 +370,20 @@ const Promotions: React.FC = () => {
         setEditingDetailId(null);
         setViewDetailId(null);
         setValidationErrors({});
-        setSnackbarMessage('Mã khuyến mãi đã được cập nhật thành công!');
+        setSnackbarMessage("Mã khuyến mãi đã được cập nhật thành công!");
         setSnackbarOpen(true);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật khuyến mãi';
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Đã xảy ra lỗi khi cập nhật khuyến mãi";
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
-      console.error('Lỗi khi cập nhật khuyến mãi:', errorMessage);
+      console.error("Lỗi khi cập nhật khuyến mãi:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -344,32 +409,42 @@ const Promotions: React.FC = () => {
 
       const promotion = promotions.find((p) => p.id === promotionToDelete);
       if (!promotion) {
-        throw new Error('Không tìm thấy mã khuyến mãi để xóa');
+        throw new Error("Không tìm thấy mã khuyến mãi để xóa");
       }
 
       if (promotion.used_count > 0) {
-        const updatedPromotion = { ...promotion, status: 'cancelled' };
-        const updateResponse = await api.put(`/promotions/${promotionToDelete}`, updatedPromotion);
+        const updatedPromotion = { ...promotion, status: "cancelled" };
+        const updateResponse = await api.put(
+          `/promotions/${promotionToDelete}`,
+          updatedPromotion
+        );
         if (updateResponse.status !== 200) {
-          throw new Error('Không thể hủy mã giảm giá do lỗi từ phía server');
+          throw new Error("Không thể hủy mã giảm giá do lỗi từ phía server");
         }
-        setSnackbarMessage('Mã giảm giá đã được hủy vì đã được sử dụng ít nhất 1 lần!');
+        setSnackbarMessage(
+          "Mã giảm giá đã được hủy vì đã được sử dụng ít nhất 1 lần!"
+        );
       } else {
-        const deleteResponse = await api.delete(`/promotions/${promotionToDelete}`);
+        const deleteResponse = await api.delete(
+          `/promotions/${promotionToDelete}`
+        );
         if (deleteResponse.status !== 200 && deleteResponse.status !== 204) {
-          throw new Error('Không thể xóa mã giảm giá do lỗi từ phía server');
+          throw new Error("Không thể xóa mã giảm giá do lỗi từ phía server");
         }
-        setSnackbarMessage('Mã giảm giá đã được xóa thành công vì chưa được sử dụng!');
+        setSnackbarMessage(
+          "Mã giảm giá đã được xóa thành công vì chưa được sử dụng!"
+        );
       }
 
       await fetchAllPromotions();
       setSnackbarOpen(true);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi xóa khuyến mãi';
+      const errorMessage =
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi xóa khuyến mãi";
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
-      console.error('Lỗi khi xóa khuyến mãi:', errorMessage);
+      console.error("Lỗi khi xóa khuyến mãi:", errorMessage);
     } finally {
       setLoading(false);
       setDeleteDialogOpen(false);
@@ -379,382 +454,811 @@ const Promotions: React.FC = () => {
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
-    setSnackbarMessage('');
+    setSnackbarMessage("");
   };
 
-  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
     setCurrentPage(page);
     setPromotions(filteredPromotions.slice((page - 1) * 10, page * 10));
   };
 
-  const handleStatusChange = (event: SelectChangeEvent<string[]>) => {
-    const {
-      target: { value },
-    } = event;
-    setStatusFilters(typeof value === 'string' ? value.split(',') : value);
+  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
+    setFilterAnchorEl(event.currentTarget);
   };
 
-  const handleDeleteStatus = (statusToDelete: string) => () => {
-    setStatusFilters((prev) => prev.filter((status) => status !== statusToDelete));
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const handleFilterSelect = (status: string) => {
+    setStatusFilters((prev) => {
+      if (prev.includes(status)) {
+        return prev.filter((s) => s !== status);
+      } else {
+        return [...prev, status];
+      }
+    });
+    handleFilterClose();
   };
 
   const statusOptions = [
-    { value: 'Chưa bắt đầu', color: '#757575' },
-    { value: 'Đang hoạt động', color: '#388E3C' },
-    { value: 'Hết lượt', color: '#FF8F00' },
-    { value: 'Hết hạn', color: '#D32F2F' },
-    { value: 'Bị hủy', color: '#757575' },
+    { value: "Chưa bắt đầu", color: "#757575" },
+    { value: "Đang hoạt động", color: "#388E3C" },
+    { value: "Hết lượt", color: "#FF8F00" },
+    { value: "Hết hạn", color: "#D32F2F" },
+    { value: "Bị hủy", color: "#757575" },
   ];
 
   return (
-    <div className="promotion-wrapper">
-      <div className="promotion-title">
-        <div className="promotion-header-content">
-          <h2>
-            Danh Sách <b>Khuyến Mãi</b>
-          </h2>
+    <div className="promotions-wrapper">
+      <div className="promotions-title">
+        <Typography variant="body2" sx={{ color: "gray", mb: 1 }}>
+          Khuyến Mãi {">"} Danh sách
+        </Typography>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          mb={2}
+        >
+          <Typography variant="h2" fontWeight={700}>
+            Khuyến Mãi
+          </Typography>
           <Box display="flex" gap={2} alignItems="center">
             <TextField
-              label="Tìm kiếm mã khuyến mãi"
-              className="promotion-search-input"
               variant="outlined"
+              placeholder="Tìm kiếm mã khuyến mãi"
               size="small"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                width: 300,
+                bgcolor: "#fff",
+                borderRadius: "8px",
+                mt: { xs: 2, sm: 0 },
+                "& input": { fontSize: "15px" },
+              }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              sx={{ width: '300px' }}
             />
-            <FormControl sx={{ width: '250px' }} variant="outlined" size="small" className="promotion-status-filter">
-              <InputLabel shrink={statusFilters.length > 0}>Lọc trạng thái</InputLabel>
-              <Select
-                multiple
-                value={statusFilters}
-                onChange={handleStatusChange}
-                label={statusFilters.length > 0 ? 'Lọc trạng thái' : undefined}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
-                    {selected.map((value) => {
-                      const statusOption = statusOptions.find((opt) => opt.value === value);
-                      return (
-                        <Chip
-                          key={value}
-                          label={value}
-                          onDelete={handleDeleteStatus(value)}
-                          sx={{
-                            backgroundColor: `${statusOption?.color}15`,
-                            color: statusOption?.color,
-                            fontSize: '12px',
-                            height: '24px',
-                            '& .MuiChip-deleteIcon': {
-                              color: statusOption?.color,
-                              fontSize: '16px',
-                            },
-                          }}
-                        />
-                      );
-                    })}
-                  </Box>
-                )}
-                MenuProps={{
-                  PaperProps: {
-                    className: 'promotion-status-menu',
-                  },
-                }}
-              >
-                {statusOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value} className="promotion-status-menu-item">
-                    <Typography variant="body2" sx={{ color: option.color, width: '100%' }}>
-                      {option.value}
-                    </Typography>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Link
-              className="promotion-btn-add"
-              to="/promotions/add"
+            <IconButton
+              onClick={handleFilterClick}
+              sx={{
+                bgcolor: "#fff",
+                borderRadius: "8px",
+                p: 1,
+                "&:hover": { bgcolor: "#f0f0f0" },
+              }}
+              className="filter-button"
             >
-              Thêm mới
-            </Link>
+              <FilterListIcon />
+            </IconButton>
+            <Menu
+              anchorEl={filterAnchorEl}
+              open={Boolean(filterAnchorEl)}
+              onClose={handleFilterClose}
+              anchorOrigin={{
+                vertical: "bottom",
+                horizontal: "left",
+              }}
+              transformOrigin={{
+                vertical: "top",
+                horizontal: "left",
+              }}
+              sx={{
+                "& .MuiPaper-root": {
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                },
+              }}
+            >
+              {statusOptions.map((option) => (
+                <MenuItemMenu
+                  key={option.value}
+                  onClick={() => handleFilterSelect(option.value)}
+                  selected={statusFilters.includes(option.value)}
+                  sx={{
+                    "&:hover": { bgcolor: "#f0f0f0" },
+                    "&.Mui-selected": {
+                      bgcolor: "#e0f7fa",
+                      "&:hover": { bgcolor: "#b2ebf2" },
+                    },
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: option.color }}>
+                    {option.value}
+                  </Typography>
+                </MenuItemMenu>
+              ))}
+            </Menu>
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 0.5,
+                alignItems: "center",
+              }}
+            >
+              {statusFilters.length > 0 && (
+                <Chip
+                  label={`Trạng thái: ${statusFilters.length} đã chọn`}
+                  onDelete={() => setStatusFilters([])}
+                  onClick={handleFilterClick}
+                  sx={{
+                    bgcolor: "#e0f7fa",
+                    color: "#00796b",
+                    fontWeight: "bold",
+                    height: "28px",
+                    cursor: "pointer",
+                    "& .MuiChip-deleteIcon": { color: "#00796b" },
+                  }}
+                />
+              )}
+            </Box>
+            <Button
+              component={Link}
+              to="/promotions/add"
+              variant="contained"
+              sx={{
+                backgroundColor: "#4318FF",
+                color: "#fff",
+                textTransform: "none",
+                fontWeight: 600,
+                borderRadius: "8px",
+                px: 2.5,
+                py: 0.7,
+                boxShadow: "0 2px 6px rgba(106, 27, 154, 0.3)",
+                "&:hover": {
+                  backgroundColor: "#7B1FA2",
+                  boxShadow: "0 4px 12px rgba(106, 27, 154, 0.4)",
+                },
+              }}
+            >
+              + Thêm mới
+            </Button>
           </Box>
-        </div>
+        </Box>
       </div>
 
-      {loading ? (
-        <div className="promotion-loading-container">
-          <CircularProgress />
-          <Typography>Đang tải danh sách khuyến mãi...</Typography>
-        </div>
-      ) : error ? (
-        <Typography color="error" className="promotion-error-message">
-          {error}
-        </Typography>
-      ) : filteredPromotions.length === 0 ? (
-        <Typography className="promotion-no-data">
-          {searchQuery || statusFilters.length > 0
-            ? 'Không tìm thấy mã khuyến mãi phù hợp.'
-            : 'Không tìm thấy khuyến mãi nào.'}
-        </Typography>
-      ) : (
-        <>
-          <TableContainer component={Paper} className="promotion-table-container">
-            <Table className="promotion-table">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Mã Khuyến Mãi</TableCell>
-                  <TableCell>Mô tả</TableCell>
-                  <TableCell>Giá trị giảm</TableCell>
-                  <TableCell>Trạng thái</TableCell>
-                  <TableCell align="center">Hành động</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {promotions.map((promotion) => {
-                  const { status, color } = getPromotionStatus(promotion.status);
-                  return (
-                    <React.Fragment key={promotion.id}>
-                      <TableRow sx={{ opacity: 1 }}>
-                        <TableCell>{promotion.code}</TableCell>
-                        <TableCell>{promotion.description}</TableCell>
-                        <TableCell>{formatCurrency(promotion.discount_value, promotion.discount_type)}</TableCell>
-                        <TableCell>
-                          <span style={{ color, fontWeight: 'bold' }}>{status}</span>
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            className="promotion-action-view"
-                            title="Xem chi tiết"
-                            onClick={() => handleViewDetail(promotion.id)}
-                          >
-                            <VisibilityIcon />
-                          </IconButton>
-                          <IconButton
-                            className="promotion-action-edit"
-                            title="Sửa"
-                            onClick={() => handleEditDetail(promotion)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            className="promotion-action-delete"
-                            title="Xóa"
-                            onClick={() => handleDelete(promotion.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell colSpan={5} style={{ padding: 0 }}>
-                          <Collapse in={viewDetailId === promotion.id}>
-                            <div className="promotion-detail-container">
-                              <h3>Thông tin khuyến mãi</h3>
-                              {editingDetailId === promotion.id && editedDetail ? (
-                                <>
-                                  <Box display="flex" flexDirection="column" gap={2}>
-                                    <Box display="flex" gap={2}>
-                                      <TextField
-                                        label="Mã khuyến mãi"
-                                        name="code"
-                                        value={editedDetail.code || ''}
-                                        onChange={handleChangeDetail}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.code}
-                                        helperText={validationErrors.code}
-                                      />
-                                      <TextField
-                                        label="Mô tả"
-                                        name="description"
-                                        value={editedDetail.description || ''}
-                                        onChange={handleChangeDetail}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.description}
-                                        helperText={validationErrors.description}
-                                      />
-                                    </Box>
-                                    <Box display="flex" gap={2}>
-                                      <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.discount_type}>
-                                        <InputLabel>Loại giảm</InputLabel>
-                                        <Select
-                                          name="discount_type"
-                                          value={editedDetail.discount_type || 'amount'}
-                                          onChange={handleSelectChange}
-                                          label="Loại giảm"
-                                        >
-                                          <MenuItem value="percent">Phần trăm (%)</MenuItem>
-                                          <MenuItem value="amount">Số tiền (VNĐ)</MenuItem>
-                                        </Select>
-                                        {validationErrors.discount_type && (
-                                          <Typography color="error" variant="caption">
-                                            {validationErrors.discount_type}
-                                          </Typography>
-                                        )}
-                                      </FormControl>
-                                      <TextField
-                                        label="Giá trị giảm"
-                                        name="discount_value"
-                                        type="number"
-                                        value={editedDetail.discount_value ?? ''}
-                                        onChange={handleChangeDetail}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.discount_value}
-                                        helperText={validationErrors.discount_value}
-                                      />
-                                    </Box>
-                                    <Box display="flex" gap={2}>
-                                      <TextField
-                                        label="Ngày bắt đầu"
-                                        name="start_date"
-                                        type="date"
-                                        value={editedDetail.start_date || ''}
-                                        onChange={handleChangeDetail}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        InputLabelProps={{ shrink: true }}
-                                        error={!!validationErrors.start_date}
-                                        helperText={validationErrors.start_date}
-                                      />
-                                      <TextField
-                                        label="Ngày kết thúc"
-                                        name="end_date"
-                                        type="date"
-                                        value={editedDetail.end_date || ''}
-                                        onChange={handleChangeDetail}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        InputLabelProps={{ shrink: true }}
-                                        error={!!validationErrors.end_date}
-                                        helperText={validationErrors.end_date}
-                                      />
-                                    </Box>
-                                    <Box display="flex" gap={2}>
-                                      <TextField
-                                        label="Giới hạn số lần dùng"
-                                        name="usage_limit"
-                                        type="number"
-                                        value={editedDetail.usage_limit ?? ''}
-                                        onChange={handleChangeDetail}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.usage_limit}
-                                        helperText={validationErrors.usage_limit}
-                                      />
-                                      <TextField
-                                        label="Số lần đã dùng"
-                                        name="used_count"
-                                        type="number"
-                                        value={editedDetail.used_count ?? ''}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        disabled
-                                        helperText="Không thể chỉnh sửa số lần đã dùng"
-                                      />
-                                    </Box>
-                                  </Box>
-                                  <Box mt={2} display="flex" gap={2}>
-                                    <Button
-                                      variant="contained"
-                                      color="primary"
-                                      onClick={handleSaveDetail}
-                                      disabled={loading}
-                                    >
-                                      Lưu
-                                    </Button>
-                                    <Button
-                                      variant="outlined"
-                                      className='promotion-btn-cancel'
-                                      color="secondary"
-                                      onClick={handleCancelEdit}
-                                      disabled={loading}
-                                    >
-                                      Hủy
-                                    </Button>
-                                  </Box>
-                                  {error && (
-                                    <Typography color="error" mt={1}>
-                                      {error}
-                                    </Typography>
-                                  )}
-                                </>
-                              ) : (
-                                <>
-                                  <Table className="promotion-detail-table">
-                                    <TableBody>
-                                      <TableRow>
-                                        <TableCell><strong>Mã CTKM:</strong> {promotion.code}</TableCell>
-                                        <TableCell><strong>Mô tả:</strong> {promotion.description}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell><strong>Loại giảm:</strong> {promotion.discount_type === 'percent' ? 'Phần trăm' : 'Số tiền'}</TableCell>
-                                        <TableCell><strong>Giá trị giảm:</strong> {formatCurrency(promotion.discount_value, promotion.discount_type)}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell><strong>Ngày bắt đầu:</strong> {formatDate(promotion.start_date)}</TableCell>
-                                        <TableCell><strong>Ngày kết thúc:</strong> {formatDate(promotion.end_date)}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell><strong>Giới hạn số lần:</strong> {promotion.usage_limit}</TableCell>
-                                        <TableCell><strong>Số lần sử dụng:</strong> {promotion.used_count}</TableCell>
-                                      </TableRow>
-                                      <TableRow>
-                                        <TableCell colSpan={2}>
-                                          <strong>Trạng thái:</strong>{' '}
-                                          <span style={{ color, fontWeight: 'bold' }}>{getPromotionStatus(promotion.status).status}</span>
-                                        </TableCell>
-                                      </TableRow>
-                                    </TableBody>
-                                  </Table>
-                                </>
+      <Card elevation={3} sx={{ p: 0, mt: 0 }}>
+        <CardContent sx={{ p: 0 }}>
+          {loading ? (
+            <div className="promotions-loading-container">
+              <CircularProgress />
+              <Typography>Đang tải danh sách khuyến mãi...</Typography>
+            </div>
+          ) : error ? (
+            <Typography color="error" className="promotions-error-message">
+              {error}
+            </Typography>
+          ) : filteredPromotions.length === 0 ? (
+            <Typography className="promotions-no-data">
+              {searchQuery || statusFilters.length > 0
+                ? "Không tìm thấy mã khuyến mãi phù hợp."
+                : "Không tìm thấy khuyến mãi nào."}
+            </Typography>
+          ) : (
+            <>
+              <TableContainer
+                component={Paper}
+                className="promotions-table-container"
+              >
+                <Table className="promotions-table" sx={{ width: "100%" }}>
+                  <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
+                    <TableRow>
+                      <TableCell>
+                        <b>Mã Khuyến Mãi</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Giá trị giảm</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Trạng thái</b>
+                      </TableCell>
+                      <TableCell align="center">
+                        <b>Hành động</b>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {promotions.map((promotion) => {
+                      const { status, color } = getPromotionStatus(
+                        promotion.status
+                      );
+                      return (
+                        <React.Fragment key={promotion.id}>
+                          <TableRow hover>
+                            <TableCell
+                              sx={{
+                                maxHeight: "60px",
+                                overflowY: "auto",
+                                whiteSpace: "normal",
+                                wordWrap: "break-word",
+                              }}
+                            >
+                              {promotion.code}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                maxHeight: "60px",
+                                overflowY: "auto",
+                                whiteSpace: "normal",
+                                wordWrap: "break-word",
+                              }}
+                            >
+                              {formatCurrency(
+                                promotion.discount_value,
+                                promotion.discount_type
                               )}
-                            </div>
-                          </Collapse>
-                        </TableCell>
-                      </TableRow>
-                    </React.Fragment>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-          <Box display="flex" justifyContent="flex-end" mt={2}>
-            <Pagination
-              count={lastPage}
-              page={currentPage}
-              onChange={handlePageChange}
-              color="primary"
-              shape="rounded"
-              showFirstButton
-              showLastButton
-            />
-          </Box>
-        </>
-      )}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                maxHeight: "60px",
+                                overflowY: "auto",
+                                whiteSpace: "normal",
+                                wordWrap: "break-word",
+                              }}
+                            >
+                              <span style={{ color, fontWeight: "bold" }}>
+                                {status}
+                              </span>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Box
+                                display="flex"
+                                justifyContent="center"
+                                gap={1}
+                              >
+                                <IconButton
+                                  title="Xem chi tiết"
+                                  sx={{
+                                    color: "#1976d2",
+                                    bgcolor: "#e3f2fd",
+                                    "&:hover": {
+                                      bgcolor: "#bbdefb",
+                                      boxShadow:
+                                        "0 2px 6px rgba(25, 118, 210, 0.4)",
+                                    },
+                                    transition: "all 0.2s ease-in-out",
+                                  }}
+                                  onClick={() => handleViewDetail(promotion.id)}
+                                >
+                                  <VisibilityIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  title="Sửa"
+                                  sx={{
+                                    color: "#FACC15",
+                                    bgcolor: "#fef9c3",
+                                    "&:hover": {
+                                      bgcolor: "#fff9c4",
+                                      boxShadow:
+                                        "0 2px 6px rgba(250, 204, 21, 0.4)",
+                                    },
+                                    transition: "all 0.2s ease-in-out",
+                                  }}
+                                  onClick={() => handleEditDetail(promotion)}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  title="Xóa"
+                                  sx={{
+                                    color: "#d32f2f",
+                                    bgcolor: "#ffebee",
+                                    "&:hover": {
+                                      bgcolor: "#ffcdd2",
+                                      boxShadow:
+                                        "0 2px 6px rgba(211, 47, 47, 0.4)",
+                                    },
+                                    transition: "all 0.2s ease-in-out",
+                                  }}
+                                  onClick={() => handleDelete(promotion.id)}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={4} style={{ padding: 0 }}>
+                              <Collapse
+                                in={viewDetailId === promotion.id}
+                                timeout="auto"
+                                unmountOnExit
+                              >
+                                <Box
+                                  sx={{
+                                    width: "100%",
+                                    bgcolor: "#f9f9f9",
+                                    px: 3,
+                                    py: 2,
+                                    borderTop: "1px solid #ddd",
+                                  }}
+                                ></Box>
+                                <div className="promotions-detail-container">
+                                  <h3>Thông tin khuyến mãi</h3>
+                                  {editingDetailId === promotion.id &&
+                                  editedDetail ? (
+                                    <>
+                                      <Box
+                                        display="flex"
+                                        flexDirection="column"
+                                        gap={2}
+                                      >
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Mã khuyến mãi"
+                                            name="code"
+                                            value={editedDetail.code || ""}
+                                            onChange={handleChangeDetail}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.code}
+                                            helperText={validationErrors.code}
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                          <TextField
+                                            label="Mô tả"
+                                            name="description"
+                                            value={
+                                              editedDetail.description || ""
+                                            }
+                                            onChange={handleChangeDetail}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={
+                                              !!validationErrors.description
+                                            }
+                                            helperText={
+                                              validationErrors.description
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                        </Box>
+                                        <Box display="flex" gap={2}>
+                                          <FormControl
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={
+                                              !!validationErrors.discount_type
+                                            }
+                                          >
+                                            <InputLabel>Loại giảm</InputLabel>
+                                            <Select
+                                              name="discount_type"
+                                              value={
+                                                editedDetail.discount_type ||
+                                                "amount"
+                                              }
+                                              onChange={handleSelectChange}
+                                              label="Loại giảm"
+                                            >
+                                              <MenuItem value="percent">
+                                                Phần trăm (%)
+                                              </MenuItem>
+                                              <MenuItem value="amount">
+                                                Số tiền (VNĐ)
+                                              </MenuItem>
+                                            </Select>
+                                            {validationErrors.discount_type && (
+                                              <Typography
+                                                color="error"
+                                                variant="caption"
+                                              >
+                                                {validationErrors.discount_type}
+                                              </Typography>
+                                            )}
+                                          </FormControl>
+                                          <TextField
+                                            label="Giá trị giảm"
+                                            name="discount_value"
+                                            type="number"
+                                            value={
+                                              editedDetail.discount_value ?? ""
+                                            }
+                                            onChange={handleChangeDetail}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={
+                                              !!validationErrors.discount_value
+                                            }
+                                            helperText={
+                                              validationErrors.discount_value
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                        </Box>
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Ngày bắt đầu"
+                                            name="start_date"
+                                            type="date"
+                                            value={
+                                              editedDetail.start_date || ""
+                                            }
+                                            onChange={handleChangeDetail}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            InputLabelProps={{ shrink: true }}
+                                            error={
+                                              !!validationErrors.start_date
+                                            }
+                                            helperText={
+                                              validationErrors.start_date
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                          <TextField
+                                            label="Ngày kết thúc"
+                                            name="end_date"
+                                            type="date"
+                                            value={editedDetail.end_date || ""}
+                                            onChange={handleChangeDetail}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            InputLabelProps={{ shrink: true }}
+                                            error={!!validationErrors.end_date}
+                                            helperText={
+                                              validationErrors.end_date
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                        </Box>
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Giới hạn số lần dùng"
+                                            name="usage_limit"
+                                            type="number"
+                                            value={
+                                              editedDetail.usage_limit ?? ""
+                                            }
+                                            onChange={handleChangeDetail}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={
+                                              !!validationErrors.usage_limit
+                                            }
+                                            helperText={
+                                              validationErrors.usage_limit
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                          <TextField
+                                            label="Số lần đã dùng"
+                                            name="used_count"
+                                            type="number"
+                                            value={
+                                              editedDetail.used_count ?? ""
+                                            }
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            disabled
+                                            helperText="Không thể chỉnh sửa số lần đã dùng"
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                        </Box>
+                                      </Box>
+                                      <Box pb={3} mt={2} display="flex" gap={2}>
+                                        <Button
+                                          variant="contained"
+                                          color="primary"
+                                          className="promotions-btn-save"
+                                          onClick={handleSaveDetail}
+                                          disabled={loading}
+                                        >
+                                          {loading ? (
+                                            <CircularProgress size={24} />
+                                          ) : (
+                                            "Lưu"
+                                          )}
+                                        </Button>
+                                        <Button
+                                          variant="outlined"
+                                          className="promotions-btn-cancel"
+                                          color="secondary"
+                                          onClick={handleCancelEdit}
+                                          disabled={loading}
+                                        >
+                                          Hủy
+                                        </Button>
+                                      </Box>
+                                      {error && (
+                                        <Typography color="error" mt={1}>
+                                          {error}
+                                        </Typography>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Table className="promotions-detail-table">
+                                        <TableBody>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Mã CTKM:</strong>{" "}
+                                              {promotion.code}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Mô tả:</strong>{" "}
+                                              {promotion.description}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Loại giảm:</strong>{" "}
+                                              {promotion.discount_type ===
+                                              "percent"
+                                                ? "Phần trăm"
+                                                : "Số tiền"}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Giá trị giảm:</strong>{" "}
+                                              {formatCurrency(
+                                                promotion.discount_value,
+                                                promotion.discount_type
+                                              )}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Ngày bắt đầu:</strong>{" "}
+                                              {formatDate(promotion.start_date)}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Ngày kết thúc:</strong>{" "}
+                                              {formatDate(promotion.end_date)}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Giới hạn số lần:</strong>{" "}
+                                              {promotion.usage_limit}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Số lần sử dụng:</strong>{" "}
+                                              {promotion.used_count}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell colSpan={2}>
+                                              <strong>Trạng thái:</strong>{" "}
+                                              <span
+                                                style={{
+                                                  color,
+                                                  fontWeight: "bold",
+                                                }}
+                                              >
+                                                {
+                                                  getPromotionStatus(
+                                                    promotion.status
+                                                  ).status
+                                                }
+                                              </span>
+                                            </TableCell>
+                                          </TableRow>
+                                        </TableBody>
+                                      </Table>
+                                    </>
+                                  )}
+                                </div>
+                              </Collapse>
+                            </TableCell>
+                          </TableRow>
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+                <Pagination
+                  count={lastPage}
+                  page={currentPage}
+                  onChange={handlePageChange}
+                  color="primary"
+                  shape="rounded"
+                  showFirstButton
+                  showLastButton
+                />
+              </Box>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-        classes={{ paper: 'promotion-dialog' }}
+        sx={{
+          "& .MuiDialog-paper": {
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+          },
+        }}
       >
-        <DialogTitle>Xác nhận xóa khuyến mãi</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Xác nhận xóa khuyến mãi
+        </DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn xóa hoặc hủy mã khuyến mãi này không? Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn xóa hoặc hủy mã khuyến mãi này không? Hành
+            động này không thể hoàn tác.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            className="promotions-btn-cancel"
+            sx={{
+              color: "#d32f2f",
+              borderColor: "#d32f2f",
+              "&:hover": { borderColor: "#b71c1c", backgroundColor: "#ffebee" },
+            }}
+          >
             Hủy
           </Button>
-          <Button onClick={confirmDelete} variant="contained" color="error">
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            sx={{ bgcolor: "#d32f2f", "&:hover": { bgcolor: "#b71c1c" } }}
+          >
             Xác nhận
           </Button>
         </DialogActions>
@@ -764,12 +1268,14 @@ const Promotions: React.FC = () => {
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
+          severity={
+            snackbarMessage.includes("thành công") ? "success" : "error"
+          }
+          sx={{ width: "100%" }}
         >
           {snackbarMessage}
         </Alert>

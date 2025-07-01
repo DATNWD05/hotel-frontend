@@ -30,7 +30,7 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import StarIcon from '@mui/icons-material/Star';
 import EditIcon from '@mui/icons-material/Edit';
-import BookingForm from './BookingForm';
+import DeleteIcon from '@mui/icons-material/Delete';
 import '../../css/OrderRoom.css';
 import api from '../../api/axios';
 import { Link } from 'react-router-dom';
@@ -164,9 +164,7 @@ const OrderRoom: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [openDialog, setOpenDialog] = useState<boolean>(false);
-  const [openBooking, setOpenBooking] = useState<boolean>(false);
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
-  const [bookingRoom, setBookingRoom] = useState<{ roomNumber: string; roomId: number }>({ roomNumber: '', roomId: 0 });
   const [editRoom, setEditRoom] = useState<Partial<Room>>({});
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
@@ -317,13 +315,6 @@ const OrderRoom: React.FC = () => {
     setSelectedRoom(null);
   };
 
- 
-
-  const handleCloseBooking = () => {
-    setOpenBooking(false);
-    setBookingRoom({ roomNumber: '', roomId: 0 });
-  };
-
   const handleOpenEditDialog = (room: Room) => {
     setEditRoom({
       id: room.id,
@@ -420,6 +411,30 @@ const OrderRoom: React.FC = () => {
     }
   };
 
+  const handleSoftDeleteRoom = async () => {
+    if (!selectedRoom?.id) return;
+
+    try {
+      setLoading(true);
+      const response = await api.delete(`/rooms/${selectedRoom.id}`);
+      if (response.status === 200) {
+        await fetchRooms();
+        setOpenDialog(false);
+        setSnackbarMessage('Phòng đã được xóa (mềm) thành công!');
+        setSnackbarOpen(true);
+      }  else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi xóa phòng';
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+      console.error('Lỗi khi xóa phòng:', errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
     setSnackbarMessage('');
@@ -482,38 +497,63 @@ const OrderRoom: React.FC = () => {
         <Button
           className={`order-room-filter-tat_ca ${statusFilter === 'all' ? 'active' : ''}`}
           onClick={() => handleStatusFilter('all')}
-          sx={{ backgroundColor: '#607D8B', color: 'white', mr: 1, '&:hover': { backgroundColor: '#546E7A' } }}
+          sx={{
+            backgroundColor: '#607D8B',
+            color: 'white',
+            mr: 1,
+            '&:hover': { backgroundColor: '#546E7A' },
+          }}
         >
           Tất cả
         </Button>
         <Button
           className={`order-room-filter-trong ${statusFilter === 'trong' ? 'active' : ''}`}
           onClick={() => handleStatusFilter('trong')}
-          sx={{ backgroundColor: '#1B5E20', color: 'white', mr: 1, '&:hover': { backgroundColor: '#2E7D32' } }}
+          sx={{
+            backgroundColor: '#1B5E20',
+            color: 'white',
+            mr: 1,
+            '&:hover': { backgroundColor: '#2E7D32' },
+          }}
         >
           Trống
         </Button>
         <Button
           className={`order-room-filter-da_dat ${statusFilter === 'da_dat' ? 'active' : ''}`}
           onClick={() => handleStatusFilter('da_dat')}
-          sx={{ backgroundColor: '#B71C1C', color: 'white', mr: 1, '&:hover': { backgroundColor: '#C62828' } }}
+          sx={{
+            backgroundColor: '#B71C1C',
+            color: 'white',
+            mr: 1,
+            '&:hover': { backgroundColor: '#C62828' },
+          }}
         >
           Đã đặt
         </Button>
         <Button
           className={`order-room-filter-dang_sua ${statusFilter === 'dang_sua' ? 'active' : ''}`}
           onClick={() => handleStatusFilter('dang_sua')}
-          sx={{ backgroundColor: '#F57F17', color: 'white', mr: 1, '&:hover': { backgroundColor: '#FB8C00' } }}
+          sx={{
+            backgroundColor: '#F57F17',
+            color: 'white',
+            mr: 1,
+            '&:hover': { backgroundColor: '#FB8C00' },
+          }}
         >
           Đang sửa
         </Button>
         <Link to="/listbookings/add">
-        <Button
-          className="order-room-filter-book"
-          sx={{ backgroundColor: '#4CAF50', color: 'white', ml: 'auto', '&:hover': { backgroundColor: '#2E7D32' } }}
-        >
-          Đặt phòng
-        </Button>
+          <Button
+            className="order-room-filter-book"
+            sx={{
+              backgroundColor: '#4CAF50',
+              color: 'white',
+              ml: 'auto',
+              '&:hover': { backgroundColor: '#2E7D32' },
+            }}
+          >
+            Đặt phòng
+          </Button>
         </Link>
       </div>
 
@@ -570,9 +610,7 @@ const OrderRoom: React.FC = () => {
                     </>
                   )}
                   {mapStatusToUI(room.status) === 'dang_sua' && (
-                    <>
-                      <div className="order-room-status-text">Đang sửa chữa</div>
-                    </>
+                    <div className="order-room-status-text">Đang sửa chữa</div>
                   )}
                 </div>
               </div>
@@ -597,7 +635,7 @@ const OrderRoom: React.FC = () => {
         
         <DialogContent className="dialog-content-enhanced">
           {selectedRoom ? (
-            <div className="room-details-container">
+            <>
               <Card className="info-card room-info-card">
                 <CardContent>
                   <div className="card-header">
@@ -616,22 +654,22 @@ const OrderRoom: React.FC = () => {
                       value={selectedRoom.room_number} 
                     />
                     <InfoRow 
-                      icon={<StarIcon />} 
+                      icon=<StarIcon /> 
                       label="Loại phòng" 
                       value={selectedRoom.room_type.name} 
                     />
                     <InfoRow 
-                      icon={<InfoIcon />} 
+                      icon=<InfoIcon /> 
                       label="Mã loại phòng" 
                       value={selectedRoom.room_type.code} 
                     />
                     <InfoRow 
-                      icon={<PersonIcon />} 
+                      icon=<PersonIcon /> 
                       label="Sức chứa tối đa" 
                       value={`${selectedRoom.room_type.max_occupancy} người`} 
                     />
                     <InfoRow 
-                      icon={<PaymentIcon />} 
+                      icon=<PaymentIcon /> 
                       label="Giá" 
                       value={`${Number(selectedRoom.room_type.base_rate).toLocaleString('vi-VN')} VNĐ`} 
                     />
@@ -655,22 +693,22 @@ const OrderRoom: React.FC = () => {
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
                       <InfoRow 
-                        icon={<PersonIcon />} 
+                        icon=<PersonIcon /> 
                         label="Người đặt phòng" 
                         value={selectedRoom.creator_name ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<CalendarTodayIcon />} 
+                        icon=<CalendarTodayIcon /> 
                         label="Ngày nhận phòng" 
                         value={formatDate(selectedRoom.check_in_date)} 
                       />
                       <InfoRow 
-                        icon={<CalendarTodayIcon />} 
+                        icon=<CalendarTodayIcon /> 
                         label="Ngày trả phòng" 
                         value={formatDate(selectedRoom.check_out_date)} 
                       />
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Trạng thái" 
                         value={
                           selectedRoom.booking_status === 'Pending' ? 'Đang chờ' :
@@ -681,22 +719,22 @@ const OrderRoom: React.FC = () => {
                         } 
                       />
                       <InfoRow 
-                        icon={<PaymentIcon />} 
+                        icon=<PaymentIcon /> 
                         label="Tiền đặt cọc" 
                         value={selectedRoom.deposit_amount ? `${Number(selectedRoom.deposit_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<PaymentIcon />} 
+                        icon=<PaymentIcon /> 
                         label="Tổng gốc" 
                         value={selectedRoom.raw_total ? `${Number(selectedRoom.raw_total).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<PaymentIcon />} 
+                        icon=<PaymentIcon /> 
                         label="Tổng giảm" 
                         value={selectedRoom.discount_amount ? `${Number(selectedRoom.discount_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<PaymentIcon />} 
+                        icon=<PaymentIcon /> 
                         label="Tổng giá cuối" 
                         value={selectedRoom.total_amount ? `${Number(selectedRoom.total_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
                       />
@@ -715,17 +753,17 @@ const OrderRoom: React.FC = () => {
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Số CCCD" 
                         value={selectedRoom.guest_id_number ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<PersonIcon />} 
+                        icon=<PersonIcon /> 
                         label="Tên" 
                         value={selectedRoom.guest_name ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Giới tính" 
                         value={
                           selectedRoom.guest_gender === 'male' ? 'Nam' : 
@@ -734,27 +772,27 @@ const OrderRoom: React.FC = () => {
                         } 
                       />
                       <InfoRow 
-                        icon={<ContactPhoneIcon />} 
+                        icon=<ContactPhoneIcon /> 
                         label="Số điện thoại" 
                         value={selectedRoom.guest_phone ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<CalendarTodayIcon />} 
+                        icon=<CalendarTodayIcon /> 
                         label="Ngày sinh" 
                         value={formatDate(selectedRoom.guest_date_of_birth)} 
                       />
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Quốc tịch" 
                         value={selectedRoom.guest_country ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<HomeIcon />} 
+                        icon=<HomeIcon /> 
                         label="Địa chỉ" 
                         value={selectedRoom.guest_address ?? 'N/A'} 
                       />
                       <InfoRow 
-                        icon={<InfoIcon />} 
+                        icon=<InfoIcon /> 
                         label="Ghi chú" 
                         value={selectedRoom.guest_note ?? 'N/A'} 
                       />
@@ -801,7 +839,7 @@ const OrderRoom: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </>
           ) : (
             <Typography align="center" sx={{ mt: 4 }}>Không có phòng được chọn.</Typography>
           )}
@@ -810,22 +848,47 @@ const OrderRoom: React.FC = () => {
         <DialogActions className="dialog-actions-enhanced">
           {selectedRoom?.status === 'available' && (
             <Link to="/listbookings/add">
-        <Button
-          className="order-room-filter-book"
-          sx={{ backgroundColor: '#4CAF50', color: 'white', ml: 'auto', '&:hover': { backgroundColor: '#2E7D32' } }}
-        >
-          Đặt phòng
-        </Button>
-        </Link>
+              <Button
+                className="order-room-filter-book"
+                sx={{
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  ml: 'auto',
+                  '&:hover': { backgroundColor: '#2E7D32' },
+                }}
+              >
+                Đặt phòng
+              </Button>
+            </Link>
           )}
           {selectedRoom && (selectedRoom.status === 'available' || selectedRoom.status === 'maintenance') && (
             <Button
               onClick={() => handleOpenEditDialog(selectedRoom)}
               variant="contained"
-              sx={{ backgroundColor: '#FACC15', color: '#2c3e50', mr: 1, '&:hover': { backgroundColor: '#E0B800' } }}
+              sx={{
+                backgroundColor: '#FACC15',
+                color: '#2c3e50',
+                mr: 1,
+                '&:hover': { backgroundColor: '#E0B800' },
+              }}
               startIcon={<EditIcon />}
             >
-              Sửa
+              Sửa phòng
+            </Button>
+          )}
+          {selectedRoom && (selectedRoom.status === 'available' || selectedRoom.status === 'maintenance') && (
+            <Button
+              onClick={handleSoftDeleteRoom}
+              variant="contained"
+              sx={{
+                backgroundColor: '#D32F2F',
+                color: 'white',
+                mr: 1,
+                '&:hover': { backgroundColor: '#B71C1C' },
+              }}
+              startIcon={<DeleteIcon />}
+            >
+              Ẩn phòng
             </Button>
           )}
           <Button 
@@ -946,13 +1009,6 @@ const OrderRoom: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <BookingForm 
-        open={openBooking} 
-        onClose={handleCloseBooking} 
-        roomNumber={bookingRoom.roomNumber} 
-        roomId={bookingRoom.roomId} 
-      />
 
       <Snackbar
         open={snackbarOpen}

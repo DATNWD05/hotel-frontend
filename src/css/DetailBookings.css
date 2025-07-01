@@ -65,16 +65,6 @@
   border-bottom: 2px solid #e0e0e0;
 }
 
-.amenities-header {
-  display: flex;
-  align-items: center;
-  margin: 10px 0 5px;
-  padding: 10px;
-  border-bottom: 1px solid #d0d0d0;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
 .card-icon {
   width: 40px;
   height: 40px;
@@ -101,10 +91,6 @@
 
 .customer-info .card-icon {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.amenities-header .card-icon {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
 .card-title {
@@ -161,13 +147,34 @@
 }
 
 .status-pending {
-  background: #fff3cd;
-  color: #856404;
+  background: #fef3c7; /* Vàng nhạt - chờ đợi */
+  color: #92400e; /* Nâu đậm */
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.status-checked-in {
+  background: #dbeafe; /* Xanh dương nhạt - tích cực */
+  color: #1e40af; /* Xanh dương đậm */
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.status-checked-out {
+  background: #e2e8f0; /* Xám xanh nhạt - hoàn tất */
+  color: #2d3748; /* Xám đậm */
+}
+
+.status-cancelled {
+  background: #fed7d7; /* Đỏ nhạt - cảnh báo */
+  color: #9b2c2c; /* Đỏ đậm nhẹ */
 }
 
 .status-vip {
-  background: #f8d7da;
-  color: #721c24;
+  background: #e9d8fd; /* Tím nhạt - đặc biệt */
+  color: #5a2e87; /* Tím đậm */
 }
 
 .price-highlight {
@@ -212,6 +219,11 @@
   background-color: #fff;
 }
 
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
 .button-group {
   display: flex;
   gap: 10px;
@@ -250,7 +262,7 @@
   background: #2980b9;
 }
 
-.view-amenities-button {
+.view-amenities-button, .view-services-button {
   padding: 6px 12px;
   background: #3498db;
   color: white;
@@ -262,26 +274,49 @@
   transition: background 0.2s ease;
 }
 
-.view-amenities-button:hover {
+.view-amenities-button:hover, .view-services-button:hover {
   background: #2980b9;
 }
 
-.amenities-section {
+.detail-container {
   padding: 15px;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease-out;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.amenities-section.active {
-  max-height: 300px; /* Điều chỉnh độ cao tối đa tùy ý */
+.detail-container h3 {
+  margin: 10px 0;
+  color: #1a73e8;
+  font-size: 18px;
 }
 
-.amenities-table {
-  margin-top: 10px;
+.user-detail-table {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin: 10px 0;
+  width: 100%;
+}
+
+.user-detail-table td {
+  padding: 8px 15px;
+  border: none;
+  color: #555;
+}
+
+.user-detail-table th {
+  background: #f5f5f5;
+  color: #333;
+  font-weight: 600;
+}
+
+.action-edit {
+  color: #4318FF;
+}
+
+.action-edit:hover {
+  opacity: 0.8;
 }
 
 .detail-booking-loading-container {
@@ -349,14 +384,43 @@
     flex-direction: column;
   }
 
+  .action-buttons {
+    flex-direction: column;
+    gap: 5px;
+  }
+
   .add-button,
   .edit-button,
-  .view-amenities-button {
+  .view-amenities-button,
+  .view-services-button {
     width: 100%;
     margin-bottom: 10px;
   }
+}
+.detail-container .user-detail-table .action-delete {
+  color: #d93025;
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #d93025;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.2s ease, color 0.2s ease;
+}
 
-  .amenities-section {
-    padding: 10px;
-  }
+.action-delete:hover {
+  background: #d93025;
+  color: #fff;
+}
+
+.card-header .tim-kiem {
+  display: flex;
+  align-items: center;
+  margin-left: auto; /* Đẩy ô tìm kiếm sang bên phải */
+  width: 300px; /* Độ rộng cố định, có thể điều chỉnh */
+}
+
+.card-header .tim-kiem .MuiTextField-root {
+  width: 100%; /* Đảm bảo TextField chiếm toàn bộ chiều rộng của container */
 }
