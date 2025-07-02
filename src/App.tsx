@@ -12,7 +12,6 @@ import ProtectedRoute from "./routes/helpers/ProtectedRoute";
 import Role from "./pages/Role/Role";
 import AddRole from "./pages/Role/AddRole";
 import Customer from "./pages/Customer/Customer";
-import AddCustomer from "./pages/Customer/AddCustomer";
 import CreateService from "./pages/Services/CreateService";
 import ServiceCategoryList from "./pages/Services/Service_category";
 import AddServiceCategory from "./pages/Services/AddServiceCategory";
@@ -30,6 +29,8 @@ import Service from "./pages/Services/service";
 import Departments from "./pages/Departments/DepartmentList";
 import AddDepartment from "./pages/Departments/DepartmentAdd";
 import HiddenRoom from "./pages/Room/HiddenRoom";
+import BookingService from "./pages/Statistics/BookingService";
+import Revenue from "./pages/Statistics/Revenue";
 
 function App() {
   return (
@@ -47,13 +48,14 @@ function App() {
         <Route path="/listbookings/detail/:id" element={<RoleBasedRoute allowedRoleIds={[1]}><DetailBookings /></RoleBasedRoute>} />
 
         <Route path="/statistics" element={<RoleBasedRoute allowedRoleIds={[1]}><Statistics /></RoleBasedRoute>} />
+        <Route path="/statistics-services" element={<RoleBasedRoute allowedRoleIds={[1]}><BookingService  /></RoleBasedRoute>} />
+        <Route path="/statistics-revenues" element={<RoleBasedRoute allowedRoleIds={[1]}><Revenue  /></RoleBasedRoute>} />
 
         <Route path="/hiddenrooms" element={<RoleBasedRoute allowedRoleIds={[1]}><HiddenRoom /></RoleBasedRoute>} />
 
 
 
         <Route path="customer" element={<RoleBasedRoute allowedRoleIds={[1]}><Customer /></RoleBasedRoute>} />
-        <Route path="customer/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddCustomer/></RoleBasedRoute>} />
 
         <Route path="/promotions" element={<RoleBasedRoute allowedRoleIds={[1]}><Promotions /></RoleBasedRoute>} />
         <Route path="promotions/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddPromotion /></RoleBasedRoute>} />

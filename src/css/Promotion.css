@@ -84,20 +84,6 @@ body *::-webkit-scrollbar {
   white-space: normal !important;
 }
 
-.promotions-wrapper .promotions-btn-cancel {
-  border-radius: 5px; 
-  height: 35px;
-  width: 60px;
-  font-size: 14px;
-  color: #d32f2f;
-}
-.promotions-wrapper .promotions-btn-save {
-  border-radius: 5px; 
-  height: 35px;
-  width: 60px;
-  font-size: 14px;
-}
-
 .promotions-detail-container {
   width: 100%;
   max-width: 100%;
@@ -180,3 +166,37 @@ body *::-webkit-scrollbar {
 .filter-button:hover {
   background-color: #f0f0f0;
 }
+
+.promotions-btn-save {
+  height: 40px;
+  min-width: 90px !important;
+  padding: 0 16px;
+  border-radius: 8px !important;
+  font-size: 14px;
+  font-weight: 600;
+  background-color: #4318FF !important;
+  color: white !important;
+  text-transform: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+
+
+.promotions-btn-cancel {
+  height: 40px !important;
+  min-width: 90px !important;
+  padding: 0 16px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #d32f2f !important;
+  border: 1px solid #d32f2f !important;
+  background-color: white !important;
+  text-transform: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+.promotions-btn-cancel:hover {
+  background-color: #fddede !important;
+}
+

@@ -70,20 +70,30 @@ body *::-webkit-scrollbar {
   font-size: 14px;
 }
 
+.role-btn-save,
 .role-btn-cancel {
-  border-radius: 5px;
-  height: 35px;
-  width: 60px;
-  font-size: 14px;
-  color: #d32f2f;
+  border-radius: 8px !important; /* Hình vuông nhẹ */
+  height: 42px !important;
+  min-width: 90px !important;
+  font-size: 15px !important;
+  font-weight: 600;
+  text-transform: none;
+  padding: 0 16px !important;
 }
 
-.role-btn-save {
-  border-radius: 5px;
-  height: 35px;
-  width: 60px;
-  font-size: 14px;
+/* Style riêng cho nút hủy (outlined + đỏ) */
+.role-btn-cancel {
+  color: #d32f2f !important;
+  border: 1px solid #d32f2f !important;
+  background-color: transparent !important;
 }
+
+.role-btn-cancel:hover {
+  background-color: #ffebee !important;
+  border-color: #d32f2f !important;
+}
+
+
 
 .role-detail-container {
   width: 100%;

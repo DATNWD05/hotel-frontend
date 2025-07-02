@@ -365,7 +365,7 @@ const Customer: React.FC = () => {
           flexWrap="wrap"
           mb={2}
         >
-          <Typography variant="h2" className="section-title" fontWeight={700} >
+          <Typography variant="h2" className="section-title" fontWeight={700}>
             Khách Hàng
           </Typography>
 
@@ -819,7 +819,6 @@ const Customer: React.FC = () => {
                                             },
                                           }}
                                         />
-
                                       </Box>
                                     </Box>
 
@@ -983,6 +982,25 @@ const Customer: React.FC = () => {
                   shape="rounded"
                   showFirstButton
                   showLastButton
+                  siblingCount={0} // 👈 hiện 0 số hai bên trang hiện tại
+                  boundaryCount={1} // 👈 hiện 1 số ở đầu/cuối (ví dụ: 1 ... 5 ... 10)
+                  sx={{
+                    "& .MuiPaginationItem-root": {
+                      color: "#666",
+                      fontWeight: 500,
+                      borderRadius: "8px",
+                      border: "none",
+                    },
+                    "& .MuiPaginationItem-page.Mui-selected": {
+                      backgroundColor: "#5B3EFF",
+                      color: "#fff",
+                      fontWeight: "bold",
+                    },
+                    "& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast":
+                      {
+                        color: "#999",
+                      },
+                  }}
                 />
               </Box>
             </>

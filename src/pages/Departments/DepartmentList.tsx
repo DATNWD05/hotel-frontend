@@ -56,29 +56,40 @@ interface ValidationErrors {
 const Departments: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [allDepartments, setAllDepartments] = useState<Department[]>([]);
-  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
+  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>(
+    []
+  );
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Department>>({});
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [departmentToDelete, setDepartmentToDelete] = useState<number | null>(null);
-  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [departmentToDelete, setDepartmentToDelete] = useState<number | null>(
+    null
+  );
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(
+    null
+  );
 
   const fetchAllDepartments = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get<{ data: Department[]; meta: Meta }>("/departments", {
-        params: { page: currentPage },
-      });
+      const response = await api.get<{ data: Department[]; meta: Meta }>(
+        "/departments",
+        {
+          params: { page: currentPage },
+        }
+      );
       if (response.status === 200) {
         setDepartments(response.data.data);
         setAllDepartments(response.data.data);
@@ -88,7 +99,10 @@ const Departments: React.FC = () => {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải danh sách phòng ban";
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Đã xảy ra lỗi khi tải danh sách phòng ban";
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
@@ -166,7 +180,10 @@ const Departments: React.FC = () => {
       const payload = {
         name: editedDetail.name?.trim() ?? "",
       };
-      const response = await api.put(`/departments/${editedDetail.id}`, payload);
+      const response = await api.put(
+        `/departments/${editedDetail.id}`,
+        payload
+      );
       if (response.status === 200) {
         await fetchAllDepartments();
         setEditingDetailId(null);
@@ -179,7 +196,9 @@ const Departments: React.FC = () => {
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi cập nhật phòng ban";
+        err instanceof Error
+          ? err.message
+          : "Đã xảy ra lỗi khi cập nhật phòng ban";
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
@@ -214,7 +233,8 @@ const Departments: React.FC = () => {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || "Đã xảy ra lỗi khi xóa phòng ban";
+      const errorMessage =
+        err.response?.data?.message || "Đã xảy ra lỗi khi xóa phòng ban";
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
@@ -230,7 +250,10 @@ const Departments: React.FC = () => {
     setSnackbarMessage("");
   };
 
-  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
     setCurrentPage(page);
   };
 
@@ -248,7 +271,13 @@ const Departments: React.FC = () => {
         <Typography variant="body2" sx={{ color: "gray", mb: 1 }}>
           Phòng ban {">"} Danh sách
         </Typography>
-        <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          mb={2}
+        >
           <Typography variant="h2" fontWeight={700}>
             Phòng ban
           </Typography>
@@ -300,7 +329,9 @@ const Departments: React.FC = () => {
               }}
             >
               <MenuItemMenu onClick={handleFilterClose}>
-                <Typography variant="body2">Không có bộ lọc nào khả dụng</Typography>
+                <Typography variant="body2">
+                  Không có bộ lọc nào khả dụng
+                </Typography>
               </MenuItemMenu>
             </Menu>
             <Button
@@ -341,18 +372,31 @@ const Departments: React.FC = () => {
             </Typography>
           ) : filteredDepartments.length === 0 ? (
             <Typography className="promotions-no-data">
-              {searchQuery ? "Không tìm thấy phòng ban phù hợp với tìm kiếm." : "Không tìm thấy phòng ban nào."}
+              {searchQuery
+                ? "Không tìm thấy phòng ban phù hợp với tìm kiếm."
+                : "Không tìm thấy phòng ban nào."}
             </Typography>
           ) : (
             <>
-              <TableContainer component={Paper} className="promotions-table-container">
+              <TableContainer
+                component={Paper}
+                className="promotions-table-container"
+              >
                 <Table className="promotions-table" sx={{ width: "100%" }}>
                   <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
                     <TableRow>
-                      <TableCell><b>Mã</b></TableCell>
-                      <TableCell><b>Tên</b></TableCell>
-                      <TableCell><b>Quản lý</b></TableCell>
-                      <TableCell align="center"><b>Hành động</b></TableCell>
+                      <TableCell>
+                        <b>Mã</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Tên</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Quản lý</b>
+                      </TableCell>
+                      <TableCell align="center">
+                        <b>Hành động</b>
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -361,7 +405,9 @@ const Departments: React.FC = () => {
                         <TableRow hover>
                           <TableCell>{department.id}</TableCell>
                           <TableCell>{department.name}</TableCell>
-                          <TableCell>{department.manager?.name || "N/A"}</TableCell>
+                          <TableCell>
+                            {department.manager?.name || "N/A"}
+                          </TableCell>
                           <TableCell align="center">
                             <Box display="flex" justifyContent="center" gap={1}>
                               <IconButton
@@ -371,7 +417,8 @@ const Departments: React.FC = () => {
                                   bgcolor: "#e3f2fd",
                                   "&:hover": {
                                     bgcolor: "#bbdefb",
-                                    boxShadow: "0 2px 6px rgba(25, 118, 210, 0.4)",
+                                    boxShadow:
+                                      "0 2px 6px rgba(25, 118, 210, 0.4)",
                                   },
                                   transition: "all 0.2s ease-in-out",
                                 }}
@@ -386,7 +433,8 @@ const Departments: React.FC = () => {
                                   bgcolor: "#fef9c3",
                                   "&:hover": {
                                     bgcolor: "#fff9c4",
-                                    boxShadow: "0 2px 6px rgba(250, 204, 21, 0.4)",
+                                    boxShadow:
+                                      "0 2px 6px rgba(250, 204, 21, 0.4)",
                                   },
                                   transition: "all 0.2s ease-in-out",
                                 }}
@@ -401,7 +449,8 @@ const Departments: React.FC = () => {
                                   bgcolor: "#ffebee",
                                   "&:hover": {
                                     bgcolor: "#ffcdd2",
-                                    boxShadow: "0 2px 6px rgba(211, 47, 47, 0.4)",
+                                    boxShadow:
+                                      "0 2px 6px rgba(211, 47, 47, 0.4)",
                                   },
                                   transition: "all 0.2s ease-in-out",
                                 }}
@@ -414,13 +463,30 @@ const Departments: React.FC = () => {
                         </TableRow>
                         <TableRow>
                           <TableCell colSpan={4} style={{ padding: 0 }}>
-                            <Collapse in={viewDetailId === department.id} timeout="auto" unmountOnExit>
-                              <Box sx={{ width: "100%", bgcolor: "#f9f9f9", px: 3, py: 2, borderTop: "1px solid #ddd" }}>
+                            <Collapse
+                              in={viewDetailId === department.id}
+                              timeout="auto"
+                              unmountOnExit
+                            >
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  bgcolor: "#f9f9f9",
+                                  px: 3,
+                                  py: 2,
+                                  borderTop: "1px solid #ddd",
+                                }}
+                              >
                                 <div className="promotions-detail-container">
                                   <h3>Thông tin phòng ban</h3>
-                                  {editingDetailId === department.id && editedDetail ? (
+                                  {editingDetailId === department.id &&
+                                  editedDetail ? (
                                     <>
-                                      <Box display="flex" flexDirection="column" gap={2}>
+                                      <Box
+                                        display="flex"
+                                        flexDirection="column"
+                                        gap={2}
+                                      >
                                         <TextField
                                           label="Tên phòng ban"
                                           name="name"
@@ -433,12 +499,24 @@ const Departments: React.FC = () => {
                                           helperText={validationErrors.name}
                                           sx={{
                                             "& .MuiOutlinedInput-root": {
-                                              "& fieldset": { borderColor: "#ccc" },
-                                              "&:hover fieldset": { borderColor: "#888" },
-                                              "&.Mui-focused fieldset": { borderColor: "#1976d2", borderWidth: "2px" },
+                                              "& fieldset": {
+                                                borderColor: "#ccc",
+                                              },
+                                              "&:hover fieldset": {
+                                                borderColor: "#888",
+                                              },
+                                              "&.Mui-focused fieldset": {
+                                                borderColor: "#1976d2",
+                                                borderWidth: "2px",
+                                              },
                                             },
-                                            "& label": { backgroundColor: "#fff", padding: "0 4px" },
-                                            "& label.Mui-focused": { color: "#1976d2" },
+                                            "& label": {
+                                              backgroundColor: "#fff",
+                                              padding: "0 4px",
+                                            },
+                                            "& label.Mui-focused": {
+                                              color: "#1976d2",
+                                            },
                                           }}
                                         />
                                       </Box>
@@ -450,7 +528,11 @@ const Departments: React.FC = () => {
                                           onClick={handleSaveDetail}
                                           disabled={loading}
                                         >
-                                          {loading ? <CircularProgress size={24} /> : "Lưu"}
+                                          {loading ? (
+                                            <CircularProgress size={24} />
+                                          ) : (
+                                            "Lưu"
+                                          )}
                                         </Button>
                                         <Button
                                           variant="outlined"
@@ -472,12 +554,18 @@ const Departments: React.FC = () => {
                                     <Table className="promotions-detail-table">
                                       <TableBody>
                                         <TableRow>
-                                          <TableCell><strong>Mã:</strong> {department.id}</TableCell>
-                                          <TableCell><strong>Tên:</strong> {department.name}</TableCell>
+                                          <TableCell>
+                                            <strong>Mã:</strong> {department.id}
+                                          </TableCell>
+                                          <TableCell>
+                                            <strong>Tên:</strong>{" "}
+                                            {department.name}
+                                          </TableCell>
                                         </TableRow>
                                         <TableRow>
                                           <TableCell colSpan={2}>
-                                            <strong>Quản lý:</strong> {department.manager?.name || "N/A"}
+                                            <strong>Quản lý:</strong>{" "}
+                                            {department.manager?.name || "N/A"}
                                           </TableCell>
                                         </TableRow>
                                       </TableBody>
@@ -498,10 +586,33 @@ const Departments: React.FC = () => {
                   count={lastPage}
                   page={currentPage}
                   onChange={handlePageChange}
-                  color="primary"
                   shape="rounded"
                   showFirstButton
                   showLastButton
+                  siblingCount={0}
+                  boundaryCount={1}
+                  sx={{
+                    "& .MuiPaginationItem-root": {
+                      color: "#888",
+                      fontWeight: 500,
+                      minWidth: "36px",
+                      height: "36px",
+                      borderRadius: "8px",
+                      border: "none",
+                    },
+                    "& .Mui-selected": {
+                      backgroundColor: "#5B3EFF",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      "&:hover": {
+                        backgroundColor: "#5B3EFF",
+                      },
+                    },
+                    "& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast":
+                      {
+                        color: "#bbb",
+                      },
+                  }}
                 />
               </Box>
             </>
@@ -512,19 +623,31 @@ const Departments: React.FC = () => {
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
-        sx={{ "& .MuiDialog-paper": { borderRadius: "8px", boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)" } }}
+        sx={{
+          "& .MuiDialog-paper": {
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+          },
+        }}
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>Xác nhận xóa phòng ban</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Xác nhận xóa phòng ban
+        </DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn xóa phòng ban này không? Hành động này không thể hoàn tác.
+            Bạn có chắc chắn muốn xóa phòng ban này không? Hành động này không
+            thể hoàn tác.
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button
             onClick={() => setDeleteDialogOpen(false)}
             className="promotions-btn-cancel"
-            sx={{ color: "#d32f2f", borderColor: "#d32f2f", "&:hover": { borderColor: "#b71c1c", backgroundColor: "#ffebee" } }}
+            sx={{
+              color: "#d32f2f",
+              borderColor: "#d32f2f",
+              "&:hover": { borderColor: "#b71c1c", backgroundColor: "#ffebee" },
+            }}
           >
             Hủy
           </Button>
@@ -546,7 +669,9 @@ const Departments: React.FC = () => {
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes("thành công") ? "success" : "error"}
+          severity={
+            snackbarMessage.includes("thành công") ? "success" : "error"
+          }
           sx={{ width: "100%" }}
         >
           {snackbarMessage}

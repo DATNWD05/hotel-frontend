@@ -55,6 +55,23 @@
   background-color: rgba(211, 47, 47, 0.04) !important;
 }
 
+.create-service-btn-save {
+  background-color: #1976d2 !important; /* Màu xanh MUI */
+  color: white !important;
+  font-weight: 600;
+  font-size: 15px;
+  height: 42px;
+  min-width: 110px;
+  border-radius: 8px;
+  text-transform: none;
+  padding: 0 16px !important;
+}
+
+.create-service-btn-save:hover {
+  background-color: #1565c0 !important; /* Màu hover xanh đậm hơn */
+}
+
+
 /* Loading container styling */
 .create-service-loading-container {
   display: flex;
@@ -308,4 +325,31 @@
     flex-direction: column;
     gap: 16px; /* Consistent field spacing on mobile */
   }
+}
+.custom-btn-save {
+  background-color: #6200ea !important; /* tím đậm */
+  color: white !important;
+  font-weight: 600;
+  border-radius: 7px !important; /* bo tròn kiểu pill */
+  padding: 6px 25px !important;
+  text-transform: none;
+  font-size: 14px;
+}
+
+.custom-btn-save:hover {
+  background-color: #3700b3 !important; /* tím đậm hơn khi hover */
+}
+
+.custom-btn-cancel {
+  color: #d32f2f !important;
+  border: 1px solid #d32f2f !important;
+  font-weight: 600;
+  border-radius: 7px !important;
+  padding: 6px 25px !important;
+  text-transform: none;
+  font-size: 14px;
+}
+
+.custom-btn-cancel:hover {
+  background-color: rgba(211, 47, 47, 0.08) !important;
 }

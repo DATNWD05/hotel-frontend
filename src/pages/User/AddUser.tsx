@@ -16,7 +16,7 @@ import {
 import { useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
 import axios from "axios";
-import "../../css/User.css";
+import "../../css/AddUser.css";
 
 interface FormData {
   name: string;
@@ -434,27 +434,24 @@ const AddUser: React.FC = () => {
                 helperText={errors.password}
               />
             </Box>
-            <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleSave}
-                disabled={loading}
-              >
-                {loading ? <CircularProgress size={24} /> : "Lưu"}
-              </Button>
-              <Button
-                variant="outlined"
-                className="user-btn-cancel"
-                color="secondary"
-                onClick={handleCancel}
-                disabled={loading}
-                component={Link}
-                to="/user"
-              >
-                Hủy
-              </Button>
-            </Box>
+<Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
+      <Button
+        className="adduser-btn-save"
+        onClick={handleSave}
+        disabled={loading}
+      >
+        {loading ? <CircularProgress size={24} /> : "Lưu"}
+      </Button>
+      <Button
+        className="adduser-btn-cancel"
+        onClick={handleCancel}
+        component={Link}
+        to="/user"
+        disabled={loading}
+      >
+        Hủy
+      </Button>
+    </Box>
           </Box>
           {error && (
             <Typography color="error" className="user-error-message" mt={2}>
