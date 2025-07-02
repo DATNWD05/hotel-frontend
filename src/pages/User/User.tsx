@@ -51,7 +51,7 @@ interface Employee {
   id: number;
   name: string;
   email: string;
-  role: string;
+  role?: string;
   birthday?: string | null | undefined;
   phone?: string | null | undefined;
   address?: string | null | undefined;
@@ -300,10 +300,10 @@ const User: React.FC = () => {
       if (!editedDetail.status) {
         newErrors.status = "Trạng thái không được để trống.";
       } else if (
-        !["Làm việc", "Nghỉ làm", "Chờ Xét Duyệt"].includes(editedDetail.status)
+        !["active", "not_active", "pending"].includes(editedDetail.status)
       ) {
         newErrors.status =
-          "Trạng thái phải là Làm việc, Nghỉ làm hoặc Chờ Xét Duyệt.";
+          "Trạng thái phải là Đang làm việc, Nghỉ làm hoặc Chờ xét duyệt.";
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -322,12 +322,10 @@ const User: React.FC = () => {
         hire_date: editedDetail.hire_date ?? null,
         status: editedDetail.status ?? null,
         email: editedDetail.email ?? currentEmployee?.user?.email ?? "",
-        role:
-          editedDetail.role ??
-          (currentEmployee?.user?.role_id === 1 ? "admin" : "staff"),
       };
 
       const res = await api.put(`/employees/${id}`, payload);
+      console.log("Response from update:", res);
 
       if (res.status === 200) {
         setEmployees((prev) =>
@@ -344,27 +342,28 @@ const User: React.FC = () => {
     } catch (err: unknown) {
       let errorMessage = "Lỗi khi cập nhật nhân viên.";
       if (axios.isAxiosError(err)) {
+        console.error("🔥 FULL ERROR:", err.response?.data);
+
+        // Nếu có lỗi cụ thể từ backend
         if (err.response?.status === 422 && err.response.data?.errors) {
           const backendErrors: Partial<Record<keyof Employee, string>> = {};
           for (const [field, messages] of Object.entries(
             err.response.data.errors
           )) {
+            console.warn("❌ Field Error:", field, "=>", messages);
             backendErrors[field as keyof Employee] = (
               messages as string[]
             ).join(", ");
           }
           setErrors(backendErrors);
-        } else if (err.response?.data?.message) {
+        }
+
+        if (err.response?.data?.message) {
           errorMessage = err.response.data.message;
           setGeneralError(errorMessage);
-        } else {
-          setGeneralError(errorMessage);
         }
-        console.error("Lỗi cập nhật nhân viên:", err);
-      } else {
-        console.error("Lỗi không xác định:", err);
-        setGeneralError(errorMessage);
       }
+
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
     } finally {
@@ -563,6 +562,19 @@ const User: React.FC = () => {
 
   const totalPages = Math.ceil(filteredEmployees.length / rowsPerPage);
 
+  const renderStatusLabel = (status: string | undefined) => {
+    switch (status) {
+      case "active":
+        return "Đang làm việc";
+      case "not_active":
+        return "Nghỉ làm";
+      case "pending":
+        return "Chờ xét duyệt";
+      default:
+        return "Không xác định";
+    }
+  };
+
   return (
     <div className="customer-wrapper">
       <div className="customer-title">
@@ -603,7 +615,7 @@ const User: React.FC = () => {
             />
             <Button
               component={Link}
-              to="/customer/add"
+              to="/user/add"
               variant="contained"
               sx={{
                 backgroundColor: "#4318FF", // tím sang
@@ -1088,12 +1100,7 @@ const User: React.FC = () => {
                                             />
                                           </Box>
                                           <Box display="flex" gap={2}>
-                                            <FormControl
-                                              fullWidth
-                                              variant="outlined"
-                                              size="small"
-                                              error={!!errors.status}
-                                            >
+                                            <FormControl fullWidth>
                                               <InputLabel>
                                                 Trạng thái
                                               </InputLabel>
@@ -1110,25 +1117,18 @@ const User: React.FC = () => {
                                                 }
                                                 label="Trạng thái"
                                               >
-                                                <MenuItem value="Làm việc">
+                                                <MenuItem value="active">
                                                   Làm việc
                                                 </MenuItem>
-                                                <MenuItem value="Nghỉ làm">
+                                                <MenuItem value="not_active">
                                                   Nghỉ làm
                                                 </MenuItem>
-                                                <MenuItem value="Chờ Xét Duyệt">
-                                                  Chờ Xét Duyệt
+                                                <MenuItem value="pending">
+                                                  Chờ xét duyệt
                                                 </MenuItem>
                                               </Select>
-                                              {errors.status && (
-                                                <Typography
-                                                  color="error"
-                                                  variant="caption"
-                                                >
-                                                  {errors.status}
-                                                </Typography>
-                                              )}
                                             </FormControl>
+
                                             <TextField
                                               label="Ngày tuyển dụng"
                                               name="hire_date"
@@ -1258,7 +1258,9 @@ const User: React.FC = () => {
                                           <TableRow>
                                             <TableCell>
                                               <strong>Trạng thái:</strong>{" "}
-                                              {emp.status || "Không xác định"}
+                                              {renderStatusLabel(
+                                                emp.status ?? ""
+                                              )}
                                             </TableCell>
                                             <TableCell>
                                               <strong>Ngày tuyển dụng:</strong>{" "}
@@ -1513,35 +1515,34 @@ const User: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-<Box mt={2} pr={3} display="flex" justifyContent="flex-end">
-  <Pagination
-    count={totalPages}
-    page={currentPage}
-    onChange={handlePageChange}
-    shape="rounded"
-    color="primary"
-    siblingCount={0} // số trang gần kề 2 bên
-    boundaryCount={1} // số trang đầu/cuối hiển thị
-    showFirstButton
-    showLastButton
-    sx={{
-      "& .MuiPaginationItem-root": {
-        color: "#444",
-        minWidth: "32px",
-        height: "32px",
-        fontSize: "14px",
-        fontWeight: 500,
-        borderRadius: "8px",
-      },
-      "& .Mui-selected": {
-        backgroundColor: "#5B3EFF",
-        color: "#fff",
-        fontWeight: "bold",
-      },
-    }}
-  />
-</Box>
-
+              <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+                <Pagination
+                  count={totalPages}
+                  page={currentPage}
+                  onChange={handlePageChange}
+                  shape="rounded"
+                  color="primary"
+                  siblingCount={0} // số trang gần kề 2 bên
+                  boundaryCount={1} // số trang đầu/cuối hiển thị
+                  showFirstButton
+                  showLastButton
+                  sx={{
+                    "& .MuiPaginationItem-root": {
+                      color: "#444",
+                      minWidth: "32px",
+                      height: "32px",
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      borderRadius: "8px",
+                    },
+                    "& .Mui-selected": {
+                      backgroundColor: "#5B3EFF",
+                      color: "#fff",
+                      fontWeight: "bold",
+                    },
+                  }}
+                />
+              </Box>
             </>
           )}
         </CardContent>

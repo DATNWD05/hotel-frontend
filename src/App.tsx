@@ -12,7 +12,6 @@ import ProtectedRoute from "./routes/helpers/ProtectedRoute";
 import Role from "./pages/Role/Role";
 import AddRole from "./pages/Role/AddRole";
 import Customer from "./pages/Customer/Customer";
-import AddCustomer from "./pages/Customer/AddCustomer";
 import CreateService from "./pages/Services/CreateService";
 import ServiceCategoryList from "./pages/Services/Service_category";
 import AddServiceCategory from "./pages/Services/AddServiceCategory";
@@ -57,7 +56,6 @@ function App() {
 
 
         <Route path="customer" element={<RoleBasedRoute allowedRoleIds={[1]}><Customer /></RoleBasedRoute>} />
-        <Route path="customer/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddCustomer/></RoleBasedRoute>} />
 
         <Route path="/promotions" element={<RoleBasedRoute allowedRoleIds={[1]}><Promotions /></RoleBasedRoute>} />
         <Route path="promotions/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddPromotion /></RoleBasedRoute>} />

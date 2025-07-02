@@ -24,7 +24,6 @@ import PersonIcon from "@mui/icons-material/Person";
 import BedIcon from "@mui/icons-material/Bed";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import { Chart, registerables } from "chart.js";
-import BookingList from "./BookingList";
 
 Chart.register(...registerables);
 
@@ -398,8 +397,6 @@ export default function Statistics() {
           </Paper>
         ))}
       </Box>
-
-      <BookingList />
     </Box>
   );
 }
