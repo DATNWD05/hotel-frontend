@@ -26,6 +26,7 @@ import {
   DialogContent,
   DialogActions,
   Divider,
+  Tooltip,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AppsIcon from "@mui/icons-material/Apps";
@@ -38,7 +39,7 @@ import numeral from "numeral";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import api from "../../api/axios";
 
-// Thêm interface cho Invoice
+// Cập nhật interface Booking để hỗ trợ nhiều phòng
 interface Invoice {
   invoice_code: string;
   booking_id: number;
@@ -69,7 +70,6 @@ interface Invoice {
   };
 }
 
-// Các interface khác giữ nguyên...
 interface CheckinInfo {
   booking_id: number;
   status: string;
@@ -169,7 +169,7 @@ interface Room {
 interface Booking {
   id: number;
   customer_id: number;
-  room_id: number;
+  room_ids: number[]; // Thêm room_ids để lưu danh sách ID phòng
   created_by: number;
   check_in_date: string;
   check_out_date: string;
@@ -181,7 +181,7 @@ interface Booking {
   created_at: string | null;
   updated_at: string | null;
   customer: Customer;
-  room: Room;
+  rooms: Room[]; // Thay room bằng rooms để hỗ trợ nhiều phòng
 }
 
 interface CheckoutInfo {
@@ -344,7 +344,6 @@ const ListBookings: React.FC = () => {
     }
   };
 
-  // Handle VNPay callback
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const transactionStatus = urlParams.get("vnp_TransactionStatus");
@@ -570,26 +569,8 @@ const ListBookings: React.FC = () => {
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             },
-            room: item.room || {
-              id: 0,
-              room_number: "N/A",
-              room_type_id: 0,
-              status: "N/A",
-              image: null,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              room_type: {
-                id: 0,
-                code: "N/A",
-                name: "N/A",
-                description: null,
-                max_occupancy: 0,
-                base_rate: "0.00",
-                created_at: null,
-                updated_at: null,
-                amenities: [],
-              },
-            },
+            rooms: item.rooms || [], // Đảm bảo rooms là mảng
+            room_ids: item.room_ids || [], // Thêm room_ids
           };
         });
 
@@ -623,9 +604,9 @@ const ListBookings: React.FC = () => {
           booking.customer.name
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
-          booking.room.room_number
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+          booking.rooms.some((room) =>
+            room.room_number.toLowerCase().includes(searchQuery.toLowerCase())
+          )
       );
     }
     if (statusFilters.length > 0) {
@@ -665,6 +646,31 @@ const ListBookings: React.FC = () => {
       }
     });
     handleFilterClose();
+  };
+
+  // Hàm hiển thị cột Số phòng
+  const renderRoomNumbers = (rooms: Room[]) => {
+    if (rooms.length === 0) return "N/A";
+    if (rooms.length <= 3) {
+      return rooms.map((room) => room.room_number).join(", ");
+    }
+    return (
+      <Tooltip
+        title={rooms.map((room) => room.room_number).join(", ")}
+        placement="top"
+      >
+        <Chip
+          label={`${rooms.length} phòng`}
+          sx={{
+            bgcolor: "#e0f7fa",
+            color: "#00796b",
+            fontWeight: "bold",
+            height: "28px",
+            cursor: "pointer",
+          }}
+        />
+      </Tooltip>
+    );
   };
 
   const statusOptions = [
@@ -857,7 +863,9 @@ const ListBookings: React.FC = () => {
                     return (
                       <TableRow key={booking.id} hover sx={{ opacity: 1 }}>
                         <TableCell>{booking.customer.name}</TableCell>
-                        <TableCell>{booking.room.room_number}</TableCell>
+                        <TableCell>
+                          {renderRoomNumbers(booking.rooms)}
+                        </TableCell>
                         <TableCell>
                           {formatDate(booking.check_in_date)}
                         </TableCell>

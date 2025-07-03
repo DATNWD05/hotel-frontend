@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
-  Button,
   Typography,
   Dialog,
   DialogTitle,
@@ -20,20 +19,20 @@ import {
   Box,
   Paper,
   SelectChangeEvent,
-} from '@mui/material';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import PersonIcon from '@mui/icons-material/Person';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import InfoIcon from '@mui/icons-material/Info';
-import HomeIcon from '@mui/icons-material/Home';
-import PaymentIcon from '@mui/icons-material/Payment';
-import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
-import StarIcon from '@mui/icons-material/Star';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import '../../css/OrderRoom.css';
-import api from '../../api/axios';
-import { Link } from 'react-router-dom';
+} from "@mui/material";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import PersonIcon from "@mui/icons-material/Person";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import InfoIcon from "@mui/icons-material/Info";
+import HomeIcon from "@mui/icons-material/Home";
+import PaymentIcon from "@mui/icons-material/Payment";
+import ContactPhoneIcon from "@mui/icons-material/ContactPhone";
+import StarIcon from "@mui/icons-material/Star";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import "../../css/OrderRoom.css";
+import api from "../../api/axios";
+import { Link } from "react-router-dom";
 
 interface RoomType {
   id: number;
@@ -119,7 +118,7 @@ interface Room {
   id: number;
   room_number: string;
   room_type_id: number;
-  status: 'available' | 'booked' | 'maintenance';
+  status: "available" | "booked" | "maintenance";
   image: string | null;
   created_at: string;
   updated_at: string;
@@ -159,16 +158,18 @@ const OrderRoom: React.FC = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [openDialog, setOpenDialog] = useState<boolean>(false);
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
   const [editRoom, setEditRoom] = useState<Partial<Room>>({});
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [roomTypes, setRoomTypes] = useState<SimpleRoomType[]>([]);
   const [roomTypesLoading, setRoomTypesLoading] = useState<boolean>(true);
   const [roomTypesError, setRoomTypesError] = useState<string | null>(null);
@@ -177,34 +178,57 @@ const OrderRoom: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get('/rooms');
+      const response = await api.get("/rooms");
       console.log(response.data);
 
       if (response.status === 200) {
-        const data: Room[] = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+        const data: Room[] = Array.isArray(response.data.data)
+          ? response.data.data
+          : [response.data.data];
         const sanitizedData = data
-          .filter(room => 
-            room &&
-            room.id &&
-            room.room_number &&
-            room.room_type &&
-            ['available', 'booked', 'maintenance'].includes(room.status)
+          .filter(
+            (room) =>
+              room &&
+              room.id &&
+              room.room_number &&
+              room.room_type &&
+              ["available", "booked", "maintenance"].includes(room.status)
           )
-          .map(room => {
+          .map((room) => {
             let latestBooking: Booking | null = null;
-            if (room.status === 'booked' && room.bookings && room.bookings.length > 0) {
-              latestBooking = room.bookings.reduce((latest: Booking | null, booking: Booking) => {
-                const latestDate = latest ? new Date(latest.check_in_date) : null;
-                const currentDate = booking.check_in_date ? new Date(booking.check_in_date) : null;
-                return (!latestDate || (currentDate && currentDate > latestDate)) ? booking : latest;
-              }, null);
+            if (
+              room.status === "booked" &&
+              room.bookings &&
+              room.bookings.length > 0
+            ) {
+              latestBooking = room.bookings.reduce(
+                (latest: Booking | null, booking: Booking) => {
+                  const latestDate = latest
+                    ? new Date(latest.check_in_date)
+                    : null;
+                  const currentDate = booking.check_in_date
+                    ? new Date(booking.check_in_date)
+                    : null;
+                  return !latestDate ||
+                    (currentDate && currentDate > latestDate)
+                    ? booking
+                    : latest;
+                },
+                null
+              );
             }
 
             let stayDays = 0;
-            if (latestBooking && latestBooking.check_in_date && latestBooking.check_out_date) {
+            if (
+              latestBooking &&
+              latestBooking.check_in_date &&
+              latestBooking.check_out_date
+            ) {
               const checkIn = new Date(latestBooking.check_in_date);
               const checkOut = new Date(latestBooking.check_out_date);
-              stayDays = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24));
+              stayDays = Math.ceil(
+                (checkOut.getTime() - checkIn.getTime()) / (1000 * 3600 * 24)
+              );
             }
 
             return {
@@ -226,7 +250,8 @@ const OrderRoom: React.FC = () => {
               guest_country: latestBooking?.customer.nationality || undefined,
               guest_id_number: latestBooking?.customer.cccd || undefined,
               guest_gender: latestBooking?.customer.gender || undefined,
-              guest_date_of_birth: latestBooking?.customer.date_of_birth || undefined,
+              guest_date_of_birth:
+                latestBooking?.customer.date_of_birth || undefined,
               guest_address: latestBooking?.customer.address || undefined,
               guest_note: latestBooking?.customer.note || undefined,
               creator_name: latestBooking?.creator?.name || undefined,
@@ -240,11 +265,12 @@ const OrderRoom: React.FC = () => {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
+      const errorMessage =
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu";
       setError(errorMessage);
       setSnackbarOpen(true);
       setSnackbarMessage(errorMessage);
-      console.error('Lỗi khi tải danh sách phòng:', errorMessage);
+      console.error("Lỗi khi tải danh sách phòng:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -254,10 +280,12 @@ const OrderRoom: React.FC = () => {
     try {
       setRoomTypesLoading(true);
       setRoomTypesError(null);
-      const response = await api.get('/room-types');
+      const response = await api.get("/room-types");
 
       if (response.status === 200) {
-        const data: RoomType[] = Array.isArray(response.data.data) ? response.data.data : [response.data.data];
+        const data: RoomType[] = Array.isArray(response.data.data)
+          ? response.data.data
+          : [response.data.data];
         const simplifiedRoomTypes: SimpleRoomType[] = data.map((rt) => ({
           id: rt.id,
           name: rt.name,
@@ -268,11 +296,14 @@ const OrderRoom: React.FC = () => {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải danh sách loại phòng';
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Đã xảy ra lỗi khi tải danh sách loại phòng";
       setRoomTypesError(errorMessage);
       setSnackbarOpen(true);
       setSnackbarMessage(errorMessage);
-      console.error('Lỗi khi tải danh sách loại phòng:', errorMessage);
+      console.error("Lỗi khi tải danh sách loại phòng:", errorMessage);
     } finally {
       setRoomTypesLoading(false);
     }
@@ -285,19 +316,27 @@ const OrderRoom: React.FC = () => {
 
   useEffect(() => {
     let filtered = [...allRooms];
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((room) => mapStatusToUI(room.status) === statusFilter);
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(
+        (room) => mapStatusToUI(room.status) === statusFilter
+      );
     }
     setFilteredRooms(filtered);
     setRooms(filtered);
   }, [statusFilter, allRooms]);
 
-  const mapStatusToUI = (status: string): 'trong' | 'da_dat' | 'dang_sua' | 'unknown' => {
+  const mapStatusToUI = (
+    status: string
+  ): "trong" | "da_dat" | "dang_sua" | "unknown" => {
     switch (status) {
-      case 'available': return 'trong';
-      case 'booked': return 'da_dat';
-      case 'maintenance': return 'dang_sua';
-      default: return 'unknown';
+      case "available":
+        return "trong";
+      case "booked":
+        return "da_dat";
+      case "maintenance":
+        return "dang_sua";
+      default:
+        return "unknown";
     }
   };
 
@@ -332,7 +371,9 @@ const OrderRoom: React.FC = () => {
     setValidationErrors({});
   };
 
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleEditChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setEditRoom((prev) => ({ ...prev, [name]: value }));
     setValidationErrors((prev) => {
@@ -347,7 +388,7 @@ const OrderRoom: React.FC = () => {
     if (name) {
       setEditRoom((prev) => ({
         ...prev,
-        [name]: name === 'room_type_id' ? Number(value) : value,
+        [name]: name === "room_type_id" ? Number(value) : value,
       }));
       setValidationErrors((prev) => {
         const newErrors = { ...prev };
@@ -360,15 +401,19 @@ const OrderRoom: React.FC = () => {
   const validateEditForm = (data: Partial<Room>): ValidationErrors => {
     const errors: ValidationErrors = {};
     if (!data.room_number?.trim()) {
-      errors.room_number = 'Số phòng không được để trống';
+      errors.room_number = "Số phòng không được để trống";
     } else if (data.room_number.length > 20) {
-      errors.room_number = 'Số phòng không được vượt quá 20 ký tự';
+      errors.room_number = "Số phòng không được vượt quá 20 ký tự";
     }
-    if (!['available', 'maintenance'].includes(data.status || '')) {
-      errors.status = 'Trạng thái không hợp lệ';
+    if (!["available", "maintenance"].includes(data.status || "")) {
+      errors.status = "Trạng thái không hợp lệ";
     }
-    if (!data.room_type_id || data.room_type_id <= 0 || !roomTypes.some((rt) => rt.id === data.room_type_id)) {
-      errors.room_type_id = 'Loại phòng không hợp lệ';
+    if (
+      !data.room_type_id ||
+      data.room_type_id <= 0 ||
+      !roomTypes.some((rt) => rt.id === data.room_type_id)
+    ) {
+      errors.room_type_id = "Loại phòng không hợp lệ";
     }
     return errors;
   };
@@ -396,16 +441,17 @@ const OrderRoom: React.FC = () => {
         setOpenEditDialog(false);
         setEditRoom({});
         setValidationErrors({});
-        setSnackbarMessage('Thông tin phòng đã được cập nhật thành công!');
+        setSnackbarMessage("Thông tin phòng đã được cập nhật thành công!");
         setSnackbarOpen(true);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi cập nhật phòng';
+      const errorMessage =
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi cập nhật phòng";
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
-      console.error('Lỗi khi cập nhật phòng:', errorMessage);
+      console.error("Lỗi khi cập nhật phòng:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -420,16 +466,17 @@ const OrderRoom: React.FC = () => {
       if (response.status === 200) {
         await fetchRooms();
         setOpenDialog(false);
-        setSnackbarMessage('Phòng đã được xóa (mềm) thành công!');
+        setSnackbarMessage("Phòng đã được xóa (mềm) thành công!");
         setSnackbarOpen(true);
-      }  else {
+      } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi xóa phòng';
+      const errorMessage =
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi xóa phòng";
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
-      console.error('Lỗi khi xóa phòng:', errorMessage);
+      console.error("Lỗi khi xóa phòng:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -437,31 +484,45 @@ const OrderRoom: React.FC = () => {
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
-    setSnackbarMessage('');
+    setSnackbarMessage("");
   };
 
   const getStatusText = (status?: string) => {
-    if (!status) return 'Không xác định';
+    if (!status) return "Không xác định";
     const uiStatus = mapStatusToUI(status);
     switch (uiStatus) {
-      case 'trong': return 'Trống';
-      case 'da_dat': return 'Đã đặt';
-      case 'dang_sua': return 'Đang sửa';
-      default: return 'Không xác định';
+      case "trong":
+        return "Trống";
+      case "da_dat":
+        return "Đã đặt";
+      case "dang_sua":
+        return "Đang sửa";
+      default:
+        return "Không xác định";
     }
   };
 
   const formatDate = (dateString?: string) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
+    return isNaN(date.getTime())
+      ? "N/A"
+      : date.toLocaleDateString("vi-VN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        });
   };
 
-  const InfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | number }) => (
+  const InfoRow = ({
+    icon,
+    label,
+    value,
+  }: {
+    icon: React.ReactNode;
+    label: string;
+    value: string | number;
+  }) => (
     <div className="info-row">
       <div className="info-row-icon">{icon}</div>
       <div className="info-row-content">
@@ -472,14 +533,28 @@ const OrderRoom: React.FC = () => {
   );
 
   if (loading || roomTypesLoading) {
-    return <Typography align="center" sx={{ mt: 4 }}>Đang tải dữ liệu...</Typography>;
+    return (
+      <Typography align="center" sx={{ mt: 4 }}>
+        Đang tải dữ liệu...
+      </Typography>
+    );
   }
 
   if (error || roomTypesError) {
     return (
-      <div style={{ textAlign: 'center', marginTop: '2rem' }}>
-        <Typography color="error" sx={{ mb: 2 }}>{error || roomTypesError}</Typography>
-        <Button variant="contained" onClick={() => { fetchRooms(); fetchRoomTypes(); }}>Thử lại</Button>
+      <div style={{ textAlign: "center", marginTop: "2rem" }}>
+        <Typography color="error" sx={{ mb: 2 }}>
+          {error || roomTypesError}
+        </Typography>
+        <button
+          className="retry-button"
+          onClick={() => {
+            fetchRooms();
+            fetchRoomTypes();
+          }}
+        >
+          Thử lại
+        </button>
       </div>
     );
   }
@@ -494,71 +569,51 @@ const OrderRoom: React.FC = () => {
         </div>
       </div>
       <div className="order-room-filter-bar">
-        <Button
-          className={`order-room-filter-tat_ca ${statusFilter === 'all' ? 'active' : ''}`}
-          onClick={() => handleStatusFilter('all')}
-          sx={{
-            backgroundColor: '#607D8B',
-            color: 'white',
-            mr: 1,
-            '&:hover': { backgroundColor: '#546E7A' },
-          }}
+        <button
+          className={`order-room-filter order-room-filter-tat_ca ${
+            statusFilter === "all" ? "active" : ""
+          }`}
+          onClick={() => handleStatusFilter("all")}
         >
           Tất cả
-        </Button>
-        <Button
-          className={`order-room-filter-trong ${statusFilter === 'trong' ? 'active' : ''}`}
-          onClick={() => handleStatusFilter('trong')}
-          sx={{
-            backgroundColor: '#1B5E20',
-            color: 'white',
-            mr: 1,
-            '&:hover': { backgroundColor: '#2E7D32' },
-          }}
+        </button>
+        <button
+          className={`order-room-filter order-room-filter-trong ${
+            statusFilter === "trong" ? "active" : ""
+          }`}
+          onClick={() => handleStatusFilter("trong")}
         >
           Trống
-        </Button>
-        <Button
-          className={`order-room-filter-da_dat ${statusFilter === 'da_dat' ? 'active' : ''}`}
-          onClick={() => handleStatusFilter('da_dat')}
-          sx={{
-            backgroundColor: '#B71C1C',
-            color: 'white',
-            mr: 1,
-            '&:hover': { backgroundColor: '#C62828' },
-          }}
+        </button>
+        <button
+          className={`order-room-filter order-room-filter-da_dat ${
+            statusFilter === "da_dat" ? "active" : ""
+          }`}
+          onClick={() => handleStatusFilter("da_dat")}
         >
           Đã đặt
-        </Button>
-        <Button
-          className={`order-room-filter-dang_sua ${statusFilter === 'dang_sua' ? 'active' : ''}`}
-          onClick={() => handleStatusFilter('dang_sua')}
-          sx={{
-            backgroundColor: '#F57F17',
-            color: 'white',
-            mr: 1,
-            '&:hover': { backgroundColor: '#FB8C00' },
-          }}
+        </button>
+        <button
+          className={`order-room-filter order-room-filter-dang_sua ${
+            statusFilter === "dang_sua" ? "active" : ""
+          }`}
+          onClick={() => handleStatusFilter("dang_sua")}
         >
           Đang sửa
-        </Button>
-        <Link to="/listbookings/add">
-          <Button
-            className="order-room-filter-book"
-            sx={{
-              backgroundColor: '#4CAF50',
-              color: 'white',
-              ml: 'auto',
-              '&:hover': { backgroundColor: '#2E7D32' },
-            }}
-          >
+        </button>
+        <Link to="/listbookings/add" style={{ marginLeft: "auto" }}>
+          <button className="order-room-filter order-room-filter-book">
             Đặt phòng
-          </Button>
+          </button>
         </Link>
       </div>
 
       {filteredRooms.length === 0 ? (
-        <Typography align="center" className="order-room-no-data" sx={{ mt: 4 }}>
+        <Typography
+          align="center"
+          className="order-room-no-data"
+          sx={{ mt: 4 }}
+        >
           Không tìm thấy phòng phù hợp.
         </Typography>
       ) : (
@@ -566,42 +621,45 @@ const OrderRoom: React.FC = () => {
           {rooms.map((room) => (
             <div
               key={room.id}
-              className={`order-room-card order-room-status-${mapStatusToUI(room.status)}`}
+              className={`order-room-card order-room-status-${mapStatusToUI(
+                room.status
+              )}`}
               onClick={() => handleViewDetails(room)}
             >
               <div className="order-room-left-section">
                 <div className="order-room-status-label">
-                  {room.room_type.code || 'STD'}
+                  {room.room_type.code || "STD"}
                 </div>
                 <div className="order-room-number">{room.room_number}</div>
-                {mapStatusToUI(room.status) === 'trong' && (
+                {mapStatusToUI(room.status) === "trong" && (
                   <div className="order-room-icon">
                     <PersonIcon />
                   </div>
                 )}
-                {mapStatusToUI(room.status) === 'da_dat' && (
+                {mapStatusToUI(room.status) === "da_dat" && (
                   <div className="order-room-icon">
                     <CalendarTodayIcon />
                   </div>
                 )}
-                {mapStatusToUI(room.status) === 'dang_sua' && (
+                {mapStatusToUI(room.status) === "dang_sua" && (
                   <div className="order-room-icon">
                     <AccessTimeIcon />
                   </div>
                 )}
               </div>
-
               <div className="order-room-right-section">
                 <div className="order-room-content">
-                  {mapStatusToUI(room.status) === 'trong' && (
+                  {mapStatusToUI(room.status) === "trong" && (
                     <div className="order-room-status-text">Trống</div>
                   )}
-                  {mapStatusToUI(room.status) === 'da_dat' && (
+                  {mapStatusToUI(room.status) === "da_dat" && (
                     <>
                       <div className="order-room-date-time">
                         {formatDate(room.check_out_date)}
                       </div>
-                      <div className="order-room-guest-name">{room.guest_name || 'N/A'}</div>
+                      <div className="order-room-guest-name">
+                        {room.guest_name || "N/A"}
+                      </div>
                       {room.stay_days && (
                         <div className="order-room-countdown">
                           {`--Còn ${room.stay_days} ngày--`}
@@ -609,7 +667,7 @@ const OrderRoom: React.FC = () => {
                       )}
                     </>
                   )}
-                  {mapStatusToUI(room.status) === 'dang_sua' && (
+                  {mapStatusToUI(room.status) === "dang_sua" && (
                     <div className="order-room-status-text">Đang sửa chữa</div>
                   )}
                 </div>
@@ -629,10 +687,10 @@ const OrderRoom: React.FC = () => {
         <DialogTitle className="dialog-header">
           <div className="dialog-title-content">
             <HomeIcon className="dialog-title-icon" />
-            <span>Chi tiết phòng {selectedRoom?.room_number ?? 'N/A'}</span>
+            <span>Chi tiết phòng {selectedRoom?.room_number ?? "N/A"}</span>
           </div>
         </DialogTitle>
-        
+
         <DialogContent className="dialog-content-enhanced">
           {selectedRoom ? (
             <>
@@ -640,161 +698,199 @@ const OrderRoom: React.FC = () => {
                 <CardContent>
                   <div className="card-header">
                     <InfoIcon className="card-icon" />
-                    <Typography variant="h6" className="card-title">Thông tin phòng</Typography>
-                    <Chip 
-                      label={getStatusText(selectedRoom.status)} 
-                      className={`status-chip status-${mapStatusToUI(selectedRoom.status)}`}
+                    <Typography variant="h6" className="card-title">
+                      Thông tin phòng
+                    </Typography>
+                    <Chip
+                      label={getStatusText(selectedRoom.status)}
+                      className={`status-chip status-${mapStatusToUI(
+                        selectedRoom.status
+                      )}`}
                     />
                   </div>
                   <Divider className="card-divider" />
                   <div className="info-grid-enhanced">
-                    <InfoRow 
-                      icon={<HomeIcon />} 
-                      label="Số phòng" 
-                      value={selectedRoom.room_number} 
+                    <InfoRow
+                      icon={<HomeIcon />}
+                      label="Số phòng"
+                      value={selectedRoom.room_number}
                     />
-                    <InfoRow 
-                      icon=<StarIcon /> 
-                      label="Loại phòng" 
-                      value={selectedRoom.room_type.name} 
+                    <InfoRow
+                      icon={<StarIcon />}
+                      label="Loại phòng"
+                      value={selectedRoom.room_type.name}
                     />
-                    <InfoRow 
-                      icon=<InfoIcon /> 
-                      label="Mã loại phòng" 
-                      value={selectedRoom.room_type.code} 
+                    <InfoRow
+                      icon={<InfoIcon />}
+                      label="Mã loại phòng"
+                      value={selectedRoom.room_type.code}
                     />
-                    <InfoRow 
-                      icon=<PersonIcon /> 
-                      label="Sức chứa tối đa" 
-                      value={`${selectedRoom.room_type.max_occupancy} người`} 
+                    <InfoRow
+                      icon={<PersonIcon />}
+                      label="Sức chứa tối đa"
+                      value={`${selectedRoom.room_type.max_occupancy} người`}
                     />
-                    <InfoRow 
-                      icon=<PaymentIcon /> 
-                      label="Giá" 
-                      value={`${Number(selectedRoom.room_type.base_rate).toLocaleString('vi-VN')} VNĐ`} 
+                    <InfoRow
+                      icon={<PaymentIcon />}
+                      label="Giá"
+                      value={`${Number(
+                        selectedRoom.room_type.base_rate
+                      ).toLocaleString("vi-VN")} VNĐ`}
                     />
                   </div>
-                  {selectedRoom.room_type.description && (
-                    <div className="description-section">
-                      <Typography variant="subtitle2" className="description-label">Mô tả:</Typography>
-                      <Typography className="description-text">{selectedRoom.room_type.description}</Typography>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
 
-              {mapStatusToUI(selectedRoom.status) === 'da_dat' && (
+              {mapStatusToUI(selectedRoom.status) === "da_dat" && (
                 <Card className="info-card booking-info-card">
                   <CardContent>
                     <div className="card-header">
                       <CalendarTodayIcon className="card-icon" />
-                      <Typography variant="h6" className="card-title">Thông tin đặt phòng</Typography>
+                      <Typography variant="h6" className="card-title">
+                        Thông tin đặt phòng
+                      </Typography>
                     </div>
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
-                      <InfoRow 
-                        icon=<PersonIcon /> 
-                        label="Người đặt phòng" 
-                        value={selectedRoom.creator_name ?? 'N/A'} 
+                      <InfoRow
+                        icon={<PersonIcon />}
+                        label="Người đặt phòng"
+                        value={selectedRoom.creator_name ?? "N/A"}
                       />
-                      <InfoRow 
-                        icon=<CalendarTodayIcon /> 
-                        label="Ngày nhận phòng" 
-                        value={formatDate(selectedRoom.check_in_date)} 
+                      <InfoRow
+                        icon={<CalendarTodayIcon />}
+                        label="Ngày nhận phòng"
+                        value={formatDate(selectedRoom.check_in_date)}
                       />
-                      <InfoRow 
-                        icon=<CalendarTodayIcon /> 
-                        label="Ngày trả phòng" 
-                        value={formatDate(selectedRoom.check_out_date)} 
+                      <InfoRow
+                        icon={<CalendarTodayIcon />}
+                        label="Ngày trả phòng"
+                        value={formatDate(selectedRoom.check_out_date)}
                       />
-                      <InfoRow 
-                        icon=<InfoIcon /> 
-                        label="Trạng thái" 
+                      <InfoRow
+                        icon={<InfoIcon />}
+                        label="Trạng thái"
                         value={
-                          selectedRoom.booking_status === 'Pending' ? 'Đang chờ' :
-                          selectedRoom.booking_status === 'Confirmed' ? 'Đã xác nhận' :
-                          selectedRoom.booking_status === 'Checked-in' ? 'Đã nhận phòng' :
-                          selectedRoom.booking_status === 'Checked-out' ? 'Đã trả phòng' :
-                          selectedRoom.booking_status === 'Canceled' ? 'Đã hủy' : 'N/A'
-                        } 
+                          selectedRoom.booking_status === "Pending"
+                            ? "Đang chờ"
+                            : selectedRoom.booking_status === "Confirmed"
+                            ? "Đã xác nhận"
+                            : selectedRoom.booking_status === "Checked-in"
+                            ? "Đã nhận phòng"
+                            : selectedRoom.booking_status === "Checked-out"
+                            ? "Đã trả phòng"
+                            : selectedRoom.booking_status === "Canceled"
+                            ? "Đã hủy"
+                            : "N/A"
+                        }
                       />
-                      <InfoRow 
-                        icon=<PaymentIcon /> 
-                        label="Tiền đặt cọc" 
-                        value={selectedRoom.deposit_amount ? `${Number(selectedRoom.deposit_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                      <InfoRow
+                        icon={<PaymentIcon />}
+                        label="Tiền đặt cọc"
+                        value={
+                          selectedRoom.deposit_amount
+                            ? `${Number(
+                                selectedRoom.deposit_amount
+                              ).toLocaleString("vi-VN")} VNĐ`
+                            : "N/A"
+                        }
                       />
-                      <InfoRow 
-                        icon=<PaymentIcon /> 
-                        label="Tổng gốc" 
-                        value={selectedRoom.raw_total ? `${Number(selectedRoom.raw_total).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                      <InfoRow
+                        icon={<PaymentIcon />}
+                        label="Tổng gốc"
+                        value={
+                          selectedRoom.raw_total
+                            ? `${Number(selectedRoom.raw_total).toLocaleString(
+                                "vi-VN"
+                              )} VNĐ`
+                            : "N/A"
+                        }
                       />
-                      <InfoRow 
-                        icon=<PaymentIcon /> 
-                        label="Tổng giảm" 
-                        value={selectedRoom.discount_amount ? `${Number(selectedRoom.discount_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                      <InfoRow
+                        icon=<PaymentIcon />
+                        label="Tổng giảm"
+                        value={
+                          selectedRoom.discount_amount
+                            ? `${Number(
+                                selectedRoom.discount_amount
+                              ).toLocaleString("vi-VN")} VNĐ`
+                            : "N/A"
+                        }
                       />
-                      <InfoRow 
-                        icon=<PaymentIcon /> 
-                        label="Tổng giá cuối" 
-                        value={selectedRoom.total_amount ? `${Number(selectedRoom.total_amount).toLocaleString('vi-VN')} VNĐ` : 'N/A'} 
+                      <InfoRow
+                        icon=<PaymentIcon />
+                        label="Tổng giá cuối"
+                        value={
+                          selectedRoom.total_amount
+                            ? `${Number(
+                                selectedRoom.total_amount
+                              ).toLocaleString("vi-VN")} VNĐ`
+                            : "N/A"
+                        }
                       />
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              {mapStatusToUI(selectedRoom.status) === 'da_dat' && (
+              {mapStatusToUI(selectedRoom.status) === "da_dat" && (
                 <Card className="info-card guest-info-card">
                   <CardContent>
                     <div className="card-header">
                       <ContactPhoneIcon className="card-icon" />
-                      <Typography variant="h6" className="card-title">Thông tin khách hàng</Typography>
+                      <Typography variant="h6" className="card-title">
+                        Thông tin khách hàng
+                      </Typography>
                     </div>
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
-                      <InfoRow 
-                        icon=<InfoIcon /> 
-                        label="Số CCCD" 
-                        value={selectedRoom.guest_id_number ?? 'N/A'} 
+                      <InfoRow
+                        icon=<InfoIcon />
+                        label="Số CCCD"
+                        value={selectedRoom.guest_id_number ?? "N/A"}
                       />
-                      <InfoRow 
-                        icon=<PersonIcon /> 
-                        label="Tên" 
-                        value={selectedRoom.guest_name ?? 'N/A'} 
+                      <InfoRow
+                        icon=<PersonIcon />
+                        label="Tên"
+                        value={selectedRoom.guest_name ?? "N/A"}
                       />
-                      <InfoRow 
-                        icon=<InfoIcon /> 
-                        label="Giới tính" 
+                      <InfoRow
+                        icon=<InfoIcon />
+                        label="Giới tính"
                         value={
-                          selectedRoom.guest_gender === 'male' ? 'Nam' : 
-                          selectedRoom.guest_gender === 'female' ? 'Nữ' : 
-                          selectedRoom.guest_gender === 'other' ? 'Không xác định' : 'N/A'
-                        } 
+                          selectedRoom.guest_gender === "male"
+                            ? "Nam"
+                            : selectedRoom.guest_gender === "female"
+                            ? "Nữ"
+                            : selectedRoom.guest_gender === "other"
+                            ? "Không xác định"
+                            : "N/A"
+                        }
                       />
-                      <InfoRow 
-                        icon=<ContactPhoneIcon /> 
-                        label="Số điện thoại" 
-                        value={selectedRoom.guest_phone ?? 'N/A'} 
+                      <InfoRow
+                        icon=<ContactPhoneIcon />
+                        label="Số điện thoại"
+                        value={selectedRoom.guest_phone ?? "N/A"}
                       />
-                      <InfoRow 
-                        icon=<CalendarTodayIcon /> 
-                        label="Ngày sinh" 
-                        value={formatDate(selectedRoom.guest_date_of_birth)} 
+                      <InfoRow
+                        icon=<CalendarTodayIcon />
+                        label="Ngày sinh"
+                        value={formatDate(selectedRoom.guest_date_of_birth)}
                       />
-                      <InfoRow 
-                        icon=<InfoIcon /> 
-                        label="Quốc tịch" 
-                        value={selectedRoom.guest_country ?? 'N/A'} 
+                      <InfoRow
+                        icon=<InfoIcon />
+                        label="Quốc tịch"
+                        value={selectedRoom.guest_country ?? "N/A"}
                       />
-                      <InfoRow 
-                        icon=<HomeIcon /> 
-                        label="Địa chỉ" 
-                        value={selectedRoom.guest_address ?? 'N/A'} 
+                      <InfoRow
+                        icon=<HomeIcon />
+                        label="Địa chỉ"
+                        value={selectedRoom.guest_address ?? "N/A"}
                       />
-                      <InfoRow 
-                        icon=<InfoIcon /> 
-                        label="Ghi chú" 
-                        value={selectedRoom.guest_note ?? 'N/A'} 
+                      <InfoRow
+                        icon=<InfoIcon />
+                        label="Ghi chú"
+                        value={selectedRoom.guest_note ?? "N/A"}
                       />
                     </div>
                   </CardContent>
@@ -805,11 +901,14 @@ const OrderRoom: React.FC = () => {
                 <CardContent>
                   <div className="card-header">
                     <StarIcon className="card-icon" />
-                    <Typography variant="h6" className="card-title">Tiện ích</Typography>
+                    <Typography variant="h6" className="card-title">
+                      Tiện ích
+                    </Typography>
                   </div>
                   <Divider className="card-divider" />
                   <div className="amenities-grid">
-                    {selectedRoom?.room_type?.amenities && selectedRoom.room_type.amenities.length > 0 ? (
+                    {selectedRoom?.room_type?.amenities &&
+                    selectedRoom.room_type.amenities.length > 0 ? (
                       selectedRoom.room_type.amenities.map((amenity) => (
                         <div key={amenity.id} className="amenity-item">
                           <div className="amenity-header">
@@ -818,13 +917,18 @@ const OrderRoom: React.FC = () => {
                           </div>
                           <div className="amenity-details">
                             <span className="amenity-price">
-                              {Number(amenity.price).toLocaleString('vi-VN')} VNĐ
+                              {Number(amenity.price).toLocaleString("vi-VN")}{" "}
+                              VNĐ
                             </span>
                             <span className="amenity-quantity">
                               SL: {amenity.pivot.quantity}
                             </span>
-                            <Chip 
-                              label={amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'} 
+                            <Chip
+                              label={
+                                amenity.status === "active"
+                                  ? "Hoạt động"
+                                  : "Không hoạt động"
+                              }
                               size="small"
                               className={`amenity-status ${amenity.status}`}
                             />
@@ -841,63 +945,43 @@ const OrderRoom: React.FC = () => {
               </Card>
             </>
           ) : (
-            <Typography align="center" sx={{ mt: 4 }}>Không có phòng được chọn.</Typography>
+            <Typography align="center" sx={{ mt: 4 }}>
+              Không có phòng được chọn.
+            </Typography>
           )}
         </DialogContent>
-        
+
         <DialogActions className="dialog-actions-enhanced">
-          {selectedRoom?.status === 'available' && (
+          {selectedRoom?.status === "available" && (
             <Link to="/listbookings/add">
-              <Button
-                className="order-room-filter-book"
-                sx={{
-                  backgroundColor: '#4CAF50',
-                  color: 'white',
-                  ml: 'auto',
-                  '&:hover': { backgroundColor: '#2E7D32' },
-                }}
+              <button
+                className="order-room-filter order-room-filter-book"
+                style={{ marginLeft: "auto" }}
               >
                 Đặt phòng
-              </Button>
+              </button>
             </Link>
           )}
-          {selectedRoom && (selectedRoom.status === 'available' || selectedRoom.status === 'maintenance') && (
-            <Button
-              onClick={() => handleOpenEditDialog(selectedRoom)}
-              variant="contained"
-              sx={{
-                backgroundColor: '#FACC15',
-                color: '#2c3e50',
-                mr: 1,
-                '&:hover': { backgroundColor: '#E0B800' },
-              }}
-              startIcon={<EditIcon />}
-            >
-              Sửa phòng
-            </Button>
-          )}
-          {selectedRoom && (selectedRoom.status === 'available' || selectedRoom.status === 'maintenance') && (
-            <Button
-              onClick={handleSoftDeleteRoom}
-              variant="contained"
-              sx={{
-                backgroundColor: '#D32F2F',
-                color: 'white',
-                mr: 1,
-                '&:hover': { backgroundColor: '#B71C1C' },
-              }}
-              startIcon={<DeleteIcon />}
-            >
-              Ẩn phòng
-            </Button>
-          )}
-          <Button 
-            onClick={handleCloseDialog} 
-            variant="contained" 
-            className="close-dialog-button"
-          >
+          {selectedRoom &&
+            (selectedRoom.status === "available" ||
+              selectedRoom.status === "maintenance") && (
+              <button
+                onClick={() => handleOpenEditDialog(selectedRoom)}
+                className="edit-button"
+              >
+                <EditIcon /> Sửa phòng
+              </button>
+            )}
+          {selectedRoom &&
+            (selectedRoom.status === "available" ||
+              selectedRoom.status === "maintenance") && (
+              <button onClick={handleSoftDeleteRoom} className="delete-button">
+                <DeleteIcon /> Ẩn phòng
+              </button>
+            )}
+          <button onClick={handleCloseDialog} className="close-dialog-button">
             Đóng
-          </Button>
+          </button>
         </DialogActions>
       </Dialog>
 
@@ -924,7 +1008,7 @@ const OrderRoom: React.FC = () => {
               <TextField
                 label="Số phòng"
                 name="room_number"
-                value={editRoom.room_number || ''}
+                value={editRoom.room_number || ""}
                 onChange={handleEditChange}
                 fullWidth
                 variant="outlined"
@@ -932,17 +1016,19 @@ const OrderRoom: React.FC = () => {
                 error={!!validationErrors.room_number}
                 helperText={validationErrors.room_number}
                 InputProps={{
-                  startAdornment: (
-                    <HomeIcon sx={{ mr: 1, color: '#4a90e2' }} />
-                  ),
+                  startAdornment: <HomeIcon sx={{ mr: 1, color: "#4a90e2" }} />,
                 }}
               />
-              <FormControl fullWidth className="edit-form-input" error={!!validationErrors.status}>
+              <FormControl
+                fullWidth
+                className="edit-form-input"
+                error={!!validationErrors.status}
+              >
                 <InputLabel id="status-label">Trạng thái</InputLabel>
                 <Select
                   labelId="status-label"
                   name="status"
-                  value={editRoom.status || ''}
+                  value={editRoom.status || ""}
                   onChange={handleStatusChange}
                   label="Trạng thái"
                   MenuProps={{
@@ -960,12 +1046,16 @@ const OrderRoom: React.FC = () => {
                   </Typography>
                 )}
               </FormControl>
-              <FormControl fullWidth className="edit-form-input" error={!!validationErrors.room_type_id}>
+              <FormControl
+                fullWidth
+                className="edit-form-input"
+                error={!!validationErrors.room_type_id}
+              >
                 <InputLabel id="room-type-label">Loại phòng</InputLabel>
                 <Select
                   labelId="room-type-label"
                   name="room_type_id"
-                  value={editRoom.room_type_id || ''}
+                  value={editRoom.room_type_id || ""}
                   onChange={handleStatusChange}
                   label="Loại phòng"
                   MenuProps={{
@@ -991,22 +1081,20 @@ const OrderRoom: React.FC = () => {
           </Paper>
         </DialogContent>
         <DialogActions className="dialog-actions-enhanced">
-          <Button
+          <button
             onClick={handleEditRoom}
-            variant="contained"
             className="edit-form-save-button"
             disabled={loading || roomTypesLoading}
           >
             Lưu
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={handleCloseEditDialog}
-            variant="contained"
             className="edit-form-cancel-button"
             disabled={loading || roomTypesLoading}
           >
             Hủy
-          </Button>
+          </button>
         </DialogActions>
       </Dialog>
 
@@ -1014,12 +1102,14 @@ const OrderRoom: React.FC = () => {
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
+          severity={
+            snackbarMessage.includes("thành công") ? "success" : "error"
+          }
+          sx={{ width: "100%" }}
         >
           {snackbarMessage}
         </Alert>
