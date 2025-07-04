@@ -1,3 +1,8 @@
+/* =======================
+   AddUser.css - Giao diện thêm nhân viên
+   ======================= */
+
+/* Wrapper toàn bộ trang */
 .adduser-wrapper {
   width: 100%;
   max-width: 100%;
@@ -12,13 +17,15 @@
 .adduser-title h2 {
   margin: 0;
   font-size: 33px;
+  font-weight: 700;
   color: #1a73e8;
 }
+
 .adduser-title h2 b {
   color: #d93025;
 }
 
-/* Container của form chi tiết */
+/* Card chứa form nhập thông tin */
 .adduser-detail-container {
   width: 100%;
   max-width: 100%;
@@ -33,48 +40,77 @@
 
 /* Nút Lưu */
 .adduser-btn-save {
-  height: 40px;
-  min-width: 100px;
-  padding: 0 20px;
-  border-radius: 8px;
+  height: 42px;
+  min-width: 100px !important;
+  padding: 0 24px;
+  border-radius: 7px !important; 
   font-size: 14px;
-  font-weight: 600;
-  background-color: #4318FF !important;
+  font-weight: 700;
+  background-color: #6200ea !important; /* tím đậm */
   color: white !important;
   text-transform: none;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transition: background 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
 }
+
 .adduser-btn-save:hover {
-  background-color: #2c0ed3 !important;
+  background-color: #3700b3 !important;
+}
+
+/* Khi bị disabled - FIX lỗi mất chữ */
+.adduser-btn-save:disabled {
+  background-color: #a29bfe !important;
+  color: white !important;
+  opacity: 1 !important;
+  pointer-events: none;
 }
 
 /* Nút Hủy */
 .adduser-btn-cancel {
-  height: 40px;
-  min-width: 100px;
-  padding: 0 20px;
-  border-radius: 8px;
+  height: 42px;
+  min-width: 100px !important; 
+  padding: 0 24px;
+  border-radius: 7px !important;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   color: #d32f2f !important;
-  border: 1px solid #d32f2f;
+  border: 1.5px solid #d32f2f !important;
   background-color: white !important;
   text-transform: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  transition: background 0.3s ease;
-}
-.adduser-btn-cancel:hover {
-  background-color: #fddede !important;
+  transition: background 0.3s ease, transform 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Loading và lỗi */
+.adduser-btn-cancel:hover {
+  background-color: #fdeaea !important;
+}
+
+.adduser-btn-cancel:active {
+  transform: scale(0.97);
+}
+
+/* Container chứa nút */
+.adduser-btn-container {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Loading */
 .adduser-loading-container {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
 }
+
+/* Thông báo lỗi */
 .adduser-error-message {
   text-align: center;
   padding: 10px;
@@ -84,6 +120,8 @@
   border-radius: 5px;
   margin-bottom: 20px;
 }
+
+/* Trường hợp không có dữ liệu */
 .adduser-no-data {
   text-align: center;
   padding: 20px;
@@ -95,4 +133,29 @@
 .section-title {
   color: #1a1f4b !important;
   font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+/* Responsive cho mobile */
+@media (max-width: 600px) {
+  .adduser-btn-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .adduser-btn-save,
+  .adduser-btn-cancel {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .adduser-detail-container {
+    padding: 16px;
+  }
+
+  .adduser-title h2 {
+    font-size: 26px;
+    text-align: center;
+  }
 }
