@@ -63,8 +63,19 @@ const sitemap: MenuItem[] = [
   {
     id: 'user',
     subheader: 'Người Dùng',
-    path: '/user',
     icon: 'material-symbols:person',
+    items: [
+      {
+        name: 'Nhân viên',
+        pathName: 'user',
+        path: '/user',
+      },
+      {
+        name: 'Phòng ban',
+        pathName: 'departments',
+        path: '/departments',
+      },
+    ]
   },
   {
     id: 'customer',
@@ -110,8 +121,24 @@ const sitemap: MenuItem[] = [
   {
     id: 'statistics',
     subheader: 'Thống kê',
-    path: '/statistics',
-    icon: 'material-symbols:analytics-outline',
+    icon: 'material-symbols:analytics-outline', // dịch vụ phòng
+    items:[
+      {
+        name: 'Báo cáo',
+        pathName: 'dichvu',
+        path: '/statistics'
+      },
+      {
+        name: 'Dịch vụ',
+        pathName: 'dichvu_thongke',
+        path: '/statistics-services'
+      },
+      {
+        name: 'Doanh thu',
+        pathName: 'doanhthu_thongke',
+        path: '/statistics-revenues'
+      }
+    ]
   },
   {
     id: 'account',

@@ -246,11 +246,22 @@ const Role: React.FC = () => {
             <Link to="/role/add">
               <Button
                 variant="contained"
-                color="primary"
-                className="role-btn-add"
-                sx={{ height: 35, fontSize: 14 }}
+                sx={{
+                  backgroundColor: "#4318FF",
+                  color: "#fff",
+                  textTransform: "none",
+                  fontWeight: 600,
+                  borderRadius: "8px",
+                  px: 2.5,
+                  py: 0.6,
+                  boxShadow: "0 2px 6px rgba(106, 27, 154, 0.3)",
+                  "&:hover": {
+                    backgroundColor: "#7B1FA2",
+                    boxShadow: "0 4px 12px rgba(106, 27, 154, 0.4)",
+                  },
+                }}
               >
-                Thêm mới
+                + Thêm mới
               </Button>
             </Link>
           </Box>

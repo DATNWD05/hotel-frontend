@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   TextField,
   Button,
@@ -13,11 +13,11 @@ import {
   SelectChangeEvent,
   Snackbar,
   Alert,
-} from '@mui/material';
-import '../../css/Promotion.css';
-import api from '../../api/axios';
+} from "@mui/material";
+import "../../css/Promotion.css";
+import api from "../../api/axios";
 
-type DiscountType = 'percent' | 'amount';
+type DiscountType = "percent" | "amount";
 
 interface PromotionFormData {
   code: string;
@@ -44,47 +44,66 @@ interface ValidationErrors {
 const AddPromotion: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<PromotionFormData>({
-    code: '',
-    description: '',
-    discount_type: 'amount',
+    code: "",
+    description: "",
+    discount_type: "amount",
     discount_value: 0,
-    start_date: '',
-    end_date: '',
+    start_date: "",
+    end_date: "",
     usage_limit: 0,
     used_count: 0,
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
 
   const validateForm = (data: PromotionFormData): ValidationErrors => {
     const errors: ValidationErrors = {};
-    if (!data.code.trim()) errors.code = 'Mã CTKM không được để trống';
-    else if (data.code.length > 20) errors.code = 'Mã CTKM không được vượt quá 20 ký tự';
-    if (!data.description.trim()) errors.description = 'Mô tả không được để trống';
-    else if (data.description.length > 200) errors.description = 'Mô tả không được vượt quá 200 ký tự';
-    if (!data.discount_type) errors.discount_type = 'Vui lòng chọn loại giảm';
-    if (data.discount_value <= 0) errors.discount_value = 'Giá trị giảm phải lớn hơn 0';
-    else if (data.discount_type === 'percent' && data.discount_value > 100) {
-      errors.discount_value = 'Giá trị giảm không được vượt quá 100%';
+    if (!data.code.trim()) errors.code = "Mã CTKM không được để trống";
+    else if (data.code.length > 20)
+      errors.code = "Mã CTKM không được vượt quá 20 ký tự";
+    if (!data.description.trim())
+      errors.description = "Mô tả không được để trống";
+    else if (data.description.length > 200)
+      errors.description = "Mô tả không được vượt quá 200 ký tự";
+    if (!data.discount_type) errors.discount_type = "Vui lòng chọn loại giảm";
+    if (data.discount_value <= 0)
+      errors.discount_value = "Giá trị giảm phải lớn hơn 0";
+    else if (data.discount_type === "percent" && data.discount_value > 100) {
+      errors.discount_value = "Giá trị giảm không được vượt quá 100%";
     }
-    if (!data.start_date) errors.start_date = 'Ngày bắt đầu không được để trống';
-    if (!data.end_date) errors.end_date = 'Ngày kết thúc không được để trống';
-    else if (data.start_date && data.end_date && data.start_date > data.end_date) {
-      errors.end_date = 'Ngày kết thúc phải sau ngày bắt đầu';
+    if (!data.start_date)
+      errors.start_date = "Ngày bắt đầu không được để trống";
+    if (!data.end_date) errors.end_date = "Ngày kết thúc không được để trống";
+    else if (
+      data.start_date &&
+      data.end_date &&
+      data.start_date > data.end_date
+    ) {
+      errors.end_date = "Ngày kết thúc phải sau ngày bắt đầu";
     }
-    if (data.usage_limit <= 0) errors.usage_limit = 'Giới hạn số lần dùng phải lớn hơn 0';
-    if (data.used_count < 0) errors.used_count = 'Số lần đã dùng không được âm';
+    if (data.usage_limit <= 0)
+      errors.usage_limit = "Giới hạn số lần dùng phải lớn hơn 0";
+    if (data.used_count < 0) errors.used_count = "Số lần đã dùng không được âm";
     return errors;
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'discount_value' || name === 'usage_limit' || name === 'used_count' ? Number(value) : value,
+      [name]:
+        name === "discount_value" ||
+        name === "usage_limit" ||
+        name === "used_count"
+          ? Number(value)
+          : value,
     }));
     const errors = validateForm({ ...formData, [name]: value });
     setValidationErrors(errors);
@@ -108,21 +127,25 @@ const AddPromotion: React.FC = () => {
 
     setLoading(true);
     try {
-      const response = await api.post('/promotions', formData);
+      const response = await api.post("/promotions", formData);
       if (response.status === 201) {
-        setSnackbarMessage('Thêm khuyến mãi thành công!');
+        setSnackbarMessage("Thêm khuyến mãi thành công!");
         setSnackbarOpen(true);
-        setTimeout(() => navigate('/promotions'), 2000);
+        setTimeout(() => navigate("/promotions"), 2000);
       } else {
-        throw new Error('Không thể thêm khuyến mãi mới');
+        throw new Error("Không thể thêm khuyến mãi mới");
       }
     } catch (err: unknown) {
-      let errorMessage = 'Đã xảy ra lỗi khi thêm khuyến mãi';
+      let errorMessage = "Đã xảy ra lỗi khi thêm khuyến mãi";
       if (err instanceof Error) {
         errorMessage = err.message;
       }
-      if (typeof err === 'object' && err !== null && 'response' in err) {
-        const axiosError = err as { response?: { data?: { message?: string; errors?: { [key: string]: string[] } } } };
+      if (typeof err === "object" && err !== null && "response" in err) {
+        const axiosError = err as {
+          response?: {
+            data?: { message?: string; errors?: { [key: string]: string[] } };
+          };
+        };
         errorMessage =
           axiosError.response?.data?.message ||
           JSON.stringify(axiosError.response?.data?.errors) ||
@@ -137,12 +160,12 @@ const AddPromotion: React.FC = () => {
   };
 
   const handleCancel = () => {
-    navigate('/promotions');
+    navigate("/promotions");
   };
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
-    setSnackbarMessage('');
+    setSnackbarMessage("");
   };
 
   return (
@@ -193,7 +216,12 @@ const AddPromotion: React.FC = () => {
               />
             </Box>
             <Box display="flex" gap={2}>
-              <FormControl fullWidth variant="outlined" size="small" error={!!validationErrors.discount_type}>
+              <FormControl
+                fullWidth
+                variant="outlined"
+                size="small"
+                error={!!validationErrors.discount_type}
+              >
                 <InputLabel>Loại giảm</InputLabel>
                 <Select
                   name="discount_type"
@@ -280,6 +308,7 @@ const AddPromotion: React.FC = () => {
             <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
               <Button
                 variant="contained"
+                className="promotions-btn-save"
                 color="primary"
                 onClick={handleSave}
                 disabled={loading}
@@ -288,7 +317,7 @@ const AddPromotion: React.FC = () => {
               </Button>
               <Button
                 variant="outlined"
-                className="promotion-btn-cancel"
+                className="promotions-btn-cancel" // <-- Đúng class CSS đã định nghĩa
                 color="secondary"
                 onClick={handleCancel}
                 disabled={loading}
@@ -306,12 +335,14 @@ const AddPromotion: React.FC = () => {
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
+          severity={
+            snackbarMessage.includes("thành công") ? "success" : "error"
+          }
+          sx={{ width: "100%" }}
         >
           {snackbarMessage}
         </Alert>

@@ -138,11 +138,20 @@ const HiddenRoom: React.FC = () => {
   return (
     <div className="hidden-room-wrapper">
       <div className="hidden-room-title">
-        <div className="hidden-room-header-content">
-          <h2>
-            Hidden <b>Rooms</b>
-          </h2>
-        </div>
+        <Typography variant="body2" sx={{ color: "gray", mb: 1 }}>
+          Hidden Rooms {">"} Danh sách
+        </Typography>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          flexWrap="wrap"
+          mb={2}
+        >
+          <Typography variant="h2" fontWeight={700}>
+            Hidden Rooms
+          </Typography>
+        </Box>
       </div>
 
       {loading ? (
@@ -162,51 +171,119 @@ const HiddenRoom: React.FC = () => {
         <>
           <TableContainer component={Paper} className="hidden-room-table-container">
             <Table className="hidden-room-table">
-              <TableHead>
+              <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
                 <TableRow>
-                  <TableCell>Số Phòng</TableCell>
-                  <TableCell>Loại Phòng</TableCell>
-                  <TableCell>Trạng Thái</TableCell>
-                  <TableCell align="center">Hành động</TableCell>
+                  <TableCell>
+                    <b>Số Phòng</b>
+                  </TableCell>
+                  <TableCell>
+                    <b>Loại Phòng</b>
+                  </TableCell>
+                  <TableCell>
+                    <b>Trạng Thái</b>
+                  </TableCell>
+                  <TableCell align="center">
+                    <b>Hành động</b>
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredRooms.map((room) => (
                   <React.Fragment key={room.id}>
-                    <TableRow>
-                      <TableCell>{room.room_number}</TableCell>
-                      <TableCell>{room.room_type.name}</TableCell>
-                      <TableCell>{getStatusText(room.status)}</TableCell>
+                    <TableRow hover>
+                      <TableCell
+                        sx={{
+                          maxHeight: "60px",
+                          overflowY: "auto",
+                          whiteSpace: "normal",
+                          wordWrap: "break-word",
+                        }}
+                      >
+                        {room.room_number}
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          maxHeight: "60px",
+                          overflowY: "auto",
+                          whiteSpace: "normal",
+                          wordWrap: "break-word",
+                        }}
+                      >
+                        {room.room_type.name}
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          maxHeight: "60px",
+                          overflowY: "auto",
+                          whiteSpace: "normal",
+                          wordWrap: "break-word",
+                        }}
+                      >
+                        {getStatusText(room.status)}
+                      </TableCell>
                       <TableCell align="center">
-                        <IconButton
-                          className="hidden-room-action-view"
-                          title="Xem chi tiết"
-                          onClick={() => handleViewDetails(room.id)}
-                        >
-                          <VisibilityIcon />
-                        </IconButton>
-                        <IconButton
-                          className="hidden-room-action-restore"
-                          title="Khôi phục"
-                          onClick={() => handleRestore(room.id)}
-                        >
-                          <RestoreIcon />
-                        </IconButton>
+                        <Box display="flex" justifyContent="center" gap={1}>
+                          <IconButton
+                            title="Xem chi tiết"
+                            sx={{
+                              color: "#1976d2",
+                              bgcolor: "#e3f2fd",
+                              "&:hover": {
+                                bgcolor: "#bbdefb",
+                                boxShadow: "0 2px 6px rgba(25, 118, 210, 0.4)",
+                              },
+                              transition: "all 0.2s ease-in-out",
+                            }}
+                            onClick={() => handleViewDetails(room.id)}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                          <IconButton
+                            title="Khôi phục"
+                            sx={{
+                              color: "#388E3C",
+                              bgcolor: "#e8f5e9",
+                              "&:hover": {
+                                bgcolor: "#c8e6c9",
+                                boxShadow: "0 2px 6px rgba(56, 142, 60, 0.4)",
+                              },
+                              transition: "all 0.2s ease-in-out",
+                            }}
+                            onClick={() => handleRestore(room.id)}
+                          >
+                            <RestoreIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
                       </TableCell>
                     </TableRow>
                     <TableRow>
                       <TableCell colSpan={4} style={{ padding: 0 }}>
-                        <Collapse in={selectedRoomId === room.id}>
+                        <Collapse in={selectedRoomId === room.id} timeout="auto" unmountOnExit>
+                          <Box
+                            sx={{
+                              width: "100%",
+                              bgcolor: "#f9f9f9",
+                              px: 3,
+                              py: 2,
+                              borderTop: "1px solid #ddd",
+                            }}
+                          ></Box>
                           <div className="hidden-room-detail-container">
                             <h3>Thông tin chi tiết phòng</h3>
                             <Table className="hidden-room-detail-table">
                               <TableBody>
                                 <TableRow>
-                                  <TableCell><strong>Số Phòng:</strong> {room.room_number}</TableCell>
-                                  <TableCell><strong>Loại Phòng:</strong> {room.room_type.name}</TableCell>
+                                  <TableCell>
+                                    <strong>Số Phòng:</strong> {room.room_number}
+                                  </TableCell>
+                                  <TableCell>
+                                    <strong>Loại Phòng:</strong> {room.room_type.name}
+                                  </TableCell>
                                 </TableRow>
                                 <TableRow>
-                                  <TableCell><strong>Trạng Thái:</strong> {getStatusText(room.status)}</TableCell>
+                                  <TableCell>
+                                    <strong>Trạng Thái:</strong> {getStatusText(room.status)}
+                                  </TableCell>
                                 </TableRow>
                               </TableBody>
                             </Table>
@@ -240,7 +317,7 @@ const HiddenRoom: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          <Box display="flex" justifyContent="flex-end" mt={2}>
+          <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
             <Pagination
               count={lastPage}
               page={currentPage}

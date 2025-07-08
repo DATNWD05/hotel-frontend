@@ -16,7 +16,7 @@ import {
 import { useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
 import axios from "axios";
-import "../../css/User.css";
+import "../../css/AddUser.css";
 
 interface FormData {
   name: string;
@@ -73,11 +73,13 @@ const AddUser: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
 
   useEffect(() => {
-    api.get("/departments")
+    api
+      .get("/departments")
       .then((res) => setDepartments(res.data.data))
       .catch(() => setError("Không thể tải danh sách phòng ban"));
 
-    api.get("/role")
+    api
+      .get("/role")
       .then((res) => {
         console.log("Role API response:", res.data);
         setRoles(res.data.roles);
@@ -434,27 +436,45 @@ const AddUser: React.FC = () => {
                 helperText={errors.password}
               />
             </Box>
-            <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleSave}
-                disabled={loading}
-              >
-                {loading ? <CircularProgress size={24} /> : "Lưu"}
-              </Button>
-              <Button
-                variant="outlined"
-                className="user-btn-cancel"
-                color="secondary"
-                onClick={handleCancel}
-                disabled={loading}
-                component={Link}
-                to="/user"
-              >
-                Hủy
-              </Button>
-            </Box>
+<Box
+  display="flex"
+  justifyContent="flex-end"
+  gap={2}
+  mt={2}
+  className="adduser-btn-container"
+>
+  <Button
+  variant="contained"
+  onClick={handleSave}
+  disabled={loading}
+  className="adduser-btn-save"
+>
+  {loading ? (
+    <>
+      <CircularProgress
+        size={18}
+        color="inherit"
+        style={{ marginRight: 8 }}
+      />
+      Đang lưu...
+    </>
+  ) : (
+    "Lưu"
+  )}
+</Button>
+
+  <Button
+  variant="outlined"
+    className="adduser-btn-cancel"
+    onClick={handleCancel}
+    component={Link}
+    to="/user"
+    disabled={loading}
+  >
+    Hủy
+  </Button>
+</Box>
+
           </Box>
           {error && (
             <Typography color="error" className="user-error-message" mt={2}>
@@ -472,7 +492,9 @@ const AddUser: React.FC = () => {
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes("thành công") ? "success" : "error"}
+          severity={
+            snackbarMessage.includes("thành công") ? "success" : "error"
+          }
           sx={{ width: "100%" }}
         >
           {snackbarMessage}
