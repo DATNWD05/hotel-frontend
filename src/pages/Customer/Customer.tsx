@@ -28,9 +28,96 @@ import {
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import { SelectChangeEvent } from "@mui/material/Select";
+import { useNavigate } from "react-router-dom";
 import "../../css/Customer.css";
 import api from "../../api/axios";
 import { SearchIcon } from "lucide-react";
+
+interface Room {
+  id: number;
+  room_number: string;
+  room_type_id: number;
+  status: string;
+  image: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  pivot: {
+    booking_id: number;
+    room_id: number;
+    rate: string;
+    created_at: string;
+    updated_at: string;
+  };
+  room_type: {
+    id: number;
+    code: string;
+    name: string;
+    description: string | null;
+    max_occupancy: number;
+    base_rate: string;
+    created_at: string | null;
+    updated_at: string | null;
+    amenities: {
+      id: number;
+      category_id: number;
+      code: string;
+      name: string;
+      description: string;
+      icon: string;
+      price: string;
+      default_quantity: number;
+      status: string;
+      created_at: string;
+      updated_at: string;
+      deleted_at: string | null;
+      pivot: {
+        room_type_id: number;
+        amenity_id: number;
+        quantity: number;
+      };
+    }[];
+  };
+}
+
+interface Service {
+  id: number;
+  name: string;
+  category_id: number;
+  description: string;
+  price: string;
+  created_at: string;
+  updated_at: string;
+  pivot: {
+    booking_id: number;
+    service_id: number;
+    room_id: number | null;
+    quantity: number;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
+interface Booking {
+  id: number;
+  customer_id: number;
+  created_by: number;
+  check_in_date: string;
+  check_out_date: string;
+  check_in_at: string | null;
+  check_out_at: string | null;
+  status: string;
+  note: string | null;
+  deposit_amount: string;
+  is_deposit_paid: number;
+  raw_total: string;
+  discount_amount: string;
+  total_amount: string | null;
+  created_at: string;
+  updated_at: string;
+  rooms: Room[];
+  services: Service[];
+}
 
 interface Customer {
   id: number;
@@ -43,18 +130,7 @@ interface Customer {
   nationality: string;
   address: string;
   note: string;
-  bookings?: {
-    id: number;
-    customer_id: number;
-    created_by: string;
-    check_in_date: string;
-    check_out_date: string;
-    status: string;
-    deposit_amount: string;
-    raw_total: string;
-    discount_amount: string;
-    total_amount: string;
-  }[];
+  bookings: Booking[];
 }
 
 interface ValidationErrors {
@@ -76,10 +152,40 @@ interface Meta {
   total: number;
 }
 
-interface ApiResponse {
-  data: Customer[];
+interface CustomersListApiResponse {
+  data: { id: number }[];
   meta: Meta;
 }
+
+const getBookingStatus = (
+  status: string
+): { status: string; color: string } => {
+  switch (status.toLowerCase()) {
+    case "pending":
+      return { status: "Chờ xác nhận", color: "#FFA500" };
+    case "confirmed":
+      return { status: "Đã xác nhận", color: "#388E3C" };
+    case "checked-in":
+      return { status: "Đã nhận phòng", color: "#1A73E8" };
+    case "checked-out":
+      return { status: "Đã trả phòng", color: "#757575" };
+    case "cancelled":
+    case "canceled":
+      return { status: "Đã hủy", color: "#D32F2F" };
+    default:
+      return { status: "Không xác định", color: "#757575" };
+  }
+};
+
+const formatDate = (dateString: string): string => {
+  if (!dateString || dateString === "Không xác định") return "Không xác định";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "Không xác định";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
 const Customer: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -102,6 +208,14 @@ const Customer: React.FC = () => {
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
+  const navigate = useNavigate();
+
+  const formatCurrency = (amount: string): string => {
+    const number = parseFloat(amount);
+    return isNaN(number)
+      ? "0"
+      : number.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
+  };
 
   const mapGenderToVietnamese = (gender: string): string => {
     switch (gender.toLowerCase()) {
@@ -133,46 +247,141 @@ const Customer: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      let allData: Customer[] = [];
-      let page = 1;
 
-      while (true) {
-        const response = await api.get("/customers", { params: { page } });
-        if (response.status === 200) {
-          const data: ApiResponse = response.data;
-          const sanitizedData = data.data.map((item) => ({
-            ...item,
-            id: Number(item.id) || 0,
-            cccd: item.cccd || "Không xác định",
-            name: item.name || "Không xác định",
-            email: item.email || "Không xác định",
-            phone: item.phone || "Không xác định",
-            address: item.address || "Không xác định",
-            date_of_birth: item.date_of_birth || "Không xác định",
-            gender: mapGenderToVietnamese(item.gender || "other"),
-            nationality: item.nationality || "Không xác định",
-            note: item.note || "",
-            bookings: item.bookings
-              ? item.bookings.map((booking) => ({
-                  id: Number(booking.id) || 0,
-                  customer_id: Number(booking.customer_id) || 0,
-                  created_by: booking.created_by || "Không xác định",
-                  check_in_date: booking.check_in_date || "Không xác định",
-                  check_out_date: booking.check_out_date || "Không xác định",
-                  status: booking.status || "Không xác định",
-                  deposit_amount: booking.deposit_amount || "0",
-                  raw_total: booking.raw_total || "0",
-                  discount_amount: booking.discount_amount || "0",
-                  total_amount: booking.total_amount || "0",
-                }))
-              : [],
-          }));
-          allData = [...allData, ...sanitizedData];
+      const listResponse = await api.get<CustomersListApiResponse>(
+        "/customers",
+        {
+          params: { page: 1, per_page: 1000 },
+        }
+      );
 
-          if (page >= data.meta.last_page) break;
-          page++;
-        } else {
-          throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      if (listResponse.status !== 200) {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${listResponse.status}`);
+      }
+
+      const customerIds = listResponse.data.data.map((item) => item.id);
+      const allData: Customer[] = [];
+
+      for (const id of customerIds) {
+        try {
+          const response = await api.get<Customer>(`/customers/${id}`);
+          if (response.status === 200) {
+            const customer = response.data;
+            allData.push({
+              id: Number(customer.id) || 0,
+              cccd: customer.cccd || "Không xác định",
+              name: customer.name || "Không xác định",
+              email: customer.email || "Không xác định",
+              phone: customer.phone || "Không xác định",
+              address: customer.address || "Không xác định",
+              date_of_birth: formatDate(
+                customer.date_of_birth || "Không xác định"
+              ),
+              gender: mapGenderToVietnamese(customer.gender || "other"),
+              nationality: customer.nationality || "Không xác định",
+              note: customer.note || "",
+              bookings: customer.bookings
+                ? customer.bookings.map((booking) => ({
+                    id: Number(booking.id) || 0,
+                    customer_id: Number(booking.customer_id) || 0,
+                    created_by: Number(booking.created_by) || 0,
+                    check_in_date: formatDate(
+                      booking.check_in_date || "Không xác định"
+                    ),
+                    check_out_date: formatDate(
+                      booking.check_out_date || "Không xác định"
+                    ),
+                    check_in_at: booking.check_in_at || null,
+                    check_out_at: booking.check_out_at || null,
+                    status: booking.status || "Không xác định",
+                    note: booking.note || "",
+                    deposit_amount: booking.deposit_amount || "0",
+                    is_deposit_paid: booking.is_deposit_paid || 0,
+                    raw_total: booking.raw_total || "0",
+                    discount_amount: booking.discount_amount || "0",
+                    total_amount: booking.total_amount || "0",
+                    created_at: booking.created_at || "",
+                    updated_at: booking.updated_at || "",
+                    rooms: booking.rooms
+                      ? booking.rooms.map((room) => ({
+                          id: Number(room.id) || 0,
+                          room_number: room.room_number || "Không xác định",
+                          room_type_id: Number(room.room_type_id) || 0,
+                          status: room.status || "Không xác định",
+                          image: room.image || null,
+                          created_at: room.created_at || "",
+                          updated_at: room.updated_at || "",
+                          deleted_at: room.deleted_at || null,
+                          pivot: {
+                            booking_id: Number(room.pivot.booking_id) || 0,
+                            room_id: Number(room.pivot.room_id) || 0,
+                            rate: room.pivot.rate || "0",
+                            created_at: room.pivot.created_at || "",
+                            updated_at: room.pivot.updated_at || "",
+                          },
+                          room_type: {
+                            id: Number(room.room_type.id) || 0,
+                            code: room.room_type.code || "Không xác định",
+                            name: room.room_type.name || "Không xác định",
+                            description: room.room_type.description || null,
+                            max_occupancy:
+                              Number(room.room_type.max_occupancy) || 0,
+                            base_rate: room.room_type.base_rate || "0",
+                            created_at: room.room_type.created_at || null,
+                            updated_at: room.room_type.updated_at || null,
+                            amenities: room.room_type.amenities
+                              ? room.room_type.amenities.map((amenity) => ({
+                                  id: Number(amenity.id) || 0,
+                                  category_id: Number(amenity.category_id) || 0,
+                                  code: amenity.code || "",
+                                  name: amenity.name || "Không xác định",
+                                  description: amenity.description || "",
+                                  icon: amenity.icon || "",
+                                  price: amenity.price || "0",
+                                  default_quantity:
+                                    Number(amenity.default_quantity) || 0,
+                                  status: amenity.status || "",
+                                  created_at: amenity.created_at || "",
+                                  updated_at: amenity.updated_at || "",
+                                  deleted_at: amenity.deleted_at || null,
+                                  pivot: {
+                                    room_type_id:
+                                      Number(amenity.pivot.room_type_id) || 0,
+                                    amenity_id:
+                                      Number(amenity.pivot.amenity_id) || 0,
+                                    quantity:
+                                      Number(amenity.pivot.quantity) || 0,
+                                  },
+                                }))
+                              : [],
+                          },
+                        }))
+                      : [],
+                    services: booking.services
+                      ? booking.services.map((service) => ({
+                          id: Number(service.id) || 0,
+                          name: service.name || "Không xác định",
+                          category_id: Number(service.category_id) || 0,
+                          description: service.description || "",
+                          price: service.price || "0",
+                          created_at: service.created_at || "",
+                          updated_at: service.updated_at || "",
+                          pivot: {
+                            booking_id: Number(service.pivot.booking_id) || 0,
+                            service_id: Number(service.pivot.service_id) || 0,
+                            room_id: Number(service.pivot.room_id) || null,
+                            quantity: Number(service.pivot.quantity) || 0,
+                            created_at: service.pivot.created_at || "",
+                            updated_at: service.pivot.updated_at || "",
+                          },
+                        }))
+                      : [],
+                  }))
+                : [],
+            });
+          }
+        } catch (err) {
+          console.error(`Lỗi khi tải khách hàng ID ${id}:`, err);
         }
       }
 
@@ -200,7 +409,9 @@ const Customer: React.FC = () => {
       filtered = filtered.filter(
         (customer) =>
           customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          customer.phone.toLowerCase().includes(searchQuery.toLowerCase())
+          customer.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          customer.cccd.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -221,7 +432,7 @@ const Customer: React.FC = () => {
     else if (!/^\d{10,11}$/.test(data.phone))
       errors.phone = "Số điện thoại không hợp lệ";
     if (!data.address.trim()) errors.address = "Địa chỉ không được để trống";
-    if (!data.date_of_birth.trim())
+    if (!data.date_of_birth.trim() || data.date_of_birth === "Không xác định")
       errors.date_of_birth = "Ngày sinh không được để trống";
     if (!data.gender) errors.gender = "Vui lòng chọn giới tính";
     if (!data.nationality.trim())
@@ -339,6 +550,10 @@ const Customer: React.FC = () => {
     }
   };
 
+  const handleViewBookingDetails = (bookingId: number) => {
+    navigate(`/listbookings/detail/${bookingId}`);
+  };
+
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
     setSnackbarMessage("");
@@ -356,7 +571,7 @@ const Customer: React.FC = () => {
     <div className="customer-wrapper">
       <div className="customer-title">
         <Typography variant="body2" sx={{ color: "gray", mb: 1 }}>
-          Khách Hàng &gt; Danh sách
+          Khách Hàng Danh sách
         </Typography>
         <Box
           display="flex"
@@ -371,7 +586,7 @@ const Customer: React.FC = () => {
 
           <TextField
             variant="outlined"
-            placeholder="Tìm kiếm (Tên hoặc SĐT)"
+            placeholder="Tìm kiếm (Tên, SĐT, Email, CCCD)"
             size="small"
             InputProps={{
               startAdornment: (
@@ -386,7 +601,7 @@ const Customer: React.FC = () => {
               borderRadius: "8px",
               mt: { xs: 2, sm: 0 },
               "& input": {
-                fontSize: "15px", // hoặc '18px' tùy mong muốn
+                fontSize: "15px",
               },
             }}
             value={searchQuery}
@@ -430,6 +645,9 @@ const Customer: React.FC = () => {
                       <TableCell>
                         <b>Số điện thoại</b>
                       </TableCell>
+                      <TableCell>
+                        <b>CCCD</b>
+                      </TableCell>
                       <TableCell align="center">
                         <b>Hành động</b>
                       </TableCell>
@@ -443,6 +661,7 @@ const Customer: React.FC = () => {
                           <TableCell>{customer.name}</TableCell>
                           <TableCell>{customer.email}</TableCell>
                           <TableCell>{customer.phone}</TableCell>
+                          <TableCell>{customer.cccd}</TableCell>
                           <TableCell align="center">
                             <Box display="flex" justifyContent="center" gap={1}>
                               <IconButton
@@ -483,7 +702,7 @@ const Customer: React.FC = () => {
                         </TableRow>
 
                         <TableRow>
-                          <TableCell colSpan={4} style={{ padding: 0 }}>
+                          <TableCell colSpan={5} style={{ padding: 0 }}>
                             <Collapse
                               in={selectedCustomerId === customer.id}
                               timeout="auto"
@@ -497,474 +716,507 @@ const Customer: React.FC = () => {
                                   py: 2,
                                   borderTop: "1px solid #ddd",
                                 }}
-                              ></Box>
-                              <div className="customer-detail-container">
-                                {editCustomerId === customer.id &&
-                                editFormData ? (
-                                  <>
-                                    <h3>Thông tin khách hàng</h3>
-                                    <Box
-                                      display="flex"
-                                      flexDirection="column"
-                                      gap={2}
-                                    >
-                                      <Box display="flex" gap={2}>
-                                        <TextField
-                                          label="Họ Tên"
-                                          name="name"
-                                          value={editFormData.name}
-                                          onChange={handleChange}
-                                          fullWidth
-                                          variant="outlined"
-                                          size="small"
-                                          error={!!validationErrors.name}
-                                          helperText={validationErrors.name}
-                                          sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                              "& fieldset": {
-                                                borderColor: "#ccc", // viền mặc định
+                              >
+                                <div className="customer-detail-container">
+                                  {editCustomerId === customer.id &&
+                                  editFormData ? (
+                                    <>
+                                      <h3>Thông tin khách hàng</h3>
+                                      <Box
+                                        display="flex"
+                                        flexDirection="column"
+                                        gap={2}
+                                      >
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Họ Tên"
+                                            name="name"
+                                            value={editFormData.name}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.name}
+                                            helperText={validationErrors.name}
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
                                               },
-                                              "&:hover fieldset": {
-                                                borderColor: "#888", // viền khi hover
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
                                               },
-                                              "&.Mui-focused fieldset": {
-                                                borderColor: "#1976d2", // viền khi focus
-                                                borderWidth: "2px",
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
                                               },
-                                            },
-                                            "& label": {
-                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
-                                              padding: "0 4px",
-                                            },
-                                            "& label.Mui-focused": {
-                                              color: "#1976d2",
-                                            },
-                                          }}
-                                        />
-
-                                        <TextField
-                                          label="Email"
-                                          name="email"
-                                          value={editFormData.email}
-                                          onChange={handleChange}
-                                          fullWidth
-                                          variant="outlined"
-                                          size="small"
-                                          error={!!validationErrors.email}
-                                          helperText={validationErrors.email}
-                                          sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                              "& fieldset": {
-                                                borderColor: "#ccc", // viền mặc định
+                                            }}
+                                          />
+                                          <TextField
+                                            label="Email"
+                                            name="email"
+                                            value={editFormData.email}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.email}
+                                            helperText={validationErrors.email}
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
                                               },
-                                              "&:hover fieldset": {
-                                                borderColor: "#888", // viền khi hover
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
                                               },
-                                              "&.Mui-focused fieldset": {
-                                                borderColor: "#1976d2", // viền khi focus
-                                                borderWidth: "2px",
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
                                               },
-                                            },
-                                            "& label": {
-                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
-                                              padding: "0 4px",
-                                            },
-                                            "& label.Mui-focused": {
-                                              color: "#1976d2",
-                                            },
-                                          }}
-                                        />
-                                      </Box>
-                                      <Box display="flex" gap={2}>
-                                        <TextField
-                                          label="Số Điện Thoại"
-                                          name="phone"
-                                          value={editFormData.phone}
-                                          onChange={handleChange}
-                                          fullWidth
-                                          variant="outlined"
-                                          size="small"
-                                          error={!!validationErrors.phone}
-                                          helperText={validationErrors.phone}
-                                          sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                              "& fieldset": {
-                                                borderColor: "#ccc", // viền mặc định
+                                            }}
+                                          />
+                                        </Box>
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Số Điện Thoại"
+                                            name="phone"
+                                            value={editFormData.phone}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.phone}
+                                            helperText={validationErrors.phone}
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
                                               },
-                                              "&:hover fieldset": {
-                                                borderColor: "#888", // viền khi hover
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
                                               },
-                                              "&.Mui-focused fieldset": {
-                                                borderColor: "#1976d2", // viền khi focus
-                                                borderWidth: "2px",
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
                                               },
-                                            },
-                                            "& label": {
-                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
-                                              padding: "0 4px",
-                                            },
-                                            "& label.Mui-focused": {
-                                              color: "#1976d2",
-                                            },
-                                          }}
-                                        />
-                                        <TextField
-                                          label="Địa chỉ"
-                                          name="address"
-                                          value={editFormData.address}
-                                          onChange={handleChange}
-                                          fullWidth
-                                          variant="outlined"
-                                          size="small"
-                                          error={!!validationErrors.address}
-                                          helperText={validationErrors.address}
-                                          sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                              "& fieldset": {
-                                                borderColor: "#ccc", // viền mặc định
+                                            }}
+                                          />
+                                          <TextField
+                                            label="Địa chỉ"
+                                            name="address"
+                                            value={editFormData.address}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.address}
+                                            helperText={
+                                              validationErrors.address
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
                                               },
-                                              "&:hover fieldset": {
-                                                borderColor: "#888", // viền khi hover
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
                                               },
-                                              "&.Mui-focused fieldset": {
-                                                borderColor: "#1976d2", // viền khi focus
-                                                borderWidth: "2px",
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
                                               },
-                                            },
-                                            "& label": {
-                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
-                                              padding: "0 4px",
-                                            },
-                                            "& label.Mui-focused": {
-                                              color: "#1976d2",
-                                            },
-                                          }}
-                                        />
-                                      </Box>
-                                      <Box display="flex" gap={2}>
-                                        <TextField
-                                          label="Ngày sinh"
-                                          name="date_of_birth"
-                                          type="date"
-                                          value={editFormData.date_of_birth}
-                                          onChange={handleChange}
-                                          fullWidth
-                                          variant="outlined"
-                                          size="small"
-                                          InputLabelProps={{ shrink: true }}
-                                          error={
-                                            !!validationErrors.date_of_birth
-                                          }
-                                          helperText={
-                                            validationErrors.date_of_birth
-                                          }
-                                          sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                              "& fieldset": {
-                                                borderColor: "#ccc", // viền mặc định
+                                            }}
+                                          />
+                                        </Box>
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Ngày sinh"
+                                            name="date_of_birth"
+                                            type="date"
+                                            value={editFormData.date_of_birth}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            InputLabelProps={{ shrink: true }}
+                                            error={
+                                              !!validationErrors.date_of_birth
+                                            }
+                                            helperText={
+                                              validationErrors.date_of_birth
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
                                               },
-                                              "&:hover fieldset": {
-                                                borderColor: "#888", // viền khi hover
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
                                               },
-                                              "&.Mui-focused fieldset": {
-                                                borderColor: "#1976d2", // viền khi focus
-                                                borderWidth: "2px",
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
                                               },
-                                            },
-                                            "& label": {
-                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
-                                              padding: "0 4px",
-                                            },
-                                            "& label.Mui-focused": {
-                                              color: "#1976d2",
-                                            },
-                                          }}
-                                        />
-                                        <FormControl
-                                          fullWidth
-                                          variant="outlined"
-                                          size="small"
-                                          error={!!validationErrors.gender}
-                                        >
-                                          <InputLabel>Giới tính</InputLabel>
-                                          <Select
-                                            name="gender"
-                                            value={editFormData.gender}
-                                            onChange={handleSelectChange}
-                                            label="Giới tính"
+                                            }}
+                                          />
+                                          <FormControl
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.gender}
                                           >
-                                            <MenuItem value="">
-                                              Chọn giới tính
-                                            </MenuItem>
-                                            <MenuItem value="Nam">Nam</MenuItem>
-                                            <MenuItem value="Nữ">Nữ</MenuItem>
-                                            <MenuItem value="Không xác định">
-                                              Không xác định
-                                            </MenuItem>
-                                          </Select>
-                                          {validationErrors.gender && (
-                                            <Typography
-                                              color="error"
-                                              variant="caption"
+                                            <InputLabel>Giới tính</InputLabel>
+                                            <Select
+                                              name="gender"
+                                              value={editFormData.gender}
+                                              onChange={handleSelectChange}
+                                              label="Giới tính"
                                             >
-                                              {validationErrors.gender}
-                                            </Typography>
-                                          )}
-                                        </FormControl>
+                                              <MenuItem value="">
+                                                Chọn giới tính
+                                              </MenuItem>
+                                              <MenuItem value="Nam">
+                                                Nam
+                                              </MenuItem>
+                                              <MenuItem value="Nữ">Nữ</MenuItem>
+                                              <MenuItem value="Không xác định">
+                                                Không xác định
+                                              </MenuItem>
+                                            </Select>
+                                            {validationErrors.gender && (
+                                              <Typography
+                                                color="error"
+                                                variant="caption"
+                                              >
+                                                {validationErrors.gender}
+                                              </Typography>
+                                            )}
+                                          </FormControl>
+                                        </Box>
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Quốc gia"
+                                            name="nationality"
+                                            value={editFormData.nationality}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={
+                                              !!validationErrors.nationality
+                                            }
+                                            helperText={
+                                              validationErrors.nationality
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                          <TextField
+                                            label="CCCD"
+                                            name="cccd"
+                                            value={editFormData.cccd}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.cccd}
+                                            helperText={
+                                              validationErrors.cccd ||
+                                              "Ví dụ: 123456789012"
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                        </Box>
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Ghi chú"
+                                            name="note"
+                                            value={editFormData.note}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.note}
+                                            helperText={
+                                              validationErrors.note ||
+                                              "Tối đa 200 ký tự"
+                                            }
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                              "& label": {
+                                                backgroundColor: "#fff",
+                                                padding: "0 4px",
+                                              },
+                                              "& label.Mui-focused": {
+                                                color: "#1976d2",
+                                              },
+                                            }}
+                                          />
+                                        </Box>
                                       </Box>
-                                      <Box display="flex" gap={2}>
-                                        <TextField
-                                          label="Quốc gia"
-                                          name="nationality"
-                                          value={editFormData.nationality}
-                                          onChange={handleChange}
-                                          fullWidth
-                                          variant="outlined"
-                                          size="small"
-                                          error={!!validationErrors.nationality}
-                                          helperText={
-                                            validationErrors.nationality
+
+                                      <Box pb={3} mt={2} display="flex" gap={2}>
+                                        <Button
+                                          variant="contained"
+                                          color="primary"
+                                          className="customer-btn-save"
+                                          onClick={handleSave}
+                                          disabled={editLoading}
+                                          startIcon={
+                                            editLoading ? (
+                                              <CircularProgress size={20} />
+                                            ) : null
                                           }
-                                          sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                              "& fieldset": {
-                                                borderColor: "#ccc", // viền mặc định
-                                              },
-                                              "&:hover fieldset": {
-                                                borderColor: "#888", // viền khi hover
-                                              },
-                                              "&.Mui-focused fieldset": {
-                                                borderColor: "#1976d2", // viền khi focus
-                                                borderWidth: "2px",
-                                              },
-                                            },
-                                            "& label": {
-                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
-                                              padding: "0 4px",
-                                            },
-                                            "& label.Mui-focused": {
-                                              color: "#1976d2",
-                                            },
-                                          }}
-                                        />
-                                        <TextField
-                                          label="CCCD"
-                                          name="cccd"
-                                          value={editFormData.cccd}
-                                          onChange={handleChange}
-                                          fullWidth
+                                        >
+                                          Lưu
+                                        </Button>
+
+                                        <Button
                                           variant="outlined"
-                                          size="small"
-                                          error={!!validationErrors.cccd}
-                                          helperText={
-                                            validationErrors.cccd ||
-                                            "Ví dụ: 123456789012"
-                                          }
-                                          sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                              "& fieldset": {
-                                                borderColor: "#ccc", // viền mặc định
-                                              },
-                                              "&:hover fieldset": {
-                                                borderColor: "#888", // viền khi hover
-                                              },
-                                              "&.Mui-focused fieldset": {
-                                                borderColor: "#1976d2", // viền khi focus
-                                                borderWidth: "2px",
-                                              },
-                                            },
-                                            "& label": {
-                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
-                                              padding: "0 4px",
-                                            },
-                                            "& label.Mui-focused": {
-                                              color: "#1976d2",
-                                            },
-                                          }}
-                                        />
+                                          className="customer-btn-cancel"
+                                          color="secondary"
+                                          onClick={handleCancel}
+                                          disabled={editLoading}
+                                        >
+                                          Hủy
+                                        </Button>
                                       </Box>
-                                      <Box display="flex" gap={2}>
-                                        <TextField
-                                          label="Ghi chú"
-                                          name="note"
-                                          value={editFormData.note}
-                                          onChange={handleChange}
-                                          fullWidth
-                                          variant="outlined"
-                                          size="small"
-                                          error={!!validationErrors.note}
-                                          helperText={
-                                            validationErrors.note ||
-                                            "Tối đa 200 ký tự"
-                                          }
-                                          sx={{
-                                            "& .MuiOutlinedInput-root": {
-                                              "& fieldset": {
-                                                borderColor: "#ccc", // viền mặc định
-                                              },
-                                              "&:hover fieldset": {
-                                                borderColor: "#888", // viền khi hover
-                                              },
-                                              "&.Mui-focused fieldset": {
-                                                borderColor: "#1976d2", // viền khi focus
-                                                borderWidth: "2px",
-                                              },
-                                            },
-                                            "& label": {
-                                              backgroundColor: "#fff", // tránh label bị chồng lên viền
-                                              padding: "0 4px",
-                                            },
-                                            "& label.Mui-focused": {
-                                              color: "#1976d2",
-                                            },
-                                          }}
-                                        />
-                                      </Box>
-                                    </Box>
+                                      {editError && (
+                                        <Typography color="error" mt={1}>
+                                          {editError}
+                                        </Typography>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <h3>Thông tin khách hàng</h3>
+                                      <Table className="customer-detail-table">
+                                        <TableBody>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Họ Tên:</strong>{" "}
+                                              {customer.name}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Email:</strong>{" "}
+                                              {customer.email}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Số Điện Thoại:</strong>{" "}
+                                              {customer.phone}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Địa chỉ:</strong>{" "}
+                                              {customer.address}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Ngày sinh:</strong>{" "}
+                                              {customer.date_of_birth}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Giới tính:</strong>{" "}
+                                              {customer.gender}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Quốc gia:</strong>{" "}
+                                              {customer.nationality}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>CCCD:</strong>{" "}
+                                              {customer.cccd}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell colSpan={2}>
+                                              <strong>Ghi chú:</strong>{" "}
+                                              {customer.note}
+                                            </TableCell>
+                                          </TableRow>
+                                        </TableBody>
+                                      </Table>
 
-                                    <Box pb={3} mt={2} display="flex" gap={2}>
-                                      <Button
-                                        variant="contained"
-                                        color="primary"
-                                        className="customer-btn-save"
-                                        onClick={handleSave}
-                                        disabled={editLoading}
-                                      >
-                                        Lưu
-                                      </Button>
-
-                                      <Button
-                                        variant="outlined"
-                                        className="customer-btn-cancel"
-                                        color="secondary"
-                                        onClick={handleCancel}
-                                        disabled={editLoading}
-                                      >
-                                        Hủy
-                                      </Button>
-                                    </Box>
-                                    {editError && (
-                                      <Typography color="error" mt={1}>
-                                        {editError}
-                                      </Typography>
-                                    )}
-                                  </>
-                                ) : (
-                                  <>
-                                    <h3>Thông tin khách hàng</h3>
-                                    <Table className="customer-detail-table">
-                                      <TableBody>
-                                        <TableRow>
-                                          <TableCell>
-                                            <strong>Họ Tên:</strong>{" "}
-                                            {customer.name}
-                                          </TableCell>
-                                          <TableCell>
-                                            <strong>Email:</strong>{" "}
-                                            {customer.email}
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell>
-                                            <strong>Số Điện Thoại:</strong>{" "}
-                                            {customer.phone}
-                                          </TableCell>
-                                          <TableCell>
-                                            <strong>Địa chỉ:</strong>{" "}
-                                            {customer.address}
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell>
-                                            <strong>Ngày sinh:</strong>{" "}
-                                            {customer.date_of_birth}
-                                          </TableCell>
-                                          <TableCell>
-                                            <strong>Giới tính:</strong>{" "}
-                                            {customer.gender}
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell>
-                                            <strong>Quốc gia:</strong>{" "}
-                                            {customer.nationality}
-                                          </TableCell>
-                                          <TableCell>
-                                            <strong>CCCD:</strong>{" "}
-                                            {customer.cccd}
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell colSpan={2}>
-                                            <strong>Ghi chú:</strong>{" "}
-                                            {customer.note}
-                                          </TableCell>
-                                        </TableRow>
-                                      </TableBody>
-                                    </Table>
-                                  </>
-                                )}
-
-                                <h3>Đặt phòng</h3>
-                                {customer.bookings &&
-                                customer.bookings.length > 0 ? (
-                                  <Table className="customer-detail-table">
-                                    <TableHead>
-                                      <TableRow>
-                                        <TableCell>Mã Đặt Phòng</TableCell>
-                                        <TableCell>Người Tạo</TableCell>
-                                        <TableCell>Ngày Nhận Phòng</TableCell>
-                                        <TableCell>Ngày Trả Phòng</TableCell>
-                                        <TableCell>Trạng Thái</TableCell>
-                                        <TableCell>Đặt Cọc</TableCell>
-                                        <TableCell>Tổng Gốc</TableCell>
-                                        <TableCell>Tổng Giảm Giá</TableCell>
-                                        <TableCell>Tổng Cuối</TableCell>
-                                      </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                      {customer.bookings.map((booking) => (
-                                        <TableRow key={booking.id}>
-                                          <TableCell>
-                                            {booking.id || "Không xác định"}
-                                          </TableCell>
-                                          <TableCell>
-                                            {booking.created_by ||
-                                              "Không xác định"}
-                                          </TableCell>
-                                          <TableCell>
-                                            {booking.check_in_date ||
-                                              "Không xác định"}
-                                          </TableCell>
-                                          <TableCell>
-                                            {booking.check_out_date ||
-                                              "Không xác định"}
-                                          </TableCell>
-                                          <TableCell>
-                                            {booking.status || "Không xác định"}
-                                          </TableCell>
-                                          <TableCell>
-                                            {booking.deposit_amount || "0"}
-                                          </TableCell>
-                                          <TableCell>
-                                            {booking.raw_total || "0"}
-                                          </TableCell>
-                                          <TableCell>
-                                            {booking.discount_amount || "0"}
-                                          </TableCell>
-                                          <TableCell>
-                                            {booking.total_amount || "0"}
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                ) : (
-                                  <Typography>
-                                    Không có thông tin đặt phòng.
-                                  </Typography>
-                                )}
-                              </div>
+                                      <h3>Đặt phòng</h3>
+                                      {customer.bookings &&
+                                      customer.bookings.length > 0 ? (
+                                        <Table className="customer-detail-table">
+                                          <TableHead>
+                                            <TableRow>
+                                              <TableCell>Nhận phòng</TableCell>
+                                              <TableCell>Trả phòng</TableCell>
+                                              <TableCell>Trạng thái</TableCell>
+                                              <TableCell>Số tiền</TableCell>
+                                              <TableCell align="center">
+                                                Hành động
+                                              </TableCell>
+                                            </TableRow>
+                                          </TableHead>
+                                          <TableBody>
+                                            {customer.bookings.map(
+                                              (booking) => {
+                                                const { status, color } =
+                                                  getBookingStatus(
+                                                    booking.status
+                                                  );
+                                                return (
+                                                  <TableRow key={booking.id}>
+                                                    <TableCell>
+                                                      {booking.check_in_date}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {booking.check_out_date}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      <Typography
+                                                        sx={{
+                                                          color: color,
+                                                          fontSize: "14px",
+                                                          fontWeight: "bold",
+                                                        }}
+                                                      >
+                                                        {status}
+                                                      </Typography>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {formatCurrency(
+                                                        booking.total_amount ||
+                                                          booking.raw_total
+                                                      )}
+                                                    </TableCell>
+                                                    <TableCell align="center">
+                                                      <IconButton
+                                                        title="Xem chi tiết"
+                                                        sx={{
+                                                          color: "#1976d2",
+                                                          bgcolor: "#e3f2fd",
+                                                          "&:hover": {
+                                                            bgcolor: "#bbdefb",
+                                                            boxShadow:
+                                                              "0 2px 6px rgba(25, 118, 210, 0.4)",
+                                                          },
+                                                          transition:
+                                                            "all 0.2s ease-in-out",
+                                                        }}
+                                                        onClick={() =>
+                                                          handleViewBookingDetails(
+                                                            booking.id
+                                                          )
+                                                        }
+                                                      >
+                                                        <VisibilityIcon fontSize="small" />
+                                                      </IconButton>
+                                                    </TableCell>
+                                                  </TableRow>
+                                                );
+                                              }
+                                            )}
+                                          </TableBody>
+                                        </Table>
+                                      ) : (
+                                        <Typography>
+                                          Không có thông tin đặt phòng.
+                                        </Typography>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </Box>
                             </Collapse>
                           </TableCell>
                         </TableRow>
@@ -982,8 +1234,8 @@ const Customer: React.FC = () => {
                   shape="rounded"
                   showFirstButton
                   showLastButton
-                  siblingCount={0} // 👈 hiện 0 số hai bên trang hiện tại
-                  boundaryCount={1} // 👈 hiện 1 số ở đầu/cuối (ví dụ: 1 ... 5 ... 10)
+                  siblingCount={0}
+                  boundaryCount={1}
                   sx={{
                     "& .MuiPaginationItem-root": {
                       color: "#666",

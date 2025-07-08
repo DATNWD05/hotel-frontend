@@ -30,7 +30,7 @@ import {
   Card,
   CardContent,
   InputAdornment,
-  Menu,
+  Menu as MuiMenu,
   MenuItem as MenuItemMenu,
 } from "@mui/material";
 import { SelectChangeEvent } from "@mui/material/Select";
@@ -131,6 +131,39 @@ const getPromotionStatus = (
   }
 };
 
+// Hàm kiểm tra và cập nhật trạng thái khuyến mãi
+const updatePromotionStatus = (
+  promotion: Promotion,
+  currentDate: Date
+): StatusType => {
+  const startDate = parseISO(promotion.start_date);
+  const endDate = parseISO(promotion.end_date);
+
+  if (promotion.status === "cancelled") {
+    return "cancelled"; // Giữ nguyên trạng thái cancelled
+  }
+
+  if (!isValid(startDate) || !isValid(endDate)) {
+    return "cancelled"; // Nếu ngày không hợp lệ, coi như bị hủy
+  }
+
+  if (currentDate < startDate) {
+    return "scheduled";
+  } else if (
+    currentDate >= startDate &&
+    currentDate <= endDate &&
+    promotion.used_count < promotion.usage_limit
+  ) {
+    return "active";
+  } else if (currentDate > endDate) {
+    return "expired";
+  } else if (promotion.used_count >= promotion.usage_limit) {
+    return "depleted";
+  }
+
+  return promotion.status; // Giữ trạng thái hiện tại nếu không khớp điều kiện nào
+};
+
 const Promotions: React.FC = () => {
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [allPromotions, setAllPromotions] = useState<Promotion[]>([]);
@@ -163,38 +196,47 @@ const Promotions: React.FC = () => {
       setError(null);
       let allData: Promotion[] = [];
       let page = 1;
+      const currentDate = new Date(); // Lấy ngày hiện tại
 
       while (true) {
         const response = await api.get("/promotions", { params: { page } });
         if (response.status === 200) {
           const data: { data: Promotion[]; meta: Meta } = response.data;
-          const sanitizedData = data.data.map((item) => ({
-            ...item,
-            discount_type:
-              item.discount_type === "percent" ||
-              item.discount_type === "amount"
-                ? item.discount_type
-                : "amount",
-            status: [
-              "scheduled",
-              "active",
-              "expired",
-              "cancelled",
-              "depleted",
-            ].includes(item.status)
-              ? item.status
-              : "cancelled",
-            usage_limit: Number(item.usage_limit),
-            used_count: Number(item.used_count),
-            start_date:
-              item.start_date && isValid(parseISO(item.start_date))
-                ? item.start_date
-                : new Date().toISOString(),
-            end_date:
-              item.end_date && isValid(parseISO(item.end_date))
-                ? item.end_date
-                : new Date().toISOString(),
-          }));
+          const sanitizedData = data.data.map((item) => {
+            const sanitizedItem = {
+              ...item,
+              discount_type:
+                item.discount_type === "percent" ||
+                item.discount_type === "amount"
+                  ? item.discount_type
+                  : "amount",
+              status: [
+                "scheduled",
+                "active",
+                "expired",
+                "cancelled",
+                "depleted",
+              ].includes(item.status)
+                ? item.status
+                : "cancelled",
+              usage_limit: Number(item.usage_limit),
+              used_count: Number(item.used_count),
+              start_date:
+                item.start_date && isValid(parseISO(item.start_date))
+                  ? item.start_date
+                  : new Date().toISOString(),
+              end_date:
+                item.end_date && isValid(parseISO(item.end_date))
+                  ? item.end_date
+                  : new Date().toISOString(),
+            };
+            // Cập nhật trạng thái dựa trên ngày hiện tại
+            sanitizedItem.status = updatePromotionStatus(
+              sanitizedItem,
+              currentDate
+            );
+            return sanitizedItem;
+          });
           allData = [...allData, ...sanitizedData];
 
           if (page >= data.meta.last_page) break;
@@ -505,7 +547,7 @@ const Promotions: React.FC = () => {
           flexWrap="wrap"
           mb={2}
         >
-          <Typography variant="h2" fontWeight={700}>
+          <Typography variant="h2" fontWeight="bold">
             Khuyến Mãi
           </Typography>
           <Box display="flex" gap={2} alignItems="center">
@@ -542,7 +584,7 @@ const Promotions: React.FC = () => {
             >
               <FilterListIcon />
             </IconButton>
-            <Menu
+            <MuiMenu
               anchorEl={filterAnchorEl}
               open={Boolean(filterAnchorEl)}
               onClose={handleFilterClose}
@@ -579,7 +621,7 @@ const Promotions: React.FC = () => {
                   </Typography>
                 </MenuItemMenu>
               ))}
-            </Menu>
+            </MuiMenu>
             <Box
               sx={{
                 display: "flex",
@@ -656,16 +698,22 @@ const Promotions: React.FC = () => {
                   <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
                     <TableRow>
                       <TableCell>
-                        <b>Mã Khuyến Mãi</b>
+                        <strong>Mã Khuyến Mãi</strong>
                       </TableCell>
                       <TableCell>
-                        <b>Giá trị giảm</b>
+                        <strong>Giá trị giảm</strong>
                       </TableCell>
                       <TableCell>
-                        <b>Trạng thái</b>
+                        <strong>Ngày bắt đầu</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Ngày kết thúc</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Trạng thái</strong>
                       </TableCell>
                       <TableCell align="center">
-                        <b>Hành động</b>
+                        <strong>Hành động</strong>
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -699,6 +747,26 @@ const Promotions: React.FC = () => {
                                 promotion.discount_value,
                                 promotion.discount_type
                               )}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                maxHeight: "60px",
+                                overflowY: "auto",
+                                whiteSpace: "normal",
+                                wordWrap: "break-word",
+                              }}
+                            >
+                              {formatDate(promotion.start_date)}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                maxHeight: "60px",
+                                overflowY: "auto",
+                                whiteSpace: "normal",
+                                wordWrap: "break-word",
+                              }}
+                            >
+                              {formatDate(promotion.end_date)}
                             </TableCell>
                             <TableCell
                               sx={{
@@ -770,7 +838,7 @@ const Promotions: React.FC = () => {
                             </TableCell>
                           </TableRow>
                           <TableRow>
-                            <TableCell colSpan={4} style={{ padding: 0 }}>
+                            <TableCell colSpan={6} style={{ padding: 0 }}>
                               <Collapse
                                 in={viewDetailId === promotion.id}
                                 timeout="auto"
@@ -784,420 +852,434 @@ const Promotions: React.FC = () => {
                                     py: 2,
                                     borderTop: "1px solid #ddd",
                                   }}
-                                ></Box>
-                                <div className="promotions-detail-container">
-                                  <h3>Thông tin khuyến mãi</h3>
-                                  {editingDetailId === promotion.id &&
-                                  editedDetail ? (
-                                    <>
-                                      <Box
-                                        display="flex"
-                                        flexDirection="column"
-                                        gap={2}
-                                      >
-                                        <Box display="flex" gap={2}>
-                                          <TextField
-                                            label="Mã khuyến mãi"
-                                            name="code"
-                                            value={editedDetail.code || ""}
-                                            onChange={handleChangeDetail}
-                                            fullWidth
-                                            variant="outlined"
-                                            size="small"
-                                            error={!!validationErrors.code}
-                                            helperText={validationErrors.code}
-                                            sx={{
-                                              "& .MuiOutlinedInput-root": {
-                                                "& fieldset": {
-                                                  borderColor: "#ccc",
+                                >
+                                  <div className="promotions-detail-container">
+                                    <h3>Thông tin khuyến mãi</h3>
+                                    {editingDetailId === promotion.id &&
+                                    editedDetail ? (
+                                      <>
+                                        <Box
+                                          display="flex"
+                                          flexDirection="column"
+                                          gap={2}
+                                        >
+                                          <Box display="flex" gap={2}>
+                                            <TextField
+                                              label="Mã khuyến mãi"
+                                              name="code"
+                                              value={editedDetail.code || ""}
+                                              onChange={handleChangeDetail}
+                                              fullWidth
+                                              variant="outlined"
+                                              size="small"
+                                              error={!!validationErrors.code}
+                                              helperText={validationErrors.code}
+                                              sx={{
+                                                "& .MuiOutlinedInput-root": {
+                                                  "& fieldset": {
+                                                    borderColor: "#ccc",
+                                                  },
+                                                  "&:hover fieldset": {
+                                                    borderColor: "#888",
+                                                  },
+                                                  "&.Mui-focused fieldset": {
+                                                    borderColor: "#1976d2",
+                                                    borderWidth: "2px",
+                                                  },
                                                 },
-                                                "&:hover fieldset": {
-                                                  borderColor: "#888",
+                                                "& label": {
+                                                  backgroundColor: "#fff",
+                                                  padding: "0 4px",
                                                 },
-                                                "&.Mui-focused fieldset": {
-                                                  borderColor: "#1976d2",
-                                                  borderWidth: "2px",
+                                                "& label.Mui-focused": {
+                                                  color: "#1976d2",
                                                 },
-                                              },
-                                              "& label": {
-                                                backgroundColor: "#fff",
-                                                padding: "0 4px",
-                                              },
-                                              "& label.Mui-focused": {
-                                                color: "#1976d2",
-                                              },
-                                            }}
-                                          />
-                                          <TextField
-                                            label="Mô tả"
-                                            name="description"
-                                            value={
-                                              editedDetail.description || ""
-                                            }
-                                            onChange={handleChangeDetail}
-                                            fullWidth
-                                            variant="outlined"
-                                            size="small"
-                                            error={
-                                              !!validationErrors.description
-                                            }
-                                            helperText={
-                                              validationErrors.description
-                                            }
-                                            sx={{
-                                              "& .MuiOutlinedInput-root": {
-                                                "& fieldset": {
-                                                  borderColor: "#ccc",
-                                                },
-                                                "&:hover fieldset": {
-                                                  borderColor: "#888",
-                                                },
-                                                "&.Mui-focused fieldset": {
-                                                  borderColor: "#1976d2",
-                                                  borderWidth: "2px",
-                                                },
-                                              },
-                                              "& label": {
-                                                backgroundColor: "#fff",
-                                                padding: "0 4px",
-                                              },
-                                              "& label.Mui-focused": {
-                                                color: "#1976d2",
-                                              },
-                                            }}
-                                          />
-                                        </Box>
-                                        <Box display="flex" gap={2}>
-                                          <FormControl
-                                            fullWidth
-                                            variant="outlined"
-                                            size="small"
-                                            error={
-                                              !!validationErrors.discount_type
-                                            }
-                                          >
-                                            <InputLabel>Loại giảm</InputLabel>
-                                            <Select
-                                              name="discount_type"
+                                              }}
+                                            />
+                                            <TextField
+                                              label="Mô tả"
+                                              name="description"
                                               value={
-                                                editedDetail.discount_type ||
-                                                "amount"
+                                                editedDetail.description || ""
                                               }
-                                              onChange={handleSelectChange}
-                                              label="Loại giảm"
+                                              onChange={handleChangeDetail}
+                                              fullWidth
+                                              variant="outlined"
+                                              size="small"
+                                              error={
+                                                !!validationErrors.description
+                                              }
+                                              helperText={
+                                                validationErrors.description
+                                              }
+                                              sx={{
+                                                "& .MuiOutlinedInput-root": {
+                                                  "& fieldset": {
+                                                    borderColor: "#ccc",
+                                                  },
+                                                  "&:hover fieldset": {
+                                                    borderColor: "#888",
+                                                  },
+                                                  "&.Mui-focused fieldset": {
+                                                    borderColor: "#1976d2",
+                                                    borderWidth: "2px",
+                                                  },
+                                                },
+                                                "& label": {
+                                                  backgroundColor: "#fff",
+                                                  padding: "0 4px",
+                                                },
+                                                "& label.Mui-focused": {
+                                                  color: "#1976d2",
+                                                },
+                                              }}
+                                            />
+                                          </Box>
+                                          <Box display="flex" gap={2}>
+                                            <FormControl
+                                              fullWidth
+                                              variant="outlined"
+                                              size="small"
+                                              error={
+                                                !!validationErrors.discount_type
+                                              }
                                             >
-                                              <MenuItem value="percent">
-                                                Phần trăm (%)
-                                              </MenuItem>
-                                              <MenuItem value="amount">
-                                                Số tiền (VNĐ)
-                                              </MenuItem>
-                                            </Select>
-                                            {validationErrors.discount_type && (
-                                              <Typography
-                                                color="error"
-                                                variant="caption"
-                                              >
-                                                {validationErrors.discount_type}
-                                              </Typography>
-                                            )}
-                                          </FormControl>
-                                          <TextField
-                                            label="Giá trị giảm"
-                                            name="discount_value"
-                                            type="number"
-                                            value={
-                                              editedDetail.discount_value ?? ""
-                                            }
-                                            onChange={handleChangeDetail}
-                                            fullWidth
-                                            variant="outlined"
-                                            size="small"
-                                            error={
-                                              !!validationErrors.discount_value
-                                            }
-                                            helperText={
-                                              validationErrors.discount_value
-                                            }
-                                            sx={{
-                                              "& .MuiOutlinedInput-root": {
-                                                "& fieldset": {
-                                                  borderColor: "#ccc",
-                                                },
-                                                "&:hover fieldset": {
-                                                  borderColor: "#888",
-                                                },
-                                                "&.Mui-focused fieldset": {
-                                                  borderColor: "#1976d2",
-                                                  borderWidth: "2px",
-                                                },
-                                              },
-                                              "& label": {
-                                                backgroundColor: "#fff",
-                                                padding: "0 4px",
-                                              },
-                                              "& label.Mui-focused": {
-                                                color: "#1976d2",
-                                              },
-                                            }}
-                                          />
-                                        </Box>
-                                        <Box display="flex" gap={2}>
-                                          <TextField
-                                            label="Ngày bắt đầu"
-                                            name="start_date"
-                                            type="date"
-                                            value={
-                                              editedDetail.start_date || ""
-                                            }
-                                            onChange={handleChangeDetail}
-                                            fullWidth
-                                            variant="outlined"
-                                            size="small"
-                                            InputLabelProps={{ shrink: true }}
-                                            error={
-                                              !!validationErrors.start_date
-                                            }
-                                            helperText={
-                                              validationErrors.start_date
-                                            }
-                                            sx={{
-                                              "& .MuiOutlinedInput-root": {
-                                                "& fieldset": {
-                                                  borderColor: "#ccc",
-                                                },
-                                                "&:hover fieldset": {
-                                                  borderColor: "#888",
-                                                },
-                                                "&.Mui-focused fieldset": {
-                                                  borderColor: "#1976d2",
-                                                  borderWidth: "2px",
-                                                },
-                                              },
-                                              "& label": {
-                                                backgroundColor: "#fff",
-                                                padding: "0 4px",
-                                              },
-                                              "& label.Mui-focused": {
-                                                color: "#1976d2",
-                                              },
-                                            }}
-                                          />
-                                          <TextField
-                                            label="Ngày kết thúc"
-                                            name="end_date"
-                                            type="date"
-                                            value={editedDetail.end_date || ""}
-                                            onChange={handleChangeDetail}
-                                            fullWidth
-                                            variant="outlined"
-                                            size="small"
-                                            InputLabelProps={{ shrink: true }}
-                                            error={!!validationErrors.end_date}
-                                            helperText={
-                                              validationErrors.end_date
-                                            }
-                                            sx={{
-                                              "& .MuiOutlinedInput-root": {
-                                                "& fieldset": {
-                                                  borderColor: "#ccc",
-                                                },
-                                                "&:hover fieldset": {
-                                                  borderColor: "#888",
-                                                },
-                                                "&.Mui-focused fieldset": {
-                                                  borderColor: "#1976d2",
-                                                  borderWidth: "2px",
-                                                },
-                                              },
-                                              "& label": {
-                                                backgroundColor: "#fff",
-                                                padding: "0 4px",
-                                              },
-                                              "& label.Mui-focused": {
-                                                color: "#1976d2",
-                                              },
-                                            }}
-                                          />
-                                        </Box>
-                                        <Box display="flex" gap={2}>
-                                          <TextField
-                                            label="Giới hạn số lần dùng"
-                                            name="usage_limit"
-                                            type="number"
-                                            value={
-                                              editedDetail.usage_limit ?? ""
-                                            }
-                                            onChange={handleChangeDetail}
-                                            fullWidth
-                                            variant="outlined"
-                                            size="small"
-                                            error={
-                                              !!validationErrors.usage_limit
-                                            }
-                                            helperText={
-                                              validationErrors.usage_limit
-                                            }
-                                            sx={{
-                                              "& .MuiOutlinedInput-root": {
-                                                "& fieldset": {
-                                                  borderColor: "#ccc",
-                                                },
-                                                "&:hover fieldset": {
-                                                  borderColor: "#888",
-                                                },
-                                                "&.Mui-focused fieldset": {
-                                                  borderColor: "#1976d2",
-                                                  borderWidth: "2px",
-                                                },
-                                              },
-                                              "& label": {
-                                                backgroundColor: "#fff",
-                                                padding: "0 4px",
-                                              },
-                                              "& label.Mui-focused": {
-                                                color: "#1976d2",
-                                              },
-                                            }}
-                                          />
-                                          <TextField
-                                            label="Số lần đã dùng"
-                                            name="used_count"
-                                            type="number"
-                                            value={
-                                              editedDetail.used_count ?? ""
-                                            }
-                                            fullWidth
-                                            variant="outlined"
-                                            size="small"
-                                            disabled
-                                            helperText="Không thể chỉnh sửa số lần đã dùng"
-                                            sx={{
-                                              "& .MuiOutlinedInput-root": {
-                                                "& fieldset": {
-                                                  borderColor: "#ccc",
-                                                },
-                                                "&:hover fieldset": {
-                                                  borderColor: "#888",
-                                                },
-                                                "&.Mui-focused fieldset": {
-                                                  borderColor: "#1976d2",
-                                                  borderWidth: "2px",
-                                                },
-                                              },
-                                              "& label": {
-                                                backgroundColor: "#fff",
-                                                padding: "0 4px",
-                                              },
-                                              "& label.Mui-focused": {
-                                                color: "#1976d2",
-                                              },
-                                            }}
-                                          />
-                                        </Box>
-                                      </Box>
-                                      <Box pb={3} mt={2} display="flex" gap={2}>
-                                        <Button
-                                          variant="contained"
-                                          color="primary"
-                                          className="promotions-btn-save"
-                                          onClick={handleSaveDetail}
-                                          disabled={loading}
-                                        >
-                                          {loading ? (
-                                            <CircularProgress size={24} />
-                                          ) : (
-                                            "Lưu"
-                                          )}
-                                        </Button>
-                                        <Button
-                                          variant="outlined"
-                                          className="promotions-btn-cancel"
-                                          color="secondary"
-                                          onClick={handleCancelEdit}
-                                          disabled={loading}
-                                        >
-                                          Hủy
-                                        </Button>
-                                      </Box>
-                                      {error && (
-                                        <Typography color="error" mt={1}>
-                                          {error}
-                                        </Typography>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Table className="promotions-detail-table">
-                                        <TableBody>
-                                          <TableRow>
-                                            <TableCell>
-                                              <strong>Mã CTKM:</strong>{" "}
-                                              {promotion.code}
-                                            </TableCell>
-                                            <TableCell>
-                                              <strong>Mô tả:</strong>{" "}
-                                              {promotion.description}
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell>
-                                              <strong>Loại giảm:</strong>{" "}
-                                              {promotion.discount_type ===
-                                              "percent"
-                                                ? "Phần trăm"
-                                                : "Số tiền"}
-                                            </TableCell>
-                                            <TableCell>
-                                              <strong>Giá trị giảm:</strong>{" "}
-                                              {formatCurrency(
-                                                promotion.discount_value,
-                                                promotion.discount_type
-                                              )}
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell>
-                                              <strong>Ngày bắt đầu:</strong>{" "}
-                                              {formatDate(promotion.start_date)}
-                                            </TableCell>
-                                            <TableCell>
-                                              <strong>Ngày kết thúc:</strong>{" "}
-                                              {formatDate(promotion.end_date)}
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell>
-                                              <strong>Giới hạn số lần:</strong>{" "}
-                                              {promotion.usage_limit}
-                                            </TableCell>
-                                            <TableCell>
-                                              <strong>Số lần sử dụng:</strong>{" "}
-                                              {promotion.used_count}
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell colSpan={2}>
-                                              <strong>Trạng thái:</strong>{" "}
-                                              <span
-                                                style={{
-                                                  color,
-                                                  fontWeight: "bold",
-                                                }}
-                                              >
-                                                {
-                                                  getPromotionStatus(
-                                                    promotion.status
-                                                  ).status
+                                              <InputLabel>Loại giảm</InputLabel>
+                                              <Select
+                                                name="discount_type"
+                                                value={
+                                                  editedDetail.discount_type ||
+                                                  "amount"
                                                 }
-                                              </span>
-                                            </TableCell>
-                                          </TableRow>
-                                        </TableBody>
-                                      </Table>
-                                    </>
-                                  )}
-                                </div>
+                                                onChange={handleSelectChange}
+                                                label="Loại giảm"
+                                              >
+                                                <MenuItem value="percent">
+                                                  Phần trăm (%)
+                                                </MenuItem>
+                                                <MenuItem value="amount">
+                                                  Số tiền (VNĐ)
+                                                </MenuItem>
+                                              </Select>
+                                              {validationErrors.discount_type && (
+                                                <Typography
+                                                  color="error"
+                                                  variant="caption"
+                                                >
+                                                  {
+                                                    validationErrors.discount_type
+                                                  }
+                                                </Typography>
+                                              )}
+                                            </FormControl>
+                                            <TextField
+                                              label="Giá trị giảm"
+                                              name="discount_value"
+                                              type="number"
+                                              value={
+                                                editedDetail.discount_value ??
+                                                ""
+                                              }
+                                              onChange={handleChangeDetail}
+                                              fullWidth
+                                              variant="outlined"
+                                              size="small"
+                                              error={
+                                                !!validationErrors.discount_value
+                                              }
+                                              helperText={
+                                                validationErrors.discount_value
+                                              }
+                                              sx={{
+                                                "& .MuiOutlinedInput-root": {
+                                                  "& fieldset": {
+                                                    borderColor: "#ccc",
+                                                  },
+                                                  "&:hover fieldset": {
+                                                    borderColor: "#888",
+                                                  },
+                                                  "&.Mui-focused fieldset": {
+                                                    borderColor: "#1976d2",
+                                                    borderWidth: "2px",
+                                                  },
+                                                },
+                                                "& label": {
+                                                  backgroundColor: "#fff",
+                                                  padding: "0 4px",
+                                                },
+                                                "& label.Mui-focused": {
+                                                  color: "#1976d2",
+                                                },
+                                              }}
+                                            />
+                                          </Box>
+                                          <Box display="flex" gap={2}>
+                                            <TextField
+                                              label="Ngày bắt đầu"
+                                              name="start_date"
+                                              type="date"
+                                              value={
+                                                editedDetail.start_date || ""
+                                              }
+                                              onChange={handleChangeDetail}
+                                              fullWidth
+                                              variant="outlined"
+                                              size="small"
+                                              InputLabelProps={{ shrink: true }}
+                                              error={
+                                                !!validationErrors.start_date
+                                              }
+                                              helperText={
+                                                validationErrors.start_date
+                                              }
+                                              sx={{
+                                                "& .MuiOutlinedInput-root": {
+                                                  "& fieldset": {
+                                                    borderColor: "#ccc",
+                                                  },
+                                                  "&:hover fieldset": {
+                                                    borderColor: "#888",
+                                                  },
+                                                  "&.Mui-focused fieldset": {
+                                                    borderColor: "#1976d2",
+                                                    borderWidth: "2px",
+                                                  },
+                                                },
+                                                "& label": {
+                                                  backgroundColor: "#fff",
+                                                  padding: "0 4px",
+                                                },
+                                                "& label.Mui-focused": {
+                                                  color: "#1976d2",
+                                                },
+                                              }}
+                                            />
+                                            <TextField
+                                              label="Ngày kết thúc"
+                                              name="end_date"
+                                              type="date"
+                                              value={
+                                                editedDetail.end_date || ""
+                                              }
+                                              onChange={handleChangeDetail}
+                                              fullWidth
+                                              variant="outlined"
+                                              size="small"
+                                              InputLabelProps={{ shrink: true }}
+                                              error={
+                                                !!validationErrors.end_date
+                                              }
+                                              helperText={
+                                                validationErrors.end_date
+                                              }
+                                              sx={{
+                                                "& .MuiOutlinedInput-root": {
+                                                  "& fieldset": {
+                                                    borderColor: "#ccc",
+                                                  },
+                                                  "&:hover fieldset": {
+                                                    borderColor: "#888",
+                                                  },
+                                                  "&.Mui-focused fieldset": {
+                                                    borderColor: "#1976d2",
+                                                    borderWidth: "2px",
+                                                  },
+                                                },
+                                                "& label": {
+                                                  backgroundColor: "#fff",
+                                                  padding: "0 4px",
+                                                },
+                                                "& label.Mui-focused": {
+                                                  color: "#1976d2",
+                                                },
+                                              }}
+                                            />
+                                          </Box>
+                                          <Box display="flex" gap={2}>
+                                            <TextField
+                                              label="Giới hạn số lần dùng"
+                                              name="usage_limit"
+                                              type="number"
+                                              value={
+                                                editedDetail.usage_limit ?? ""
+                                              }
+                                              onChange={handleChangeDetail}
+                                              fullWidth
+                                              variant="outlined"
+                                              size="small"
+                                              error={
+                                                !!validationErrors.usage_limit
+                                              }
+                                              helperText={
+                                                validationErrors.usage_limit
+                                              }
+                                              sx={{
+                                                "& .MuiOutlinedInput-root": {
+                                                  "& fieldset": {
+                                                    borderColor: "#ccc",
+                                                  },
+                                                  "&:hover fieldset": {
+                                                    borderColor: "#888",
+                                                  },
+                                                  "&.Mui-focused fieldset": {
+                                                    borderColor: "#1976d2",
+                                                    borderWidth: "2px",
+                                                  },
+                                                },
+                                                "& label": {
+                                                  backgroundColor: "#fff",
+                                                  padding: "0 4px",
+                                                },
+                                                "& label.Mui-focused": {
+                                                  color: "#1976d2",
+                                                },
+                                              }}
+                                            />
+                                            <TextField
+                                              label="Số lần đã dùng"
+                                              name="used_count"
+                                              type="number"
+                                              value={
+                                                editedDetail.used_count ?? ""
+                                              }
+                                              fullWidth
+                                              variant="outlined"
+                                              size="small"
+                                              disabled
+                                              helperText="Không thể chỉnh sửa số lần đã dùng"
+                                              sx={{
+                                                "& .MuiOutlinedInput-root": {
+                                                  "& fieldset": {
+                                                    borderColor: "#ccc",
+                                                  },
+                                                  "&:hover fieldset": {
+                                                    borderColor: "#888",
+                                                  },
+                                                  "&.Mui-focused fieldset": {
+                                                    borderColor: "#1976d2",
+                                                    borderWidth: "2px",
+                                                  },
+                                                },
+                                                "& label": {
+                                                  backgroundColor: "#fff",
+                                                  padding: "0 4px",
+                                                },
+                                              }}
+                                            />
+                                          </Box>
+                                        </Box>
+                                        <Box
+                                          pb={2}
+                                          mt={2}
+                                          display="flex"
+                                          gap={2}
+                                        >
+                                          <Button
+                                            variant="contained"
+                                            color="primary"
+                                            className="promotions-btn-save"
+                                            onClick={handleSaveDetail}
+                                            disabled={loading}
+                                          >
+                                            {loading ? (
+                                              <CircularProgress size={24} />
+                                            ) : (
+                                              "Lưu"
+                                            )}
+                                          </Button>
+                                          <Button
+                                            variant="outlined"
+                                            className="promotions-btn-cancel"
+                                            color="secondary"
+                                            onClick={handleCancelEdit}
+                                            disabled={loading}
+                                          >
+                                            Hủy
+                                          </Button>
+                                        </Box>
+                                        {error && (
+                                          <Typography color="error" mt={1}>
+                                            {error}
+                                          </Typography>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Table className="promotions-detail-table">
+                                          <TableBody>
+                                            <TableRow>
+                                              <TableCell>
+                                                <strong>Mã CTKM:</strong>{" "}
+                                                {promotion.code}
+                                              </TableCell>
+                                              <TableCell>
+                                                <strong>Mô tả:</strong>{" "}
+                                                {promotion.description}
+                                              </TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                              <TableCell>
+                                                <strong>Loại giảm:</strong>{" "}
+                                                {promotion.discount_type ===
+                                                "percent"
+                                                  ? "Phần trăm"
+                                                  : "Số tiền"}
+                                              </TableCell>
+                                              <TableCell>
+                                                <strong>Giá trị giảm:</strong>{" "}
+                                                {formatCurrency(
+                                                  promotion.discount_value,
+                                                  promotion.discount_type
+                                                )}
+                                              </TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                              <TableCell>
+                                                <strong>Ngày bắt đầu:</strong>{" "}
+                                                {formatDate(
+                                                  promotion.start_date
+                                                )}
+                                              </TableCell>
+                                              <TableCell>
+                                                <strong>Ngày kết thúc:</strong>{" "}
+                                                {formatDate(promotion.end_date)}
+                                              </TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                              <TableCell>
+                                                <strong>
+                                                  Giới hạn số lần:
+                                                </strong>{" "}
+                                                {promotion.usage_limit}
+                                              </TableCell>
+                                              <TableCell>
+                                                <strong>Số lần sử dụng:</strong>{" "}
+                                                {promotion.used_count}
+                                              </TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                              <TableCell colSpan={2}>
+                                                <strong>Trạng thái:</strong>{" "}
+                                                <span
+                                                  style={{
+                                                    color,
+                                                    fontWeight: "bold",
+                                                  }}
+                                                >
+                                                  {
+                                                    getPromotionStatus(
+                                                      promotion.status
+                                                    ).status
+                                                  }
+                                                </span>
+                                              </TableCell>
+                                            </TableRow>
+                                          </TableBody>
+                                        </Table>
+                                      </>
+                                    )}
+                                  </div>
+                                </Box>
                               </Collapse>
                             </TableCell>
                           </TableRow>
