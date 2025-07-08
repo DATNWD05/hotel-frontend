@@ -120,18 +120,18 @@
 }
 
 .order-room-filter-book {
-  padding: 6px 12px;
+  padding: 7px 12px; /* Đồng bộ với order-room-filter */
   border: none;
-  border-radius: 25px;
+  border-radius: 7px; /* Đồng bộ với order-room-filter */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   color: white;
-  min-width: 60px;
+  min-width: 60px; /* Đồng bộ với order-room-filter */
   text-align: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
-  font-size: 10px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Đồng bộ với order-room-filter */
+  background: linear-gradient(135deg, #4CAF50, #2E7D32); /* Giữ màu xanh lá */
+  font-size: 14px; /* Đồng bộ với order-room-filter */
 }
 
 .order-room-filter-book:hover {
@@ -167,15 +167,15 @@
 
 /* Left Section - Fixed width and height */
 .order-room-left-section {
-  width: 80px; /* Đặt chiều rộng cố định */
-  height: 100%; /* Đảm bảo chiều cao khớp với card */
+  width: 80px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 10px;
   position: relative;
-  flex-shrink: 0; /* Ngăn không cho left section co lại */
+  flex-shrink: 0;
 }
 
 /* Right Section - Flexible with content */

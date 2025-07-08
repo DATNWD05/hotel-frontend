@@ -559,6 +559,18 @@ const OrderRoom: React.FC = () => {
     );
   }
 
+  // Calculate room counts
+  const totalRooms = allRooms.length;
+  const availableRooms = allRooms.filter(
+    (room) => room.status === "available"
+  ).length;
+  const bookedRooms = allRooms.filter(
+    (room) => room.status === "booked"
+  ).length;
+  const maintenanceRooms = allRooms.filter(
+    (room) => room.status === "maintenance"
+  ).length;
+
   return (
     <div className="order-room-wrapper">
       <div className="order-room-title">
@@ -575,7 +587,7 @@ const OrderRoom: React.FC = () => {
           }`}
           onClick={() => handleStatusFilter("all")}
         >
-          Tất cả
+          Tất cả({totalRooms})
         </button>
         <button
           className={`order-room-filter order-room-filter-trong ${
@@ -583,7 +595,7 @@ const OrderRoom: React.FC = () => {
           }`}
           onClick={() => handleStatusFilter("trong")}
         >
-          Trống
+          Trống({availableRooms})
         </button>
         <button
           className={`order-room-filter order-room-filter-da_dat ${
@@ -591,7 +603,7 @@ const OrderRoom: React.FC = () => {
           }`}
           onClick={() => handleStatusFilter("da_dat")}
         >
-          Đã đặt
+          Đã đặt({bookedRooms})
         </button>
         <button
           className={`order-room-filter order-room-filter-dang_sua ${
@@ -599,7 +611,7 @@ const OrderRoom: React.FC = () => {
           }`}
           onClick={() => handleStatusFilter("dang_sua")}
         >
-          Đang sửa
+          Đang sửa({maintenanceRooms})
         </button>
         <Link to="/listbookings/add" style={{ marginLeft: "auto" }}>
           <button className="order-room-filter order-room-filter-book">
@@ -721,17 +733,17 @@ const OrderRoom: React.FC = () => {
                       value={selectedRoom.room_type.name}
                     />
                     <InfoRow
-                      icon={<InfoIcon />}
+                      icon=<InfoIcon />
                       label="Mã loại phòng"
                       value={selectedRoom.room_type.code}
                     />
                     <InfoRow
-                      icon={<PersonIcon />}
+                      icon=<PersonIcon />
                       label="Sức chứa tối đa"
                       value={`${selectedRoom.room_type.max_occupancy} người`}
                     />
                     <InfoRow
-                      icon={<PaymentIcon />}
+                      icon=<PaymentIcon />
                       label="Giá"
                       value={`${Number(
                         selectedRoom.room_type.base_rate
@@ -753,22 +765,22 @@ const OrderRoom: React.FC = () => {
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
                       <InfoRow
-                        icon={<PersonIcon />}
+                        icon=<PersonIcon />
                         label="Người đặt phòng"
                         value={selectedRoom.creator_name ?? "N/A"}
                       />
                       <InfoRow
-                        icon={<CalendarTodayIcon />}
+                        icon=<CalendarTodayIcon />
                         label="Ngày nhận phòng"
                         value={formatDate(selectedRoom.check_in_date)}
                       />
                       <InfoRow
-                        icon={<CalendarTodayIcon />}
+                        icon=<CalendarTodayIcon />
                         label="Ngày trả phòng"
                         value={formatDate(selectedRoom.check_out_date)}
                       />
                       <InfoRow
-                        icon={<InfoIcon />}
+                        icon=<InfoIcon />
                         label="Trạng thái"
                         value={
                           selectedRoom.booking_status === "Pending"
@@ -785,7 +797,7 @@ const OrderRoom: React.FC = () => {
                         }
                       />
                       <InfoRow
-                        icon={<PaymentIcon />}
+                        icon=<PaymentIcon />
                         label="Tiền đặt cọc"
                         value={
                           selectedRoom.deposit_amount
@@ -796,7 +808,7 @@ const OrderRoom: React.FC = () => {
                         }
                       />
                       <InfoRow
-                        icon={<PaymentIcon />}
+                        icon=<PaymentIcon />
                         label="Tổng gốc"
                         value={
                           selectedRoom.raw_total

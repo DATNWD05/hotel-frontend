@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import {
   User,
-  Calendar,
   Hotel,
   Plus,
   Minus,
@@ -94,6 +93,13 @@ interface RoomNumber {
   status: string;
 }
 
+interface Booking {
+  id: number;
+  room_id: number;
+  check_in_date: string;
+  check_out_date: string;
+}
+
 export default function HotelBooking() {
   const navigate = useNavigate();
   const [bookingData, setBookingData] = useState<BookingData>({
@@ -137,17 +143,20 @@ export default function HotelBooking() {
     [key: string]: RoomNumber[];
   }>({});
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        const [roomTypesRes, roomsRes, promotionsRes] = await Promise.all([
-          api.get("/room-types"),
-          api.get("/rooms"),
-          api.get("/promotions"),
-        ]);
+        const [roomTypesRes, roomsRes, promotionsRes, bookingsRes] =
+          await Promise.all([
+            api.get("/room-types"),
+            api.get("/rooms"),
+            api.get("/promotions"),
+            api.get("/bookings"),
+          ]);
 
         let typesData = roomTypesRes.data;
         if (typesData && typeof typesData === "object" && "data" in typesData) {
@@ -164,18 +173,19 @@ export default function HotelBooking() {
           roomsData = roomsData.data;
         }
         if (Array.isArray(roomsData)) {
-          const groupedRooms = roomsData.reduce(
-            (acc: { [key: string]: RoomNumber[] }, room: RoomNumber) => {
-              const typeId = room.room_type_id.toString();
-              if (!acc[typeId]) acc[typeId] = [];
-              if (room.status === "available") {
-                acc[typeId].push(room);
-              }
-              return acc;
-            },
-            {}
+          setRoomNumbers(
+            roomsData.reduce(
+              (acc: { [key: string]: RoomNumber[] }, room: RoomNumber) => {
+                const typeId = room.room_type_id.toString();
+                if (!acc[typeId]) acc[typeId] = [];
+                if (room.status === "available") {
+                  acc[typeId].push(room);
+                }
+                return acc;
+              },
+              {}
+            )
           );
-          setRoomNumbers(groupedRooms);
         } else {
           throw new Error("Dữ liệu từ /rooms không hợp lệ");
         }
@@ -195,6 +205,20 @@ export default function HotelBooking() {
           setPromotions(activePromotions);
         } else {
           throw new Error("Dữ liệu từ /promotions không hợp lệ");
+        }
+
+        let bookingsData = bookingsRes.data;
+        if (
+          bookingsData &&
+          typeof bookingsData === "object" &&
+          "data" in bookingsData
+        ) {
+          bookingsData = bookingsData.data;
+        }
+        if (Array.isArray(bookingsData)) {
+          setBookings(bookingsData);
+        } else {
+          throw new Error("Dữ liệu từ /bookings không hợp lệ");
         }
       } catch (error: any) {
         setErrorMessage(
@@ -548,11 +572,46 @@ export default function HotelBooking() {
     );
   };
 
+  const isRoomAvailable = (
+    room: RoomNumber,
+    checkIn: string,
+    checkOut: string
+  ) => {
+    if (!checkIn || !checkOut) return false;
+
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+
+    return !bookings.some((booking) => {
+      const bookingCheckIn = new Date(booking.check_in_date);
+      const bookingCheckOut = new Date(booking.check_out_date);
+      return (
+        booking.room_id === room.id &&
+        !(checkOutDate <= bookingCheckIn || checkInDate >= bookingCheckOut)
+      );
+    });
+  };
+
   const getAvailableRoomNumbers = (roomType: string, currentRoomId: string) => {
-    if (!roomType || !roomNumbers[roomType]) return [];
+    if (
+      !roomType ||
+      !roomNumbers[roomType] ||
+      !bookingData.checkInDate ||
+      !bookingData.checkOutDate
+    ) {
+      return [];
+    }
 
     const availableRooms = roomNumbers[roomType]
-      .filter((room) => room.status === "available")
+      .filter(
+        (room) =>
+          room.status === "available" &&
+          isRoomAvailable(
+            room,
+            bookingData.checkInDate,
+            bookingData.checkOutDate
+          )
+      )
       .map((room) => ({
         value: room.room_number,
         label: `Phòng ${room.room_number}`,
@@ -575,6 +634,19 @@ export default function HotelBooking() {
 
     markFieldAsTouched(`booking.${field}`);
     validateBookingField(field, value);
+
+    if (field === "checkInDate" || field === "checkOutDate") {
+      setBookingData((prev) => ({
+        ...prev,
+        rooms: prev.rooms.map((room) => ({
+          ...room,
+          type: "",
+          number: "",
+          price: 0,
+          roomId: 0,
+        })),
+      }));
+    }
   };
 
   const handlePromotionChange = (value: string) => {
@@ -663,10 +735,8 @@ export default function HotelBooking() {
   };
 
   const checkExistingCustomer = async (cccd: string) => {
-    console.log("Checking CCCD:", cccd);
     try {
       const response = await api.get(`/customers/check-cccd/${cccd}`);
-      console.log("API Response:", response.data);
       const { status, data } = response.data;
 
       if (status === "exists" && data && data.id) {
@@ -685,15 +755,8 @@ export default function HotelBooking() {
             note: data.note || "",
           },
         }));
-        console.log("Customer data updated:", data);
-      } else {
-        console.log("No customer found for CCCD:", cccd);
       }
     } catch (error: any) {
-      console.error(
-        "Error checking CCCD:",
-        error.response ? error.response.data : error.message
-      );
       if (error.response?.status !== 404) {
         setErrorMessage(
           "Lỗi khi kiểm tra CCCD: " +
@@ -791,14 +854,7 @@ export default function HotelBooking() {
         promotion_code: bookingData.promotion_code,
       };
 
-      console.log("Booking payload:", JSON.stringify(apiData, null, 2));
-
       const bookingRes = await api.post("/bookings", apiData);
-
-      console.log(
-        "Booking response:",
-        JSON.stringify(bookingRes.data, null, 2)
-      );
 
       const bookingResponseData = bookingRes.data;
       if (
@@ -808,17 +864,9 @@ export default function HotelBooking() {
         throw new Error("Response không hợp lệ: Không tìm thấy booking ID");
       }
 
-      const bookingId = bookingResponseData.id || bookingResponseData.data.id;
-      console.log("Tạo đặt phòng thành công, ID:", bookingId);
-
       setSubmitStatus("success");
       setTimeout(() => navigate("/"), 2000);
     } catch (error: any) {
-      console.error("Submit error:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
       let errorMsg = "Có lỗi xảy ra khi đặt phòng";
       if (error.response?.data?.errors) {
         errorMsg = Object.values(error.response.data.errors).flat().join(", ");
@@ -943,8 +991,7 @@ export default function HotelBooking() {
               <nav className="tabs-nav">
                 {[
                   { id: "customer", label: "Khách Hàng", icon: User },
-                  { id: "rooms", label: "Phòng", icon: Hotel },
-                  { id: "booking", label: "Đặt Phòng", icon: Calendar },
+                  { id: "booking", label: "Đặt Phòng & Phòng", icon: Hotel },
                 ].map((tab) => {
                   const Icon = tab.icon;
                   return (
@@ -1176,10 +1223,127 @@ export default function HotelBooking() {
                   </div>
                 )}
 
-                {activeTab === "rooms" && (
+                {activeTab === "booking" && (
                   <div>
+                    <div className="form-grid form-grid-3 mb-6">
+                      <div className="form-group">
+                        <label
+                          htmlFor="checkIn"
+                          className="form-label required"
+                        >
+                          Ngày nhận phòng
+                        </label>
+                        <input
+                          id="checkIn"
+                          type="date"
+                          className={`form-input ${
+                            validationErrors.booking.checkInDate ? "error" : ""
+                          }`}
+                          value={bookingData.checkInDate}
+                          onChange={(e) =>
+                            handleBookingChange("checkInDate", e.target.value)
+                          }
+                          onBlur={() =>
+                            markFieldAsTouched("booking.checkInDate")
+                          }
+                          min={new Date().toISOString().split("T")[0]}
+                        />
+                        {touchedFields["booking.checkInDate"] &&
+                          validationErrors.booking.checkInDate && (
+                            <ErrorMessage
+                              message={validationErrors.booking.checkInDate}
+                            />
+                          )}
+                      </div>
+                      <div className="form-group">
+                        <label
+                          htmlFor="checkOut"
+                          className="form-label required"
+                        >
+                          Ngày trả phòng
+                        </label>
+                        <input
+                          id="checkOut"
+                          type="date"
+                          className={`form-input ${
+                            validationErrors.booking.checkOutDate ? "error" : ""
+                          }`}
+                          value={bookingData.checkOutDate}
+                          onChange={(e) =>
+                            handleBookingChange("checkOutDate", e.target.value)
+                          }
+                          onBlur={() =>
+                            markFieldAsTouched("booking.checkOutDate")
+                          }
+                          min={
+                            bookingData.checkInDate ||
+                            new Date().toISOString().split("T")[0]
+                          }
+                        />
+                        {touchedFields["booking.checkOutDate"] &&
+                          validationErrors.booking.checkOutDate && (
+                            <ErrorMessage
+                              message={validationErrors.booking.checkOutDate}
+                            />
+                          )}
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="deposit" className="form-label-deposit">
+                          Tiền đặt cọc (VNĐ)
+                        </label>
+                        <div className="form-input-icon">
+                          <CreditCard className="icon" />
+                          <input
+                            id="deposit"
+                            type="number"
+                            placeholder="0"
+                            className={`form-input form-input-small ${
+                              validationErrors.booking.depositAmount
+                                ? "error"
+                                : ""
+                            }`}
+                            value={bookingData.depositAmount || ""}
+                            onChange={(e) =>
+                              handleBookingChange(
+                                "depositAmount",
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value)
+                              )
+                            }
+                            onBlur={() =>
+                              markFieldAsTouched("booking.depositAmount")
+                            }
+                          />
+                        </div>
+                        {touchedFields["booking.depositAmount"] &&
+                          validationErrors.booking.depositAmount && (
+                            <ErrorMessage
+                              message={validationErrors.booking.depositAmount}
+                            />
+                          )}
+                      </div>
+                    </div>
+
+                    {validationErrors.booking.dateRange && (
+                      <div style={{ marginBottom: "1rem" }}>
+                        <ErrorMessage
+                          message={validationErrors.booking.dateRange}
+                        />
+                      </div>
+                    )}
+
+                    {calculateNights() > 0 && (
+                      <div className="price-info price-info-blue mb-4">
+                        <p>
+                          <strong>Số đêm lưu trú:</strong> {calculateNights()}{" "}
+                          đêm
+                        </p>
+                      </div>
+                    )}
+
                     {bookingData.rooms.map((room, index) => (
-                      <div key={room.id} className="item-card">
+                      <div key={room.id} className="item-card mb-4">
                         <div className="item-header">
                           <span className="badge badge-secondary">
                             Phòng #{index + 1}
@@ -1259,7 +1423,9 @@ export default function HotelBooking() {
                               disabled={
                                 !room.guests ||
                                 getFilteredRoomTypes(room.guests || 0)
-                                  .length === 0
+                                  .length === 0 ||
+                                !bookingData.checkInDate ||
+                                !bookingData.checkOutDate
                               }
                             />
                             {touchedFields[`rooms.${room.id}.type`] &&
@@ -1286,7 +1452,11 @@ export default function HotelBooking() {
                                 room.id
                               )}
                               placeholder="Chọn số phòng"
-                              disabled={!room.type}
+                              disabled={
+                                !room.type ||
+                                !bookingData.checkInDate ||
+                                !bookingData.checkOutDate
+                              }
                             />
                             {touchedFields[`rooms.${room.id}.number`] &&
                               validationErrors.rooms[room.id]?.number && (
@@ -1312,133 +1482,12 @@ export default function HotelBooking() {
 
                     <button
                       onClick={addRoom}
-                      className="btn btn-outline btn-full"
+                      className="btn btn-outline-primary btn-full mb-4"
                       aria-label="Thêm phòng mới"
                     >
                       <Plus className="w-4 h-4" />
                       Thêm phòng
                     </button>
-                  </div>
-                )}
-
-                {activeTab === "booking" && (
-                  <div>
-                    <div className="form-grid form-grid-3 mb-4">
-                      <div className="form-group">
-                        <label
-                          htmlFor="checkIn"
-                          className="form-label required"
-                        >
-                          Ngày nhận phòng
-                        </label>
-                        <input
-                          id="checkIn"
-                          type="date"
-                          className={`form-input ${
-                            validationErrors.booking.checkInDate ? "error" : ""
-                          }`}
-                          value={bookingData.checkInDate}
-                          onChange={(e) =>
-                            handleBookingChange("checkInDate", e.target.value)
-                          }
-                          onBlur={() =>
-                            markFieldAsTouched("booking.checkInDate")
-                          }
-                          min={new Date().toISOString().split("T")[0]}
-                        />
-                        {touchedFields["booking.checkInDate"] &&
-                          validationErrors.booking.checkInDate && (
-                            <ErrorMessage
-                              message={validationErrors.booking.checkInDate}
-                            />
-                          )}
-                      </div>
-                      <div className="form-group">
-                        <label
-                          htmlFor="checkOut"
-                          className="form-label required"
-                        >
-                          Ngày trả phòng
-                        </label>
-                        <input
-                          id="checkOut"
-                          type="date"
-                          className={`form-input ${
-                            validationErrors.booking.checkOutDate ? "error" : ""
-                          }`}
-                          value={bookingData.checkOutDate}
-                          onChange={(e) =>
-                            handleBookingChange("checkOutDate", e.target.value)
-                          }
-                          onBlur={() =>
-                            markFieldAsTouched("booking.checkOutDate")
-                          }
-                          min={
-                            bookingData.checkInDate ||
-                            new Date().toISOString().split("T")[0]
-                          }
-                        />
-                        {touchedFields["booking.checkOutDate"] &&
-                          validationErrors.booking.checkOutDate && (
-                            <ErrorMessage
-                              message={validationErrors.booking.checkOutDate}
-                            />
-                          )}
-                      </div>
-                      <div className="form-group">
-                        <label htmlFor="deposit" className="form-label-deposit">
-                          Tiền đặt cọc (VNĐ)
-                        </label>
-                        <div className="form-input-icon">
-                          <CreditCard className="icon" />
-                          <input
-                            id="deposit"
-                            type="number"
-                            placeholder="0"
-                            className={`form-input form-input-small ${
-                              validationErrors.booking.depositAmount
-                                ? "error"
-                                : ""
-                            }`}
-                            value={bookingData.depositAmount}
-                            onChange={(e) =>
-                              handleBookingChange(
-                                "depositAmount",
-                                e.target.value === ""
-                                  ? ""
-                                  : Number(e.target.value)
-                              )
-                            }
-                            onBlur={() =>
-                              markFieldAsTouched("booking.depositAmount")
-                            }
-                          />
-                        </div>
-                        {touchedFields["booking.depositAmount"] &&
-                          validationErrors.booking.depositAmount && (
-                            <ErrorMessage
-                              message={validationErrors.booking.depositAmount}
-                            />
-                          )}
-                      </div>
-                    </div>
-
-                    {validationErrors.booking.dateRange && (
-                      <div style={{ marginBottom: "1rem" }}>
-                        <ErrorMessage
-                          message={validationErrors.booking.dateRange}
-                        />
-                      </div>
-                    )}
-
-                    {calculateNights() > 0 && (
-                      <div className="price-info price-info-blue">
-                        <p>
-                          <strong>Số đêm lưu trú:</strong> {calculateNights()}{" "}
-                          đêm
-                        </p>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -1450,7 +1499,7 @@ export default function HotelBooking() {
               <div className="card-header">
                 <h3 className="card-title">
                   <CreditCard className="w-5 h-5" />
-                  Tóm Tắt Đặt Phòng
+                  Tóm tắt đặt phòng
                 </h3>
               </div>
               <div className="card-content">
@@ -1491,7 +1540,7 @@ export default function HotelBooking() {
                   <div className="summary-row">
                     <span>Tiền đặt cọc:</span>
                     <span>
-                      {bookingData.depositAmount.toLocaleString()} VNĐ
+                      {bookingData.depositAmount?.toLocaleString() || "0"} VNĐ
                     </span>
                   </div>
                   <div className="form-group">
@@ -1505,18 +1554,7 @@ export default function HotelBooking() {
                           )
                           ?.id.toString() || ""
                       }
-                      onChange={(value) => {
-                        const selectedPromo = promotions.find(
-                          (promo) => promo.id.toString() === value
-                        );
-                        handlePromotionChange(value);
-                        setBookingData((prev) => ({
-                          ...prev,
-                          promotion_code: selectedPromo
-                            ? selectedPromo.code
-                            : null,
-                        }));
-                      }}
+                      onChange={handlePromotionChange}
                       options={[
                         { value: "", label: "Không áp dụng khuyến mãi" },
                         ...promotions.map((promo) => ({
@@ -1542,7 +1580,7 @@ export default function HotelBooking() {
                 <div className="summary-divider"></div>
 
                 <div className="summary-total">
-                  <span>Tổng tiền:</span>
+                  <span>Tổng cộng:</span>
                   <span className="total-amount">
                     {calculateTotal().toLocaleString()} VNĐ
                   </span>
@@ -1603,7 +1641,7 @@ export default function HotelBooking() {
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting || loadingData}
-                    className="btn btn-primary btn-full mb-4"
+                    className="btn btn-primary btn-full mb-2"
                   >
                     {isSubmitting ? (
                       <>
