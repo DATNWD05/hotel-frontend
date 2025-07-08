@@ -180,7 +180,7 @@ interface Room {
   room_type: RoomType;
 }
 
-interface Booking {https://github.com/DATNWD05/hotel-frontend/pull/35/conflict?name=src%252Fpages%252FBookings%252FListBookings.tsx&ancestor_oid=c7b33a864f10f0af5b2a739fd76b24e268b6d994&base_oid=acc8c1e1e89fed5836255f344aebec4e1e86fe5b&head_oid=66894bb42d78f2cbd252e5f516a68183ab1aa1fb
+interface Booking {
   id: number;
   customer_id: number;
   room_id: number;
