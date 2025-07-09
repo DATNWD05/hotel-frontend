@@ -2,9 +2,7 @@
 import { useState, useEffect } from "react";
 import {
   User,
-  Calendar,
   Hotel,
-  Utensils,
   Plus,
   Minus,
   Phone,
@@ -41,15 +39,6 @@ interface Room {
   guests?: number;
 }
 
-interface Service {
-  id: string;
-  categoryId: number;
-  serviceId: number;
-  name: string;
-  quantity: number;
-  price: number;
-}
-
 interface Promotion {
   id: number;
   code: string;
@@ -65,7 +54,6 @@ interface Promotion {
 interface BookingData {
   customer: Customer;
   rooms: Room[];
-  services: Service[];
   checkInDate: string;
   checkOutDate: string;
   depositAmount: number;
@@ -89,13 +77,6 @@ interface ValidationErrors {
     dateRange?: string;
   };
   rooms: { [key: string]: { guests?: string; type?: string; number?: string } };
-  services: {
-    [key: string]: {
-      categoryId?: string;
-      serviceId?: string;
-      quantity?: string;
-    };
-  };
 }
 
 interface RoomType {
@@ -112,16 +93,11 @@ interface RoomNumber {
   status: string;
 }
 
-interface ServiceCategory {
+interface Booking {
   id: number;
-  name: string;
-}
-
-interface AvailableService {
-  id: number;
-  name: string;
-  category_id: number;
-  price: string;
+  room_id: number;
+  check_in_date: string;
+  check_out_date: string;
 }
 
 export default function HotelBooking() {
@@ -139,7 +115,6 @@ export default function HotelBooking() {
       note: "",
     },
     rooms: [{ id: "1", type: "", number: "", price: 0, roomId: 0, guests: 0 }],
-    services: [],
     checkInDate: "",
     checkOutDate: "",
     depositAmount: 0,
@@ -159,7 +134,6 @@ export default function HotelBooking() {
     customer: {},
     booking: {},
     rooms: {},
-    services: {},
   });
   const [touchedFields, setTouchedFields] = useState<{
     [key: string]: boolean;
@@ -168,32 +142,21 @@ export default function HotelBooking() {
   const [roomNumbers, setRoomNumbers] = useState<{
     [key: string]: RoomNumber[];
   }>({});
-  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>(
-    []
-  );
-  const [availableServices, setAvailableServices] = useState<{
-    [key: string]: AvailableService[];
-  }>({});
   const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        const [
-          roomTypesRes,
-          roomsRes,
-          serviceCategoriesRes,
-          servicesRes,
-          promotionsRes,
-        ] = await Promise.all([
-          api.get("/room-types"),
-          api.get("/rooms"),
-          api.get("/service-categories"),
-          api.get("/service"),
-          api.get("/promotions"),
-        ]);
+        const [roomTypesRes, roomsRes, promotionsRes, bookingsRes] =
+          await Promise.all([
+            api.get("/room-types"),
+            api.get("/rooms"),
+            api.get("/promotions"),
+            api.get("/bookings"),
+          ]);
 
         let typesData = roomTypesRes.data;
         if (typesData && typeof typesData === "object" && "data" in typesData) {
@@ -210,60 +173,21 @@ export default function HotelBooking() {
           roomsData = roomsData.data;
         }
         if (Array.isArray(roomsData)) {
-          const groupedRooms = roomsData.reduce(
-            (acc: { [key: string]: RoomNumber[] }, room: RoomNumber) => {
-              const typeId = room.room_type_id.toString();
-              if (!acc[typeId]) acc[typeId] = [];
-              if (room.status === "available") {
-                acc[typeId].push(room);
-              }
-              return acc;
-            },
-            {}
+          setRoomNumbers(
+            roomsData.reduce(
+              (acc: { [key: string]: RoomNumber[] }, room: RoomNumber) => {
+                const typeId = room.room_type_id.toString();
+                if (!acc[typeId]) acc[typeId] = [];
+                if (room.status === "available") {
+                  acc[typeId].push(room);
+                }
+                return acc;
+              },
+              {}
+            )
           );
-          setRoomNumbers(groupedRooms);
         } else {
           throw new Error("Dữ liệu từ /rooms không hợp lệ");
-        }
-
-        let categoriesData = serviceCategoriesRes.data;
-        if (
-          categoriesData &&
-          typeof categoriesData === "object" &&
-          "data" in categoriesData
-        ) {
-          categoriesData = categoriesData.data;
-        }
-        if (Array.isArray(categoriesData)) {
-          setServiceCategories(categoriesData);
-        } else {
-          throw new Error("Dữ liệu từ /service-categories không hợp lệ");
-        }
-
-        let servicesData = servicesRes.data;
-        if (
-          servicesData &&
-          typeof servicesData === "object" &&
-          "data" in servicesData
-        ) {
-          servicesData = servicesData.data;
-        }
-        if (Array.isArray(servicesData)) {
-          const groupedServices = servicesData.reduce(
-            (
-              acc: { [key: string]: AvailableService[] },
-              service: AvailableService
-            ) => {
-              const catId = service.category_id.toString();
-              if (!acc[catId]) acc[catId] = [];
-              acc[catId].push(service);
-              return acc;
-            },
-            {}
-          );
-          setAvailableServices(groupedServices);
-        } else {
-          throw new Error("Dữ liệu từ /service không hợp lệ");
         }
 
         let promotionsData = promotionsRes.data;
@@ -281,6 +205,20 @@ export default function HotelBooking() {
           setPromotions(activePromotions);
         } else {
           throw new Error("Dữ liệu từ /promotions không hợp lệ");
+        }
+
+        let bookingsData = bookingsRes.data;
+        if (
+          bookingsData &&
+          typeof bookingsData === "object" &&
+          "data" in bookingsData
+        ) {
+          bookingsData = bookingsData.data;
+        }
+        if (Array.isArray(bookingsData)) {
+          setBookings(bookingsData);
+        } else {
+          throw new Error("Dữ liệu từ /bookings không hợp lệ");
         }
       } catch (error: any) {
         setErrorMessage(
@@ -307,8 +245,7 @@ export default function HotelBooking() {
   const validateCCCD = (value: string): boolean => {
     if (!/^\d{12}$/.test(value)) return false;
 
-    const provinceCode = value.substring(0, 3); // giữ nguyên chuỗi
-
+    const provinceCode = value.substring(0, 3);
     const validProvinceCodes = [
       "001",
       "002",
@@ -389,7 +326,6 @@ export default function HotelBooking() {
     switch (field) {
       case "cccd": {
         const trimmed = value.trim();
-
         if (!trimmed) {
           errors.customer.cccd = "Vui lòng nhập số CCCD/CMND";
         } else if (!/^\d{9}$/.test(trimmed) && !/^\d{12}$/.test(trimmed)) {
@@ -401,7 +337,6 @@ export default function HotelBooking() {
         }
         break;
       }
-
       case "name":
         if (!value.trim()) {
           errors.customer.name = "Vui lòng nhập họ và tên";
@@ -576,52 +511,6 @@ export default function HotelBooking() {
     setValidationErrors(errors);
   };
 
-  const validateServiceField = (
-    serviceId: string,
-    field: keyof Service,
-    value: string | number
-  ) => {
-    const errors = { ...validationErrors };
-
-    if (!errors.services[serviceId]) {
-      errors.services[serviceId] = {};
-    }
-
-    switch (field) {
-      case "categoryId":
-        if (!value || Number(value) === 0) {
-          errors.services[serviceId].categoryId =
-            "Vui lòng chọn danh mục dịch vụ";
-        } else {
-          delete errors.services[serviceId].categoryId;
-        }
-        break;
-      case "serviceId":
-        if (!value || Number(value) === 0) {
-          errors.services[serviceId].serviceId = "Vui lòng chọn dịch vụ";
-        } else {
-          delete errors.services[serviceId].serviceId;
-        }
-        break;
-      case "quantity":
-        if (!value || Number(value) <= 0) {
-          errors.services[serviceId].quantity = "Số lượng phải lớn hơn 0";
-        } else if (Number(value) > 10) {
-          errors.services[serviceId].quantity =
-            "Số lượng không được vượt quá 10";
-        } else {
-          delete errors.services[serviceId].quantity;
-        }
-        break;
-    }
-
-    if (Object.keys(errors.services[serviceId]).length === 0) {
-      delete errors.services[serviceId];
-    }
-
-    setValidationErrors(errors);
-  };
-
   const markFieldAsTouched = (fieldPath: string) => {
     setTouchedFields((prev) => ({ ...prev, [fieldPath]: true }));
   };
@@ -637,17 +526,11 @@ export default function HotelBooking() {
   };
 
   const calculateSubtotal = () => {
-    const roomTotal = bookingData.rooms.reduce((sum, room) => {
+    return bookingData.rooms.reduce((sum, room) => {
       return room.price && room.number
         ? sum + room.price * calculateNights()
         : sum;
     }, 0);
-    const serviceTotal = bookingData.services.reduce((sum, service) => {
-      return service.price && service.quantity
-        ? sum + service.price * service.quantity
-        : sum;
-    }, 0);
-    return roomTotal + serviceTotal;
   };
 
   const calculateDiscount = () => {
@@ -689,11 +572,46 @@ export default function HotelBooking() {
     );
   };
 
+  const isRoomAvailable = (
+    room: RoomNumber,
+    checkIn: string,
+    checkOut: string
+  ) => {
+    if (!checkIn || !checkOut) return false;
+
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+
+    return !bookings.some((booking) => {
+      const bookingCheckIn = new Date(booking.check_in_date);
+      const bookingCheckOut = new Date(booking.check_out_date);
+      return (
+        booking.room_id === room.id &&
+        !(checkOutDate <= bookingCheckIn || checkInDate >= bookingCheckOut)
+      );
+    });
+  };
+
   const getAvailableRoomNumbers = (roomType: string, currentRoomId: string) => {
-    if (!roomType || !roomNumbers[roomType]) return [];
+    if (
+      !roomType ||
+      !roomNumbers[roomType] ||
+      !bookingData.checkInDate ||
+      !bookingData.checkOutDate
+    ) {
+      return [];
+    }
 
     const availableRooms = roomNumbers[roomType]
-      .filter((room) => room.status === "available")
+      .filter(
+        (room) =>
+          room.status === "available" &&
+          isRoomAvailable(
+            room,
+            bookingData.checkInDate,
+            bookingData.checkOutDate
+          )
+      )
       .map((room) => ({
         value: room.room_number,
         label: `Phòng ${room.room_number}`,
@@ -716,6 +634,19 @@ export default function HotelBooking() {
 
     markFieldAsTouched(`booking.${field}`);
     validateBookingField(field, value);
+
+    if (field === "checkInDate" || field === "checkOutDate") {
+      setBookingData((prev) => ({
+        ...prev,
+        rooms: prev.rooms.map((room) => ({
+          ...room,
+          type: "",
+          number: "",
+          price: 0,
+          roomId: 0,
+        })),
+      }));
+    }
   };
 
   const handlePromotionChange = (value: string) => {
@@ -804,10 +735,8 @@ export default function HotelBooking() {
   };
 
   const checkExistingCustomer = async (cccd: string) => {
-    console.log("Checking CCCD:", cccd); // Debug: Xác nhận CCCD được kiểm tra
     try {
       const response = await api.get(`/customers/check-cccd/${cccd}`);
-      console.log("API Response:", response.data); // Debug: Xem toàn bộ response
       const { status, data } = response.data;
 
       if (status === "exists" && data && data.id) {
@@ -821,20 +750,13 @@ export default function HotelBooking() {
             email: data.email || "",
             phone: data.phone || "",
             dateOfBirth: data.date_of_birth || "",
-            nationality: data.nationality || "Vietnamese", // Giá trị mặc định nếu không có
+            nationality: data.nationality || "Vietnamese",
             address: data.address || "",
             note: data.note || "",
           },
         }));
-        console.log("Customer data updated:", data); // Debug: Xác nhận dữ liệu đã cập nhật
-      } else {
-        console.log("No customer found for CCCD:", cccd); // Debug: Xác nhận khi không tìm thấy
       }
     } catch (error: any) {
-      console.error(
-        "Error checking CCCD:",
-        error.response ? error.response.data : error.message
-      );
       if (error.response?.status !== 404) {
         setErrorMessage(
           "Lỗi khi kiểm tra CCCD: " +
@@ -842,105 +764,6 @@ export default function HotelBooking() {
         );
       }
     }
-  };
-
-  const getAvailableServices = (
-    categoryId: string,
-    currentServiceId: string
-  ) => {
-    if (!categoryId || !availableServices[categoryId]) return [];
-
-    const availableServicesList = availableServices[categoryId].map(
-      (service) => ({
-        value: service.id.toString(),
-        label: `${service.name} - ${parseFloat(
-          service.price
-        ).toLocaleString()} VNĐ`,
-      })
-    );
-
-    const selectedServiceIds = bookingData.services
-      .filter(
-        (s) =>
-          s.id !== currentServiceId &&
-          s.categoryId.toString() === categoryId &&
-          s.serviceId !== 0
-      )
-      .map((s) => s.serviceId.toString());
-
-    return availableServicesList.filter(
-      (option) => !selectedServiceIds.includes(option.value)
-    );
-  };
-
-  const handleServiceChange = (
-    serviceId: string,
-    field: keyof Service,
-    value: string | number
-  ) => {
-    setBookingData((prev) => ({
-      ...prev,
-      services: prev.services.map((service) => {
-        if (service.id === serviceId) {
-          if (field === "categoryId") {
-            return {
-              ...service,
-              categoryId: Number(value),
-              serviceId: 0,
-              name: "",
-              price: 0,
-            };
-          }
-          if (field === "serviceId") {
-            const categoryServices =
-              availableServices[service.categoryId.toString()] || [];
-            const selectedService = categoryServices.find(
-              (s) => s.id === Number(value)
-            );
-            return {
-              ...service,
-              serviceId: Number(value),
-              name: selectedService ? selectedService.name : "",
-              price: selectedService ? parseFloat(selectedService.price) : 0,
-            };
-          }
-          return { ...service, [field]: value };
-        }
-        return service;
-      }),
-    }));
-
-    markFieldAsTouched(`services.${serviceId}.${field}`);
-    validateServiceField(serviceId, field, value);
-  };
-
-  const addService = () => {
-    const newId = (bookingData.services.length + 1).toString();
-    setBookingData((prev) => ({
-      ...prev,
-      services: [
-        ...prev.services,
-        {
-          id: newId,
-          categoryId: 0,
-          serviceId: 0,
-          name: "",
-          quantity: 1,
-          price: 0,
-        },
-      ],
-    }));
-  };
-
-  const removeService = (serviceId: string) => {
-    setBookingData((prev) => ({
-      ...prev,
-      services: prev.services.filter((service) => service.id !== serviceId),
-    }));
-
-    const errors = { ...validationErrors };
-    delete errors.services[serviceId];
-    setValidationErrors(errors);
   };
 
   const validateAllFields = (): boolean => {
@@ -970,20 +793,10 @@ export default function HotelBooking() {
       markFieldAsTouched(`rooms.${room.id}.number`);
     });
 
-    bookingData.services.forEach((service) => {
-      validateServiceField(service.id, "categoryId", service.categoryId);
-      validateServiceField(service.id, "serviceId", service.serviceId);
-      validateServiceField(service.id, "quantity", service.quantity);
-      markFieldAsTouched(`services.${service.id}.categoryId`);
-      markFieldAsTouched(`services.${service.id}.serviceId`);
-      markFieldAsTouched(`services.${service.id}.quantity`);
-    });
-
     const hasErrors =
       Object.keys(validationErrors.customer).length > 0 ||
       Object.keys(validationErrors.booking).length > 0 ||
-      Object.keys(validationErrors.rooms).length > 0 ||
-      Object.keys(validationErrors.services).length > 0;
+      Object.keys(validationErrors.rooms).length > 0;
 
     if (hasErrors) {
       isValid = false;
@@ -1041,14 +854,7 @@ export default function HotelBooking() {
         promotion_code: bookingData.promotion_code,
       };
 
-      console.log("Booking payload:", JSON.stringify(apiData, null, 2));
-
       const bookingRes = await api.post("/bookings", apiData);
-
-      console.log(
-        "Booking response:",
-        JSON.stringify(bookingRes.data, null, 2)
-      );
 
       const bookingResponseData = bookingRes.data;
       if (
@@ -1058,32 +864,9 @@ export default function HotelBooking() {
         throw new Error("Response không hợp lệ: Không tìm thấy booking ID");
       }
 
-      const bookingId = bookingResponseData.id || bookingResponseData.data.id;
-      console.log("Tạo đặt phòng thành công, ID:", bookingId);
-
-      if (bookingData.services.length > 0) {
-        const servicesPayload = bookingData.services
-          .filter((service) => service.serviceId !== 0)
-          .map((service) => ({
-            service_id: service.serviceId,
-            quantity: service.quantity,
-          }));
-        if (servicesPayload.length > 0) {
-          await api.post(`/bookings/${bookingId}/add-services`, {
-            services: servicesPayload,
-          });
-          console.log("Thêm dịch vụ thành công:", servicesPayload);
-        }
-      }
-
       setSubmitStatus("success");
       setTimeout(() => navigate("/"), 2000);
     } catch (error: any) {
-      console.error("Submit error:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
       let errorMsg = "Có lỗi xảy ra khi đặt phòng";
       if (error.response?.data?.errors) {
         errorMsg = Object.values(error.response.data.errors).flat().join(", ");
@@ -1208,9 +991,7 @@ export default function HotelBooking() {
               <nav className="tabs-nav">
                 {[
                   { id: "customer", label: "Khách Hàng", icon: User },
-                  { id: "booking", label: "Đặt Phòng", icon: Calendar },
-                  { id: "rooms", label: "Phòng", icon: Hotel },
-                  { id: "services", label: "Dịch Vụ", icon: Utensils },
+                  { id: "booking", label: "Đặt Phòng & Phòng", icon: Hotel },
                 ].map((tab) => {
                   const Icon = tab.icon;
                   return (
@@ -1444,7 +1225,7 @@ export default function HotelBooking() {
 
                 {activeTab === "booking" && (
                   <div>
-                    <div className="form-grid form-grid-3 mb-4">
+                    <div className="form-grid form-grid-3 mb-6">
                       <div className="form-group">
                         <label
                           htmlFor="checkIn"
@@ -1521,7 +1302,7 @@ export default function HotelBooking() {
                                 ? "error"
                                 : ""
                             }`}
-                            value={bookingData.depositAmount}
+                            value={bookingData.depositAmount || ""}
                             onChange={(e) =>
                               handleBookingChange(
                                 "depositAmount",
@@ -1553,20 +1334,16 @@ export default function HotelBooking() {
                     )}
 
                     {calculateNights() > 0 && (
-                      <div className="price-info price-info-blue">
+                      <div className="price-info price-info-blue mb-4">
                         <p>
                           <strong>Số đêm lưu trú:</strong> {calculateNights()}{" "}
                           đêm
                         </p>
                       </div>
                     )}
-                  </div>
-                )}
 
-                {activeTab === "rooms" && (
-                  <div>
                     {bookingData.rooms.map((room, index) => (
-                      <div key={room.id} className="item-card">
+                      <div key={room.id} className="item-card mb-4">
                         <div className="item-header">
                           <span className="badge badge-secondary">
                             Phòng #{index + 1}
@@ -1646,7 +1423,9 @@ export default function HotelBooking() {
                               disabled={
                                 !room.guests ||
                                 getFilteredRoomTypes(room.guests || 0)
-                                  .length === 0
+                                  .length === 0 ||
+                                !bookingData.checkInDate ||
+                                !bookingData.checkOutDate
                               }
                             />
                             {touchedFields[`rooms.${room.id}.type`] &&
@@ -1673,7 +1452,11 @@ export default function HotelBooking() {
                                 room.id
                               )}
                               placeholder="Chọn số phòng"
-                              disabled={!room.type}
+                              disabled={
+                                !room.type ||
+                                !bookingData.checkInDate ||
+                                !bookingData.checkOutDate
+                              }
                             />
                             {touchedFields[`rooms.${room.id}.number`] &&
                               validationErrors.rooms[room.id]?.number && (
@@ -1699,202 +1482,11 @@ export default function HotelBooking() {
 
                     <button
                       onClick={addRoom}
-                      className="btn btn-outline btn-full"
+                      className="btn btn-outline-primary btn-full mb-4"
                       aria-label="Thêm phòng mới"
                     >
                       <Plus className="w-4 h-4" />
                       Thêm phòng
-                    </button>
-                  </div>
-                )}
-
-                {activeTab === "services" && (
-                  <div>
-                    {bookingData.services.length === 0 ? (
-                      <div className="empty-state">
-                        <Utensils className="empty-state-icon" />
-                        <p className="empty-state-text">
-                          Chưa có dịch vụ nào được chọn
-                        </p>
-                        <p
-                          className="empty-state-text"
-                          style={{ fontSize: "0.875rem", marginTop: "0.5rem" }}
-                        >
-                          Nhấn "Thêm dịch vụ" để bắt đầu chọn dịch vụ
-                        </p>
-                      </div>
-                    ) : (
-                      bookingData.services.map((service, index) => (
-                        <div key={service.id} className="item-card">
-                          <div className="item-header">
-                            <span className="badge badge-success">
-                              Dịch vụ #{index + 1}
-                            </span>
-                            <button
-                              onClick={() => removeService(service.id)}
-                              className="btn btn-sm btn-outline"
-                              aria-label={`Xóa dịch vụ ${index + 1}`}
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                          </div>
-
-                          <div className="service-form-grid">
-                            <div className="form-group service-category">
-                              <label className="form-label required">
-                                Danh mục dịch vụ
-                              </label>
-                              <CustomSelect
-                                id={`service-category-${service.id}`}
-                                value={service.categoryId.toString()}
-                                onChange={(value) =>
-                                  handleServiceChange(
-                                    service.id,
-                                    "categoryId",
-                                    Number(value)
-                                  )
-                                }
-                                options={serviceCategories.map((category) => ({
-                                  value: category.id.toString(),
-                                  label: category.name,
-                                }))}
-                                placeholder="Chọn danh mục dịch vụ"
-                              />
-                              {touchedFields[
-                                `services.${service.id}.categoryId`
-                              ] &&
-                                validationErrors.services[service.id]
-                                  ?.categoryId && (
-                                  <ErrorMessage
-                                    message={
-                                      validationErrors.services[service.id]
-                                        .categoryId!
-                                    }
-                                  />
-                                )}
-                            </div>
-
-                            <div className="form-group service-name">
-                              <label className="form-label required">
-                                Dịch vụ
-                              </label>
-                              <CustomSelect
-                                id={`service-${service.id}`}
-                                value={service.serviceId.toString()}
-                                onChange={(value) =>
-                                  handleServiceChange(
-                                    service.id,
-                                    "serviceId",
-                                    Number(value)
-                                  )
-                                }
-                                options={getAvailableServices(
-                                  service.categoryId.toString(),
-                                  service.id
-                                )}
-                                placeholder={
-                                  service.categoryId
-                                    ? "Chọn dịch vụ"
-                                    : "Chọn danh mục trước"
-                                }
-                                disabled={!service.categoryId}
-                              />
-                              {touchedFields[
-                                `services.${service.id}.serviceId`
-                              ] &&
-                                validationErrors.services[service.id]
-                                  ?.serviceId && (
-                                  <ErrorMessage
-                                    message={
-                                      validationErrors.services[service.id]
-                                        .serviceId!
-                                    }
-                                  />
-                                )}
-                            </div>
-
-                            <div className="form-group service-quantity">
-                              <label
-                                htmlFor={`quantity-${service.id}`}
-                                className="form-label required"
-                              >
-                                Số lượng
-                              </label>
-                              <input
-                                id={`quantity-${service.id}`}
-                                type="number"
-                                min="1"
-                                max="10"
-                                className={`form-input ${
-                                  validationErrors.services[service.id]
-                                    ?.quantity
-                                    ? "error"
-                                    : ""
-                                }`}
-                                value={service.quantity}
-                                onChange={(e) =>
-                                  handleServiceChange(
-                                    service.id,
-                                    "quantity",
-                                    Number(e.target.value)
-                                  )
-                                }
-                                onBlur={() =>
-                                  markFieldAsTouched(
-                                    `services.${service.id}.quantity`
-                                  )
-                                }
-                                disabled={!service.serviceId}
-                                aria-label={`Số lượng dịch vụ ${index + 1}`}
-                              />
-                              {touchedFields[
-                                `services.${service.id}.quantity`
-                              ] &&
-                                validationErrors.services[service.id]
-                                  ?.quantity && (
-                                  <ErrorMessage
-                                    message={
-                                      validationErrors.services[service.id]
-                                        .quantity!
-                                    }
-                                  />
-                                )}
-                            </div>
-                          </div>
-
-                          {service.price > 0 && (
-                            <div className="price-info price-info-blue">
-                              <div
-                                style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                }}
-                              >
-                                <span>
-                                  <strong>Dịch vụ:</strong> {service.name}
-                                </span>
-                                <span>
-                                  <strong>Tổng tiền:</strong>{" "}
-                                  {(
-                                    service.price * service.quantity
-                                  ).toLocaleString()}{" "}
-                                  VNĐ
-                                </span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-
-                    <button
-                      onClick={addService}
-                      className="btn btn-outline btn-full"
-                      aria-label="Thêm dịch vụ mới"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Thêm dịch vụ
                     </button>
                   </div>
                 )}
@@ -1907,7 +1499,7 @@ export default function HotelBooking() {
               <div className="card-header">
                 <h3 className="card-title">
                   <CreditCard className="w-5 h-5" />
-                  Tóm Tắt Đặt Phòng
+                  Tóm tắt đặt phòng
                 </h3>
               </div>
               <div className="card-content">
@@ -1917,12 +1509,6 @@ export default function HotelBooking() {
                       {bookingData.rooms.length}
                     </div>
                     <div className="stat-label">Phòng</div>
-                  </div>
-                  <div className="stat-card stat-card-green">
-                    <div className="stat-number stat-number-green">
-                      {bookingData.services.length}
-                    </div>
-                    <div className="stat-label">Dịch vụ</div>
                   </div>
                   <div className="stat-card stat-card-purple">
                     <div className="stat-number stat-number-purple">
@@ -1952,25 +1538,9 @@ export default function HotelBooking() {
                     </span>
                   </div>
                   <div className="summary-row">
-                    <span>Tiền dịch vụ:</span>
-                    <span>
-                      {bookingData.services
-                        .reduce(
-                          (sum, service) =>
-                            sum +
-                            (service.price && service.quantity
-                              ? service.price * service.quantity
-                              : 0),
-                          0
-                        )
-                        .toLocaleString()}{" "}
-                      VNĐ
-                    </span>
-                  </div>
-                  <div className="summary-row">
                     <span>Tiền đặt cọc:</span>
                     <span>
-                      {bookingData.depositAmount.toLocaleString()} VNĐ
+                      {bookingData.depositAmount?.toLocaleString() || "0"} VNĐ
                     </span>
                   </div>
                   <div className="form-group">
@@ -1984,18 +1554,7 @@ export default function HotelBooking() {
                           )
                           ?.id.toString() || ""
                       }
-                      onChange={(value) => {
-                        const selectedPromo = promotions.find(
-                          (promo) => promo.id.toString() === value
-                        );
-                        handlePromotionChange(value); // Gọi hàm hiện tại để cập nhật state
-                        setBookingData((prev) => ({
-                          ...prev,
-                          promotion_code: selectedPromo
-                            ? selectedPromo.code
-                            : null,
-                        }));
-                      }}
+                      onChange={handlePromotionChange}
                       options={[
                         { value: "", label: "Không áp dụng khuyến mãi" },
                         ...promotions.map((promo) => ({
@@ -2006,7 +1565,7 @@ export default function HotelBooking() {
                               : `${promo.discount_value.toLocaleString()} VNĐ`
                           })`,
                         })),
-                      ].sort((a, b) => a.label.localeCompare(b.label))} // Sắp xếp theo alphabet
+                      ].sort((a, b) => a.label.localeCompare(b.label))}
                       placeholder="Chọn khuyến mãi"
                     />
                   </div>
@@ -2021,7 +1580,7 @@ export default function HotelBooking() {
                 <div className="summary-divider"></div>
 
                 <div className="summary-total">
-                  <span>Tổng tiền:</span>
+                  <span>Tổng cộng:</span>
                   <span className="total-amount">
                     {calculateTotal().toLocaleString()} VNĐ
                   </span>
@@ -2078,43 +1637,11 @@ export default function HotelBooking() {
                   </div>
                 )}
 
-                {bookingData.services.length > 0 && (
-                  <div style={{ marginTop: "1rem" }}>
-                    <h4
-                      style={{
-                        fontSize: "0.875rem",
-                        fontWeight: "600",
-                        marginBottom: "0.5rem",
-                        color: "#374151",
-                      }}
-                    >
-                      Chi tiết dịch vụ:
-                    </h4>
-                    <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                      {bookingData.services.map(
-                        (service, index) =>
-                          service.name && (
-                            <div
-                              key={service.id}
-                              style={{ marginBottom: "0.25rem" }}
-                            >
-                              {index + 1}. {service.name} x {service.quantity} ={" "}
-                              {(
-                                service.price * service.quantity
-                              ).toLocaleString()}{" "}
-                              VNĐ
-                            </div>
-                          )
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 <div className="mt-4">
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting || loadingData}
-                    className="btn btn-primary btn-full mb-4"
+                    className="btn btn-primary btn-full mb-2"
                   >
                     {isSubmitting ? (
                       <>

@@ -5,6 +5,7 @@
   padding: 20px;
   background: linear-gradient(135deg, #f0f4f8, #e0e7ee);
   min-height: 100vh;
+  position: relative;
 }
 
 .order-room-title .order-room-header-content {
@@ -32,22 +33,24 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
   align-items: center;
+  justify-content: flex-start;
 }
 
 .order-room-filter {
-  padding: 10px 20px;
+  padding: 7px 12px;
   border: none;
-  border-radius: 25px;
+  border-radius: 7px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   color: white;
-  min-width: 100px;
+  min-width: 60px;
   text-align: center;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   background: linear-gradient(45deg, #34495e, #2c3e50);
+  font-size: 14px;
 }
 
 .order-room-filter:hover {
@@ -89,7 +92,7 @@
 }
 
 .order-room-filter-da_dat {
-  background: linear-gradient(135deg, #3c65be, #3c65be);
+  background: linear-gradient(135deg, #3c65be, #2a4b8f);
 }
 
 .order-room-filter-da_dat:hover {
@@ -117,17 +120,18 @@
 }
 
 .order-room-filter-book {
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
-  padding: 10px 20px;
+  padding: 7px 12px; /* Đồng bộ với order-room-filter */
   border: none;
-  border-radius: 25px;
+  border-radius: 7px; /* Đồng bộ với order-room-filter */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   color: white;
-  min-width: 100px;
+  min-width: 60px; /* Đồng bộ với order-room-filter */
   text-align: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Đồng bộ với order-room-filter */
+  background: linear-gradient(135deg, #4CAF50, #2E7D32); /* Giữ màu xanh lá */
+  font-size: 14px; /* Đồng bộ với order-room-filter */
 }
 
 .order-room-filter-book:hover {
@@ -161,18 +165,20 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* Left Section - Dark colors */
+/* Left Section - Fixed width and height */
 .order-room-left-section {
   width: 80px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   padding: 10px;
   position: relative;
+  flex-shrink: 0;
 }
 
-/* Right Section - Light colors */
+/* Right Section - Flexible with content */
 .order-room-right-section {
   flex: 1;
   padding: 10px;
@@ -308,7 +314,7 @@
   color: #666;
   font-weight: 600;
   letter-spacing: 1px;
-  font-style: italic; /* Chữ nghiêng */
+  font-style: italic;
 }
 
 /* No data message */
@@ -567,11 +573,53 @@
   border-top: 1px solid #e0e0e0;
 }
 
-.close-dialog-button {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: white;
-  padding: 10px 24px;
+.edit-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #2c3e50;
+  background-color: #FACC15;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-button:hover {
+  background-color: #E0B800;
+  transform: translateY(-1px);
+}
+
+.delete-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  background-color: #D32F2F;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delete-button:hover {
+  background-color: #B71C1C;
+  transform: translateY(-1px);
+}
+
+.close-dialog-button {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
 }
 
 .close-dialog-button:hover {
@@ -632,11 +680,14 @@
 }
 
 .edit-form-save-button {
-  background: linear-gradient(135deg, #4CAF50, #2E7D32);
-  color: white;
   padding: 10px 24px;
-  font-weight: 600;
+  border: none;
   border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  background: linear-gradient(135deg, #4CAF50, #2E7D32);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -645,17 +696,20 @@
   transform: translateY(-1px);
 }
 
-.edit-form-save-button.Mui-disabled {
+.edit-form-save-button:disabled {
   background: #ccc;
   color: #666;
 }
 
 .edit-form-cancel-button {
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  color: white;
   padding: 10px 24px;
-  font-weight: 600;
+  border: none;
   border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -664,7 +718,7 @@
   transform: translateY(-1px);
 }
 
-.edit-form-cancel-button.Mui-disabled {
+.edit-form-cancel-button:disabled {
   background: #ccc;
   color: #666;
 }
@@ -756,7 +810,7 @@
   .order-room-filter,
   .order-room-filter-book {
     width: 100%;
-    margin-left: 0 !important;
+    margin-bottom: 8px !important;
   }
   
   .order-room-grid {
@@ -821,4 +875,20 @@
 .edit-form-input:focus-within {
   outline: 2px solid #3498db;
   outline-offset: 2px;
+}
+
+.retry-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: #1976d2;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.retry-button:hover {
+  background-color: #1565c0;
+  transform: translateY(-1px);
 }
