@@ -15,7 +15,11 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search } from "lucide-react";
-import api from "../../api/axios"; // Sử dụng thư mục api đã tạo
+import api from "../../api/axios";
+import { DatePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { Dayjs } from 'dayjs';
 
 interface BookingService {
   booking_code: string;
@@ -37,11 +41,18 @@ export default function BookingService() {
   const [filtered, setFiltered] = useState<BookingService[]>([]);
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
+  const [fromDate, setFromDate] = useState<Dayjs | null>(null);
+  const [toDate, setToDate] = useState<Dayjs | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/statistics/booking-service-table?page=${page}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const params: any = { page };
+      if (fromDate) params.from_date = fromDate.format("YYYY-MM-DD");
+      if (toDate) params.to_date = toDate.format("YYYY-MM-DD");
+
+      const res = await api.get(`/statistics/booking-service-table`, { params });
       setData(res.data.data);
       setFiltered(res.data.data);
       setTotalPage(res.data.pagination.last_page);
@@ -54,7 +65,7 @@ export default function BookingService() {
 
   useEffect(() => {
     fetchData();
-  }, [page]);
+  }, [page, fromDate, toDate]);
 
   useEffect(() => {
     if (!search) {
@@ -74,15 +85,7 @@ export default function BookingService() {
 
   return (
     <Box sx={{ p: 4 }}>
-      {/* --- PHẦN HEADER --- */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          mb: 3,
-        }}
-      >
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: 'wrap', gap: 2, mb: 3 }}>
         <Box>
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Dịch vụ &gt; Danh sách
@@ -92,30 +95,66 @@ export default function BookingService() {
           </Typography>
         </Box>
 
-        <TextField
-          placeholder="Tìm kiếm (Tên hoặc mã đặt phòng)"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          size="small"
-          sx={{
-            width: 300,
-            backgroundColor: "white",
-            borderRadius: "10px",
-            "& .MuiOutlinedInput-root": {
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker
+              label="Từ ngày"
+              value={fromDate}
+              onChange={(newValue) => {
+                setFromDate(newValue);
+                setPage(1);
+              }}
+              maxDate={toDate ?? undefined}
+              format="DD/MM/YYYY"
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  sx: { width: '135px', "& .MuiInputBase-root": { height: "40px" } }
+                }
+              }}
+            />
+            <DatePicker
+              label="Đến ngày"
+              value={toDate}
+              onChange={(newValue) => {
+                setToDate(newValue);
+                setPage(1);
+              }}
+              minDate={fromDate ?? undefined}
+              format="DD/MM/YYYY"
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  sx: { width: '135px', "& .MuiInputBase-root": { height: "40px" } }
+                }
+              }}
+            />
+          </LocalizationProvider>
+
+          <TextField
+            placeholder="Tìm kiếm (Tên hoặc mã đặt phòng)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            size="small"
+            sx={{
+              width: 280,
+              backgroundColor: "white",
               borderRadius: "10px",
-            },
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search size={20} />
-              </InputAdornment>
-            ),
-          }}
-        />
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "10px",
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={20} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
       </Box>
 
-      {/* --- PHẦN BẢNG --- */}
       <Paper sx={{ p: 2, borderRadius: 3, boxShadow: 3 }}>
         {loading ? (
           <Box
@@ -137,49 +176,27 @@ export default function BookingService() {
                     <TableCell sx={{ fontWeight: 600 }}>Mã đặt phòng</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Tên dịch vụ</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Nhóm</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">
-                      Đơn giá
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="center">
-                      SL
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">
-                      Tổng cộng
-                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="right">Đơn giá</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="center">SL</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="right">Tổng cộng</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Nhân viên</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="center">
-                      Thời gian tạo
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="center">
-                      Nhận phòng
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="center">
-                      Loại phòng
-                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="center">Thời gian tạo</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="center">Nhận phòng</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="center">Loại phòng</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {filtered.map((row, idx) => (
-                    <TableRow
-                      key={idx}
-                      hover
-                      sx={{
-                        "&:last-child td": { borderBottom: "none" },
-                      }}
-                    >
+                    <TableRow key={idx} hover sx={{ "&:last-child td": { borderBottom: "none" } }}>
                       <TableCell>{row.booking_code}</TableCell>
                       <TableCell>{row.service_name}</TableCell>
                       <TableCell>{row.category_name}</TableCell>
                       <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(
-                          Math.round(row.price)
-                        )} ₫
+                        {Intl.NumberFormat("vi-VN").format(Math.round(row.price))} ₫
                       </TableCell>
                       <TableCell align="center">{row.quantity}</TableCell>
                       <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(
-                          Math.round(row.total)
-                        )} ₫
+                        {Intl.NumberFormat("vi-VN").format(Math.round(row.total))} ₫
                       </TableCell>
                       <TableCell>{row.employee_name}</TableCell>
                       <TableCell align="center">

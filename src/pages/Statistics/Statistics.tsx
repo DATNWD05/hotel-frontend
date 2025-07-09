@@ -1,6 +1,5 @@
-// src/pages/Statistics/Statistics.tsx
 import React, { useEffect, useRef, useState } from "react";
-import axios from "axios";
+import api from '../../api/axios';
 import {
   Box,
   Paper,
@@ -24,6 +23,10 @@ import PersonIcon from "@mui/icons-material/Person";
 import BedIcon from "@mui/icons-material/Bed";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import { Chart, registerables } from "chart.js";
+import { DatePicker } from '@mui/x-date-pickers';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { Dayjs } from 'dayjs';
 
 Chart.register(...registerables);
 
@@ -42,6 +45,7 @@ export default function Statistics() {
   const barChartRef = useRef<Chart<"bar"> | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
 
   const [totalRevenue, setTotalRevenue] = useState<number>(0);
   const [occupancyRate, setOccupancyRate] = useState<number>(0);
@@ -50,28 +54,21 @@ export default function Statistics() {
 
   const [revByDay, setRevByDay] = useState<RevByDay[]>([]);
   const [bookingsByMonth, setBookingsByMonth] = useState<MonthCount[]>([]);
-
   const [totalPerBooking, setTotalPerBooking] = useState<BookingTotal[]>([]);
   const [revByCustomer, setRevByCustomer] = useState<CustRevenue[]>([]);
   const [revByRoom, setRevByRoom] = useState<RoomRevenue[]>([]);
   const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
 
   useEffect(() => {
-    const api = axios.create({
-      baseURL: "http://localhost:8000/api/statistics",
-    });
+    console.log('dateRange updated:', dateRange);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const params: Record<string, string> = {};
+        if (dateRange[0]) params.from_date = dateRange[0].format('YYYY-MM-DD');
+        if (dateRange[1]) params.to_date = dateRange[1].format('YYYY-MM-DD');
 
-    api.interceptors.request.use((config) => {
-      const token = localStorage.getItem("auth_token");
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
-
-    api
-      .get("/summary-dashboard")
-      .then((res) => {
+        const res = await api.get('/statistics/summary-dashboard', { params });
         const data = res.data.data;
 
         setTotalRevenue(data.total_revenue.data);
@@ -84,22 +81,21 @@ export default function Statistics() {
         setTopCustomers(data.top_customers.data);
         setBookingsByMonth(data.bookings_by_month.data.reverse());
         setTotalPerBooking(data.total_per_booking.data);
-      })
-      .catch((err) => {
-        console.error("Lỗi lấy dữ liệu thống kê tổng hợp:", err);
-      })
-      .finally(() => {
+      } catch (err) {
+        console.error('Lỗi lấy dữ liệu thống kê tổng hợp:', err);
+      } finally {
         setLoading(false);
-      });
-  }, []);
+      }
+    };
+
+    fetchData();
+  }, [dateRange]);
 
   useEffect(() => {
     if (!lineRef.current || revByDay.length === 0) return;
     lineChartRef.current?.destroy();
-
     const ctx = lineRef.current.getContext("2d");
     if (!ctx) return;
-
     const grad = ctx.createLinearGradient(0, 0, 0, 200);
     grad.addColorStop(0, "rgba(86,81,212,0.4)");
     grad.addColorStop(1, "rgba(86,81,212,0)");
@@ -144,7 +140,6 @@ export default function Statistics() {
   useEffect(() => {
     if (!barRef.current || bookingsByMonth.length === 0) return;
     barChartRef.current?.destroy();
-
     const ctx = barRef.current.getContext("2d");
     if (!ctx) return;
 
@@ -183,14 +178,7 @@ export default function Statistics() {
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "80vh",
-        }}
-      >
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: "80vh" }}>
         <CircularProgress />
       </Box>
     );
@@ -256,13 +244,51 @@ export default function Statistics() {
   ];
 
   return (
-    <Box
-      sx={{
-        p: 4,
-        background: theme.palette.background.default,
-        minHeight: "100vh",
+    <Box sx={{ p: 4, background: theme.palette.background.default, minHeight: "100vh" }}>
+<Box sx={{ display: 'flex', gap: 2, mb: 4, maxWidth: 400 }}>
+  <LocalizationProvider dateAdapter={AdapterDayjs}>
+    <DatePicker
+      label="Từ ngày"
+      value={dateRange[0]}
+      onChange={(newValue) => {
+        if (newValue && dateRange[1] && newValue.isAfter(dateRange[1])) {
+          // Nếu chọn "Từ ngày" lớn hơn "Đến ngày", reset "Đến ngày"
+          setDateRange([newValue, null]);
+        } else {
+          setDateRange([newValue, dateRange[1]]);
+        }
       }}
-    >
+      format="DD/MM/YYYY"
+      maxDate={dateRange[1] ?? undefined}
+      slotProps={{
+        textField: {
+          size: 'small',
+          sx: { width: '45%', "& .MuiInputBase-root": { height: "40px" } }
+        }
+      }}
+    />
+    <DatePicker
+      label="Đến ngày"
+      value={dateRange[1]}
+      onChange={(newValue) => {
+        if (newValue && dateRange[0] && newValue.isBefore(dateRange[0])) {
+          // Nếu chọn "Đến ngày" nhỏ hơn "Từ ngày", không cho phép
+          return;
+        }
+        setDateRange([dateRange[0], newValue]);
+      }}
+      format="DD/MM/YYYY"
+      minDate={dateRange[0] ?? undefined}
+      slotProps={{
+        textField: {
+          size: 'small',
+          sx: { width: '45%', "& .MuiInputBase-root": { height: "40px" } }
+        }
+      }}
+    />
+  </LocalizationProvider>
+</Box>
+
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 4 }}>
         {kpis.map((kpi, idx) => (
           <Paper
@@ -277,78 +303,39 @@ export default function Statistics() {
               color: "#fff",
             }}
           >
-            <Box
-              sx={{
-                width: 48,
-                height: 48,
-                bgcolor: `${kpi.color}65`,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                mb: 1,
-              }}
-            >
+            <Box sx={{
+              width: 48,
+              height: 48,
+              bgcolor: `${kpi.color}65`,
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              mb: 1,
+            }}>
               {kpi.icon}
             </Box>
-            <Typography variant="subtitle2" sx={{ opacity: 0.95 }}>
-              {kpi.title}
-            </Typography>
-            <Typography variant="h5" fontWeight={700} sx={{ mt: 0.5 }}>
-              {kpi.value}
-            </Typography>
+            <Typography variant="subtitle2" sx={{ opacity: 0.95 }}>{kpi.title}</Typography>
+            <Typography variant="h5" fontWeight={700} sx={{ mt: 0.5 }}>{kpi.value}</Typography>
           </Paper>
         ))}
       </Box>
 
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
-          gap: 2,
-          mb: 4,
-        }}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            p: 1.5,
-            borderRadius: 2,
-            display: "flex",
-            flexDirection: "column",
-            height: 340,
-          }}
-        >
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" }, gap: 2, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 1.5, borderRadius: 2, display: "flex", flexDirection: "column", height: 340 }}>
           <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
             <ShowChartIcon color="primary" sx={{ mr: 1 }} />
             <Typography variant="subtitle1">Doanh Thu Theo Ngày</Typography>
           </Box>
-          <Box
-            component="canvas"
-            ref={lineRef}
-            sx={{ flex: 1, minHeight: 240, maxHeight: 240 }}
-          />
+          <Box component="canvas" ref={lineRef} sx={{ flex: 1, minHeight: 240, maxHeight: 240 }} />
         </Paper>
 
-        <Paper
-          elevation={3}
-          sx={{
-            p: 1.5,
-            borderRadius: 2,
-            display: "flex",
-            flexDirection: "column",
-            height: 340,
-          }}
-        >
+        <Paper elevation={3} sx={{ p: 1.5, borderRadius: 2, display: "flex", flexDirection: "column", height: 340 }}>
           <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
             <BarChartIcon color="primary" sx={{ mr: 1 }} />
             <Typography variant="subtitle1">Booking Theo Tháng</Typography>
           </Box>
-          <Box
-            component="canvas"
-            ref={barRef}
-            sx={{ flex: 1, minHeight: 240, maxHeight: 240 }}
-          />
+          <Box component="canvas" ref={barRef} sx={{ flex: 1, minHeight: 240, maxHeight: 240 }} />
         </Paper>
       </Box>
 
@@ -366,20 +353,16 @@ export default function Statistics() {
               overflow: "hidden",
             }}
           >
-            <Box
-              sx={{
-                bgcolor: theme.palette.action.hover,
-                px: 2,
-                py: 1.5,
-                display: "flex",
-                alignItems: "center",
-                borderBottom: `1px solid ${theme.palette.divider}`,
-              }}
-            >
+            <Box sx={{
+              bgcolor: theme.palette.action.hover,
+              px: 2,
+              py: 1.5,
+              display: "flex",
+              alignItems: "center",
+              borderBottom: `1px solid ${theme.palette.divider}`,
+            }}>
               {tbl.icon}
-              <Typography variant="subtitle2" sx={{ ml: 1, fontWeight: 600 }}>
-                {tbl.title}
-              </Typography>
+              <Typography variant="subtitle2" sx={{ ml: 1, fontWeight: 600 }}>{tbl.title}</Typography>
             </Box>
 
             <TableContainer sx={{ maxHeight: 48 * 4, overflowY: "auto" }}>

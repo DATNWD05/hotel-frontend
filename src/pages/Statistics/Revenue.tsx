@@ -14,8 +14,11 @@ import {
   Pagination,
   InputAdornment,
 } from "@mui/material";
-import api from "../../api/axios";
 import { Search } from "lucide-react";
+import api from "../../api/axios";
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { Dayjs } from "dayjs";
 import "../../css/Revenue.css";
 
 interface RevenueItem {
@@ -45,11 +48,18 @@ export default function Revenue() {
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [fromDate, setFromDate] = useState<Dayjs | null>(null);
+  const [toDate, setToDate] = useState<Dayjs | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/statistics/revenue-table?page=${page}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const params: any = { page };
+      if (fromDate) params.from_date = fromDate.format("YYYY-MM-DD");
+      if (toDate) params.to_date = toDate.format("YYYY-MM-DD");
+
+      const res = await api.get(`/statistics/revenue-table`, { params });
       setData(res.data.data);
       setFiltered(res.data.data);
       setTotalPage(res.data.pagination.last_page);
@@ -63,7 +73,7 @@ export default function Revenue() {
 
   useEffect(() => {
     fetchData();
-  }, [page]);
+  }, [page, fromDate, toDate]);
 
   useEffect(() => {
     if (!search) {
@@ -83,14 +93,7 @@ export default function Revenue() {
 
   return (
     <Box sx={{ p: 4 }}>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          mb: 3,
-        }}
-      >
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: 'wrap', gap: 2, mb: 3 }}>
         <Box>
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Doanh thu &gt; Bảng tổng hợp
@@ -100,39 +103,69 @@ export default function Revenue() {
           </Typography>
         </Box>
 
-        <TextField
-          placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng)"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          size="small"
-          sx={{
-            width: 300,
-            backgroundColor: "white",
-            borderRadius: "10px",
-            "& .MuiOutlinedInput-root": {
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker
+              label="Từ ngày"
+              value={fromDate}
+              onChange={(newValue) => {
+                setFromDate(newValue);
+                setPage(1);
+              }}
+              maxDate={toDate ?? undefined}
+              format="DD/MM/YYYY"
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  sx: { width: '135px', "& .MuiInputBase-root": { height: "40px" } }
+                }
+              }}
+            />
+            <DatePicker
+              label="Đến ngày"
+              value={toDate}
+              onChange={(newValue) => {
+                setToDate(newValue);
+                setPage(1);
+              }}
+              minDate={fromDate ?? undefined}
+              format="DD/MM/YYYY"
+              slotProps={{
+                textField: {
+                  size: 'small',
+                  sx: { width: '135px', "& .MuiInputBase-root": { height: "40px" } }
+                }
+              }}
+            />
+          </LocalizationProvider>
+
+          <TextField
+            placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            size="small"
+            sx={{
+              width: 280,
+              backgroundColor: "white",
               borderRadius: "10px",
-            },
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search size={20} />
-              </InputAdornment>
-            ),
-          }}
-        />
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "10px",
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={20} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
       </Box>
 
       <Paper sx={{ p: 2, borderRadius: 3, boxShadow: 3 }}>
         {loading ? (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: 200,
-            }}
-          >
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: 200 }}>
             <CircularProgress />
           </Box>
         ) : (
@@ -147,15 +180,9 @@ export default function Revenue() {
                     <TableCell sx={{ fontWeight: 600 }}>Phòng</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Nhận</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Trả</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">
-                      Tổng
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">
-                      Đặt cọc
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">
-                      Còn lại
-                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="right">Tổng</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="right">Đặt cọc</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="right">Còn lại</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Trạng thái</TableCell>
                   </TableRow>
                 </TableHead>
@@ -168,19 +195,9 @@ export default function Revenue() {
                       <TableCell>{row.room_number}</TableCell>
                       <TableCell>{row.check_in_date}</TableCell>
                       <TableCell>{row.check_out_date}</TableCell>
-                      <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(row.total_amount)} ₫
-                      </TableCell>
-                      <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(row.deposit_amount)}{" "}
-                        ₫
-                      </TableCell>
-                      <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(
-                          row.remaining_amount
-                        )}{" "}
-                        ₫
-                      </TableCell>
+                      <TableCell align="right">{row.total_amount.toLocaleString()} ₫</TableCell>
+                      <TableCell align="right">{row.deposit_amount.toLocaleString()} ₫</TableCell>
+                      <TableCell align="right">{row.remaining_amount.toLocaleString()} ₫</TableCell>
                       <TableCell>{row.status}</TableCell>
                     </TableRow>
                   ))}
@@ -220,10 +237,9 @@ export default function Revenue() {
                     color: "#fff",
                     fontWeight: "bold",
                   },
-                  "& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast":
-                    {
-                      color: "#999",
-                    },
+                  "& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast": {
+                    color: "#999",
+                  },
                 }}
               />
             </Box>

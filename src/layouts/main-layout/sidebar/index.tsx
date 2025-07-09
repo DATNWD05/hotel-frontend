@@ -1,5 +1,4 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import DrawerItems from './DrawerItems';
@@ -18,7 +17,6 @@ export default function Sidebar({
   setMobileOpen,
   collapsed,
 }: SidebarProps) {
-  const location = useLocation();
 
   const handleDrawerClose = () => {
     setMobileOpen(false);
@@ -52,7 +50,7 @@ export default function Sidebar({
           },
         }}
       >
-        <DrawerItems currentPath={location.pathname} collapsed={false} />
+        <DrawerItems collapsed={false} />
       </Drawer>
 
       {/* Desktop drawer */}
@@ -73,7 +71,7 @@ export default function Sidebar({
           },
         }}
       >
-        <DrawerItems currentPath={location.pathname} collapsed={collapsed} />
+        <DrawerItems collapsed={collapsed} />
       </Drawer>
     </Box>
   );

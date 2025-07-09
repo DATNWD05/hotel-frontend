@@ -6,7 +6,6 @@ import AddUser from "./pages/User/AddUser";
 import Dashboard from "./pages/OrderRoom/OrderRoom";
 import AddPromotion from "./pages/Promotion/AddPromotion";
 import Promotions from "./pages/Promotion/Promotions";
-import RoleBasedRoute from "./routes/helpers/RoleBasedRoute";
 import Unauthorized from "./pages/Unauthorized";
 import ProtectedRoute from "./routes/helpers/ProtectedRoute";
 import Role from "./pages/Role/Role";
@@ -31,6 +30,7 @@ import AddDepartment from "./pages/Departments/DepartmentAdd";
 import HiddenRoom from "./pages/Room/HiddenRoom";
 import BookingService from "./pages/Statistics/BookingService";
 import Revenue from "./pages/Statistics/Revenue";
+import AccountProfile from "./pages/User/AccountProfile";
 
 function App() {
   return (
@@ -38,54 +38,51 @@ function App() {
       {/* Main */}
       <Route path="/" element={<MainLayout />}>
         <Route index element={<Dashboard />} />
-        
-        <Route path="user" element={<ProtectedRoute><RoleBasedRoute allowedRoleIds={[1]}><User /></RoleBasedRoute></ProtectedRoute>}/>
 
-        <Route path="user/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddUser /></RoleBasedRoute>} />
+        {/* Các route luôn hiển thị cho người đã đăng nhập */}
+        <Route path="account" element={<ProtectedRoute><AccountProfile /></ProtectedRoute>} />
+        <Route path="listbookings" element={<ProtectedRoute><ListBookings /></ProtectedRoute>} />
+        <Route path="listbookings/add" element={<ProtectedRoute><AddBookings /></ProtectedRoute>} />
+        <Route path="listbookings/detail/:id" element={<ProtectedRoute><DetailBookings /></ProtectedRoute>} />
 
-        <Route path="/listbookings" element={<RoleBasedRoute allowedRoleIds={[1]}><ListBookings /></RoleBasedRoute>} />
-        <Route path="/listbookings/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddBookings /></RoleBasedRoute>} />
-        <Route path="/listbookings/detail/:id" element={<RoleBasedRoute allowedRoleIds={[1]}><DetailBookings /></RoleBasedRoute>} />
+        {/* Các route chỉ cho phép role admin */}
+        <Route path="user" element={<ProtectedRoute allowedRoles={[1]}><User /></ProtectedRoute>} />
+        <Route path="user/add" element={<ProtectedRoute allowedRoles={[1]}><AddUser /></ProtectedRoute>} />
 
-        <Route path="/statistics" element={<RoleBasedRoute allowedRoleIds={[1]}><Statistics /></RoleBasedRoute>} />
-        <Route path="/statistics-services" element={<RoleBasedRoute allowedRoleIds={[1]}><BookingService  /></RoleBasedRoute>} />
-        <Route path="/statistics-revenues" element={<RoleBasedRoute allowedRoleIds={[1]}><Revenue  /></RoleBasedRoute>} />
+        <Route path="customer" element={<ProtectedRoute allowedRoles={[1]}><Customer /></ProtectedRoute>} />
 
-        <Route path="/hiddenrooms" element={<RoleBasedRoute allowedRoleIds={[1]}><HiddenRoom /></RoleBasedRoute>} />
+        <Route path="promotions" element={<ProtectedRoute allowedRoles={[1]}><Promotions /></ProtectedRoute>} />
+        <Route path="promotions/add" element={<ProtectedRoute allowedRoles={[1]}><AddPromotion /></ProtectedRoute>} />
 
+        <Route path="role" element={<ProtectedRoute allowedRoles={[1]}><Role /></ProtectedRoute>} />
+        <Route path="role/add" element={<ProtectedRoute allowedRoles={[1]}><AddRole /></ProtectedRoute>} />
 
+        <Route path="service" element={<ProtectedRoute allowedRoles={[1]}><Service /></ProtectedRoute>} />
+        <Route path="service/add" element={<ProtectedRoute allowedRoles={[1]}><CreateService /></ProtectedRoute>} />
+        <Route path="service-categories" element={<ProtectedRoute allowedRoles={[1]}><ServiceCategoryList /></ProtectedRoute>} />
+        <Route path="service-categories/add" element={<ProtectedRoute allowedRoles={[1]}><AddServiceCategory /></ProtectedRoute>} />
 
-        <Route path="customer" element={<RoleBasedRoute allowedRoleIds={[1]}><Customer /></RoleBasedRoute>} />
+        <Route path="room-types" element={<ProtectedRoute allowedRoles={[1]}><RoomTypesList /></ProtectedRoute>} />
+        <Route path="room-types/add" element={<ProtectedRoute allowedRoles={[1]}><AddRoomType /></ProtectedRoute>} />
 
-        <Route path="/promotions" element={<RoleBasedRoute allowedRoleIds={[1]}><Promotions /></RoleBasedRoute>} />
-        <Route path="promotions/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddPromotion /></RoleBasedRoute>} />
+        <Route path="amenities" element={<ProtectedRoute allowedRoles={[1]}><Amenities /></ProtectedRoute>} />
+        <Route path="amenities/add" element={<ProtectedRoute allowedRoles={[1]}><AmenitiesAdd /></ProtectedRoute>} />
 
-        <Route path="/role" element={<RoleBasedRoute allowedRoleIds={[1]}><Role /></RoleBasedRoute>} />
-        <Route path="role/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRole /></RoleBasedRoute>} />
+        <Route path="amenity-categories" element={<ProtectedRoute allowedRoles={[1]}><AmenitiesCategoryList /></ProtectedRoute>} />
+        <Route path="amenity-categories/add" element={<ProtectedRoute allowedRoles={[1]}><AddAmenityCategory /></ProtectedRoute>} />
 
-        <Route path="/service" element={<RoleBasedRoute allowedRoleIds={[1]}><Service /></RoleBasedRoute>} />
-        <Route path="service/add" element={<RoleBasedRoute allowedRoleIds={[1]}><CreateService /></RoleBasedRoute>} />
-        <Route path="/service-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><ServiceCategoryList /></RoleBasedRoute>} />
-        <Route path="service-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddServiceCategory /></RoleBasedRoute>} />
+        <Route path="departments" element={<ProtectedRoute allowedRoles={[1]}><Departments /></ProtectedRoute>} />
+        <Route path="departments/add" element={<ProtectedRoute allowedRoles={[1]}><AddDepartment /></ProtectedRoute>} />
 
-        <Route path="/room-types" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomTypesList /></RoleBasedRoute>} />
-        <Route path="/room-types/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRoomType /></RoleBasedRoute>} />
+        <Route path="statistics" element={<ProtectedRoute allowedRoles={[1]}><Statistics /></ProtectedRoute>} />
+        <Route path="statistics-services" element={<ProtectedRoute allowedRoles={[1]}><BookingService /></ProtectedRoute>} />
+        <Route path="statistics-revenues" element={<ProtectedRoute allowedRoles={[1]}><Revenue /></ProtectedRoute>} />
 
-        <Route path="/amenities" element={<RoleBasedRoute allowedRoleIds={[1]}><Amenities /></RoleBasedRoute>} />
-        <Route path="/amenities/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AmenitiesAdd /></RoleBasedRoute>} />
-
-        <Route path="/amenity-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><AmenitiesCategoryList /></RoleBasedRoute>} />
-        <Route path="/amenity-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddAmenityCategory /></RoleBasedRoute>} />
-
-        <Route path="/departments" element={<RoleBasedRoute allowedRoleIds={[1]}><Departments /></RoleBasedRoute>} />
-        <Route path="/departments/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddDepartment /></RoleBasedRoute>} />
-
-        
-        {/* Add more routes as needed */}
+        <Route path="hiddenrooms" element={<ProtectedRoute allowedRoles={[1]}><HiddenRoom /></ProtectedRoute>} />
       </Route>
 
       {/* Auth */}
-        <Route path="login" element={<Login />} />
+      <Route path="/login" element={<Login />} />
 
       {/* Unauthorized */}
       <Route path="/unauthorized" element={<Unauthorized />} />
