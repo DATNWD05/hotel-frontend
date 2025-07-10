@@ -24,7 +24,6 @@ const ProtectedComponent: React.FC<ProtectedComponentProps> = ({ children, permi
   if (permission && !hasPermission(permission)) {
     console.log(`User lacks permission: ${permission}, available permissions: ${JSON.stringify(user?.permissions || [])}`);
     toast.error(`Không có quyền truy cập: ${permission}`);
-    return <Navigate to="/unauthorized" replace />;
   }
 
   return <>{children}</>;

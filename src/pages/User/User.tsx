@@ -70,7 +70,7 @@ const User: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const navigate = useNavigate();
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth(); // Chỉ cần user, không cần hasPermission ở đây
 
   const PER_PAGE = 10;
 
@@ -78,10 +78,6 @@ const User: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      if (!user || !hasPermission('view_users')) {
-        throw new Error('Bạn không có quyền xem người dùng');
-      }
-
       const response = await api.get<PaginatedResponse>('/users', {
         params: { page, per_page: PER_PAGE },
       });
@@ -91,14 +87,11 @@ const User: React.FC = () => {
       setLastPage(response.data.last_page);
       setCurrentPage(response.data.current_page);
     } catch (error: any) {
-      const errorMessage =
-        error.response?.status === 403
-          ? 'Bạn không có quyền xem người dùng'
-          : `Lỗi tải danh sách người dùng: ${error.response?.data?.message || error.message}`;
+      const errorMessage = `Lỗi tải danh sách người dùng: ${error.response?.data?.message || error.message}`;
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
-      navigate('/unauthorized');
+      // Không chuyển hướng /unauthorized ở đây, để ProtectedRoute xử lý
     } finally {
       setLoading(false);
     }
@@ -106,7 +99,7 @@ const User: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [user, hasPermission, navigate]);
+  }, [navigate]); // Loại bỏ user và hasPermission khỏi dependency
 
   useEffect(() => {
     const filtered: User[] = users.filter(
@@ -176,10 +169,6 @@ const User: React.FC = () => {
 
     setEditLoading(true);
     try {
-      if (!hasPermission('edit_users')) {
-        throw new Error('Bạn không có quyền chỉnh sửa người dùng');
-      }
-
       const response = await api.put(`/users/${editFormData.id}`, {
         name: editFormData.name,
         email: editFormData.email,
@@ -202,10 +191,7 @@ const User: React.FC = () => {
         throw new Error('Không thể cập nhật người dùng');
       }
     } catch (error: any) {
-      const errorMessage =
-        error.response?.status === 403
-          ? 'Bạn không có quyền chỉnh sửa người dùng'
-          : `Không thể cập nhật người dùng: ${error.response?.data?.message || error.message}`;
+      const errorMessage = `Không thể cập nhật người dùng: ${error.response?.data?.message || error.message}`;
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
     } finally {
@@ -220,11 +206,6 @@ const User: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!hasPermission('delete_users')) {
-      setSnackbarMessage('Bạn không có quyền xóa người dùng');
-      setSnackbarOpen(true);
-      return;
-    }
     try {
       await api.delete(`/users/${id}`);
       setUsers(users.filter((user) => user.id !== id));
@@ -236,10 +217,7 @@ const User: React.FC = () => {
         fetchUsers(currentPage - 1);
       }
     } catch (error: any) {
-      const errorMessage =
-        error.response?.status === 403
-          ? 'Bạn không có quyền xóa người dùng!'
-          : `Lỗi khi xóa người dùng: ${error.response?.data?.message || error.message}`;
+      const errorMessage = `Lỗi khi xóa người dùng: ${error.response?.data?.message || error.message}`;
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
     }

@@ -30,7 +30,7 @@ api.interceptors.response.use(
     if (status === 401) {
       toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
     } else if (status === 403) {
-      toast.warn('Bạn không có quyền truy cập chức năng này.');
+      // toast.warn('Bạn không có quyền truy cập chức năng này.');
     } else if (status >= 500) {
       toast.error('Lỗi server. Vui lòng thử lại sau.');
     }

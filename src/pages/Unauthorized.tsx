@@ -1,20 +1,30 @@
 import React from 'react';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 const Unauthorized: React.FC = () => {
   const navigate = useNavigate();
 
+  const handleRetry = () => {
+    // Thử lại: refresh trang hiện tại hoặc quay về trang trước
+    navigate(-1);
+  };
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 8 }}>
-      <Typography variant="h4" color="error" gutterBottom>
-        Không có quyền truy cập
+    <Box
+      sx={{
+        height: '80vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Typography variant="h6" color="error" gutterBottom>
+        Request failed with status code 403
       </Typography>
-      <Typography variant="body1" gutterBottom>
-        Bạn không có quyền truy cập vào trang này. Vui lòng liên hệ quản trị viên.
-      </Typography>
-      <Button variant="contained" onClick={() => navigate('/')}>
-        Quay về trang chủ
+      <Button variant="contained" onClick={handleRetry}>
+        Thử lại
       </Button>
     </Box>
   );

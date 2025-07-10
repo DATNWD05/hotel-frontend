@@ -32,13 +32,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (token && userData) {
       try {
-        const parsedUser = JSON.parse(userData);
-        if (!parsedUser.role_id) throw new Error('Thiếu role_id');
-
+        const parsedUser: User = JSON.parse(userData);
         setUser(parsedUser);
         setIsAuthenticated(true);
-
-        if (!parsedUser.permissions?.length) {
+        // Nếu role_id === 1 (Owner), gán toàn quyền
+        if (parsedUser.role_id === 1) {
+          const superUser = { ...parsedUser, permissions: ['*'] };
+          setUser(superUser);
+          localStorage.setItem('auth_user', JSON.stringify(superUser));
+        } else if (!parsedUser.permissions?.length) {
+          // Với các role khác, fetch permission
           fetchPermissions(parsedUser.role_id);
         }
       } catch (err) {
@@ -53,42 +56,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await api.get(`/roles/${roleId}`);
       const permissions = response.data.role?.permissions?.map((p: any) => p.name) || [];
-
-      const updatedUser = { ...user, permissions } as User;
-      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
+      const updated = { ...(user as User), permissions };
+      setUser(updated);
+      localStorage.setItem('auth_user', JSON.stringify(updated));
     } catch (err: any) {
       console.error('Lỗi khi lấy quyền:', err);
       toast.warn('Không thể lấy quyền, sử dụng mặc định');
-      const updatedUser = { ...user, permissions: [] } as User;
-      localStorage.setItem('auth_user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
+      const updated = { ...(user as User), permissions: [] };
+      setUser(updated);
+      localStorage.setItem('auth_user', JSON.stringify(updated));
     }
   };
 
   const login = async (token: string, userData: User) => {
     try {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
-
-      // ✅ Lưu token TRƯỚC khi gọi API fetch permission
+      // Lưu token
       localStorage.setItem('auth_token', token);
-
+      // Khởi tạo user với permissions rỗng
       const initialUser = { ...userData, permissions: [] };
-      localStorage.setItem('auth_user', JSON.stringify(initialUser));
       setUser(initialUser);
       setIsAuthenticated(true);
+      localStorage.setItem('auth_user', JSON.stringify(initialUser));
 
-      await fetchPermissions(userData.role_id);
+      // Nếu Owner
+      if (userData.role_id === 1) {
+        const superUser = { ...initialUser, permissions: ['*'] };
+        setUser(superUser);
+        localStorage.setItem('auth_user', JSON.stringify(superUser));
+      } else {
+        await fetchPermissions(userData.role_id);
+      }
 
       toast.success('Đăng nhập thành công!');
       navigate('/dashboard');
     } catch (err: any) {
-      console.error('Lỗi đăng nhập:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-      });
+      console.error('Lỗi đăng nhập:', err);
       toast.error('Đăng nhập thất bại: ' + (err.response?.data?.message || err.message));
       logout();
     }
@@ -103,9 +105,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasPermission = (permission: string) => {
-    if (!user || !Array.isArray(user.permissions)) {
-      return false;
-    }
+    if (!user) return false;
+    // Owner với '*' luôn có quyền
+    if (user.permissions.includes('*')) return true;
     return user.permissions.includes(permission);
   };
 
@@ -118,8 +120,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth phải được dùng trong AuthProvider');
-  }
+  if (!context) throw new Error('useAuth phải được dùng trong AuthProvider');
   return context;
 };
