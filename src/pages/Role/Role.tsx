@@ -1,206 +1,214 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from 'react';
 import {
+  Box,
+  Button,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  Typography,
+  CircularProgress,
   Paper,
   IconButton,
-  CircularProgress,
-  Typography,
-  Collapse,
   TextField,
-  Box,
-  Button,
-  Snackbar,
-  Alert,
+  InputAdornment,
   Card,
   CardContent,
-  InputAdornment,
-} from "@mui/material";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { SearchIcon } from "lucide-react";
-import { Link } from "react-router-dom";
-import "../../css/Role.css";
-import api from "../../api/axios";
+  Menu,
+  MenuItem,
+  Chip,
+  Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
+  Alert,
+} from '@mui/material';
+import { Search as SearchIcon } from 'lucide-react';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import api from '../../api/axios';
+import { AxiosError } from 'axios';
+import '../../css/Amenities.css'; // Reuse the same CSS file for consistent styling
 
 interface Role {
   id: number;
   name: string;
-  description: string;
+  description: string | null;
 }
 
-interface ValidationErrors {
-  name?: string;
-  description?: string;
+interface ApiResponse {
+  roles: Role[];
+  meta?: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
 }
 
 const Role: React.FC = () => {
+  const { hasPermission, user } = useAuth();
   const [roles, setRoles] = useState<Role[]>([]);
   const [allRoles, setAllRoles] = useState<Role[]>([]);
-  const [filteredRoles, setFilteredRoles] = useState<Role[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  const [editRoleId, setEditRoleId] = useState<number | null>(null);
-  const [editFormData, setEditFormData] = useState<Role | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
+  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
+  const [roleToDelete, setRoleToDelete] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [lastPage, setLastPage] = useState<number>(1);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const PER_PAGE = 10;
 
-  const fetchRoles = async () => {
+  useEffect(() => {
+    document.title = 'Danh sách Vai Trò';
+    console.log('Role component - User:', user, 'Permissions:', user?.permissions);
+    if (hasPermission('view_roles')) {
+      fetchRoles(1);
+    } else {
+      setError('Bạn không có quyền xem danh sách vai trò');
+      setLoading(false);
+      setSnackbarMessage('Bạn không có quyền xem danh sách vai trò');
+      setSnackbarOpen(true);
+    }
+  }, [hasPermission, user, location]);
+
+  const fetchRoles = async (page: number = 1) => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get("/role");
-      const body = res.data;
-
-      if (!Array.isArray(body.roles)) {
-        throw new Error("Dữ liệu không hợp lệ");
+      console.log('Fetching roles from /api/roles');
+      const response = await api.get<ApiResponse>(`/roles?page=${page}&per_page=${PER_PAGE}`);
+      const fetchedRoles = response.data.roles || [];
+      if (!Array.isArray(fetchedRoles)) {
+        throw new Error('Dữ liệu vai trò không đúng định dạng');
       }
-
-      const sanitizedData = body.roles.map((item: Role) => ({
-        ...item,
-        id: Number(item.id) || 0,
-        name: item.name || "Không xác định",
-        description: item.description || "",
-      }));
-
-      setAllRoles(sanitizedData);
-      setRoles(sanitizedData);
-    } catch (err) {
-      console.error("Lỗi khi fetch roles:", err);
-      setError("Không thể tải danh sách vai trò.");
+      // Deduplicate roles by id using Array.from
+      const uniqueRoles = Array.from(
+        new Map(fetchedRoles.map((role: Role) => [role.id, role])).values()
+      );
+      // Reset allRoles for the first page; otherwise, merge and deduplicate
+      if (page === 1) {
+        setAllRoles(uniqueRoles);
+      } else {
+        setAllRoles((prev) => {
+          const combined = [...prev, ...uniqueRoles];
+          return Array.from(new Map(combined.map((role: Role) => [role.id, role])).values());
+        });
+      }
+      setRoles(uniqueRoles);
+      setLastPage(response.data.meta?.last_page || Math.ceil(uniqueRoles.length / PER_PAGE));
+      setCurrentPage(page);
+      if (fetchedRoles.length === 0) {
+        setError('Không có vai trò nào được tìm thấy');
+      }
+    } catch (err: unknown) {
+      const error = err as AxiosError<{ message?: string }>;
+      console.error('Error fetching roles:', error);
+      const errorMessage = error.response?.data?.message || 'Không thể tải danh sách vai trò';
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRoles();
-  }, []);
-
-  useEffect(() => {
-    const filtered = allRoles.filter((r) =>
-      r.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = allRoles.filter((role) =>
+      searchQuery.trim() === '' ||
+      role.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    setFilteredRoles(filtered);
-    setRoles(filtered);
-  }, [searchQuery, allRoles]);
-
-  const validate = (data: Role): ValidationErrors => {
-    const errs: ValidationErrors = {};
-    if (!data.name.trim()) errs.name = "Tên vai trò không được để trống";
-    else if (data.name.length > 30) errs.name = "Tối đa 30 ký tự";
-    if (data.description && data.description.length > 255)
-      errs.description = "Tối đa 255 ký tự";
-    return errs;
-  };
-
-  const handleEdit = (role: Role) => {
-    setSelectedRoleId(role.id);
-    setEditRoleId(role.id);
-    setEditFormData({ ...role });
-    setValidationErrors({});
-    setEditError(null);
-  };
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    if (!editFormData) return;
-    const updated = { ...editFormData, [name]: value };
-    setEditFormData(updated);
-    setValidationErrors(validate(updated));
-  };
-
-  const handleSave = async () => {
-    if (!editFormData) return;
-    const errs = validate(editFormData);
-    if (Object.keys(errs).length) {
-      setValidationErrors(errs);
-      return;
+    if (activeFilters.length > 0 && !activeFilters.includes('all')) {
+      // Add filter logic if roles have a status field
+      // Example: filtered = filtered.filter((role) => activeFilters.includes(role.status));
     }
-
-    setEditLoading(true);
-    try {
-      await api.put(`/role/${editFormData.id}`, editFormData);
-      setSnackbarMessage("Cập nhật vai trò thành công!");
-      await fetchRoles();
-      setEditRoleId(null);
-      setEditFormData(null);
-    } catch {
-      setEditError("Không thể cập nhật vai trò");
-      setSnackbarMessage("Lỗi khi cập nhật vai trò");
-    } finally {
-      setSnackbarOpen(true);
-      setEditLoading(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setEditRoleId(null);
-    setEditFormData(null);
-    setValidationErrors({});
-    setEditError(null);
-  };
+    setRoles(filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE));
+    setLastPage(Math.ceil(filtered.length / PER_PAGE));
+  }, [searchQuery, activeFilters, currentPage, allRoles]);
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Bạn có chắc muốn xóa vai trò này?")) {
-      try {
-        await api.delete(`/role/${id}`);
-        setSnackbarMessage("Xóa vai trò thành công!");
-        await fetchRoles();
-      } catch {
-        setSnackbarMessage("Lỗi khi xóa vai trò");
-      } finally {
-        setSnackbarOpen(true);
-      }
+    if (!hasPermission('delete_roles')) {
+      setSnackbarMessage('Bạn không có quyền xóa vai trò');
+      setSnackbarOpen(true);
+      return;
+    }
+    setRoleToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!roleToDelete) return;
+    try {
+      await api.delete(`/roles/${roleToDelete}`);
+      setAllRoles((prev) => prev.filter((role) => role.id !== roleToDelete));
+      fetchRoles(currentPage);
+      setSnackbarMessage('Xóa vai trò thành công!');
+      setSnackbarOpen(true);
+    } catch (err: unknown) {
+      const error = err as AxiosError<{ message?: string }>;
+      console.error('Error deleting role:', error);
+      const errorMessage = error.response?.data?.message || 'Không thể xóa vai trò';
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+    } finally {
+      setDeleteDialogOpen(false);
+      setRoleToDelete(null);
     }
   };
 
-  const handleViewDetails = (id: number) => {
-    if (selectedRoleId === id && editRoleId !== id) setSelectedRoleId(null);
-    else {
-      setSelectedRoleId(id);
-      setEditRoleId(null);
-      setEditFormData(null);
-      setValidationErrors({});
-    }
+  const handlePageChange = (event: React.ChangeEvent<unknown>, newPage: number) => {
+    setCurrentPage(newPage);
+    fetchRoles(newPage);
+  };
+
+  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
+    setFilterAnchorEl(event.currentTarget);
+  };
+
+  const handleFilterClose = () => {
+    setFilterAnchorEl(null);
+  };
+
+  const handleFilterSelect = (filter: string) => {
+    setActiveFilters((prev) => {
+      if (prev.includes(filter)) {
+        return prev.filter((f) => f !== filter);
+      } else {
+        return [...prev, filter].filter((f) => f !== 'all');
+      }
+    });
+    handleFilterClose();
   };
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
-    setSnackbarMessage("");
+    setSnackbarMessage('');
   };
 
   return (
-    <div className="role-wrapper">
-      <div className="role-title">
-        <Typography variant="body2" sx={{ color: "gray", mb: 1 }}>
-          Vai Trò {">"} Danh sách
+    <div className="promotions-wrapper">
+      <div className="promotions-title">
+        <Typography variant="body2" sx={{ color: 'gray', mb: 1 }}>
+          Quản lý {'>'} Danh sách Vai Trò
         </Typography>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          flexWrap="wrap"
-          mb={2}
-        >
-          <Typography variant="h2" className="section-title" fontWeight={700}>
+        <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" mb={2}>
+          <Typography variant="h2" fontWeight={700}>
             Vai Trò
           </Typography>
-          <Box display="flex" gap={2} alignItems="center">
+          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
             <TextField
               variant="outlined"
               placeholder="Tìm kiếm vai trò"
@@ -213,332 +221,265 @@ const Role: React.FC = () => {
                 ),
               }}
               sx={{
-                width: 300,
-                bgcolor: "#fff",
-                borderRadius: "8px",
-                mt: { xs: 2, sm: 0 },
-                "& input": {
-                  fontSize: "15px",
-                },
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: "#ccc",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "#888",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#1976d2",
-                    borderWidth: "2px",
-                  },
-                },
-                "& label": {
-                  backgroundColor: "#fff",
-                  padding: "0 4px",
-                },
-                "& label.Mui-focused": {
-                  color: "#1976d2",
-                },
+                width: { xs: '100%', sm: 300 },
+                bgcolor: '#fff',
+                borderRadius: '8px',
+                '& input': { fontSize: '15px' },
               }}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <Link to="/role/add">
+            <IconButton
+              onClick={handleFilterClick}
+              sx={{
+                bgcolor: '#fff',
+                borderRadius: '8px',
+                p: 1,
+                '&:hover': { bgcolor: '#f0f0f0' },
+              }}
+              className="filter-button"
+            >
+              <FilterListIcon />
+            </IconButton>
+            <Menu
+              anchorEl={filterAnchorEl}
+              open={Boolean(filterAnchorEl)}
+              onClose={handleFilterClose}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+              sx={{
+                '& .MuiPaper-root': {
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                },
+              }}
+            >
+              {['all', 'active', 'inactive'].map((filter) => (
+                <MenuItem
+                  key={filter}
+                  onClick={() => handleFilterSelect(filter)}
+                  selected={activeFilters.includes(filter)}
+                  sx={{
+                    '&:hover': { bgcolor: '#f0f0f0' },
+                    '&.Mui-selected': {
+                      bgcolor: '#e0f7fa',
+                      '&:hover': { bgcolor: '#b2ebf2' },
+                    },
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: activeFilters.includes(filter) ? '#00796b' : '#333',
+                    }}
+                  >
+                    {filter === 'all' ? 'Tất cả' : filter === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                  </Typography>
+                </MenuItem>
+              ))}
+            </Menu>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+              {activeFilters.length > 0 && (
+                <Chip
+                  label={`Bộ lọc: ${activeFilters.length} đã chọn`}
+                  onDelete={() => setActiveFilters([])}
+                  onClick={handleFilterClick}
+                  sx={{
+                    bgcolor: '#e0f7fa',
+                    color: '#00796b',
+                    fontWeight: 'bold',
+                    height: '28px',
+                    cursor: 'pointer',
+                    '& .MuiChip-deleteIcon': { color: '#00796b' },
+                  }}
+                />
+              )}
+            </Box>
+            {hasPermission('create_roles') && (
               <Button
                 variant="contained"
-                color="primary"
-                className="role-btn-add"
-                sx={{ height: 35, fontSize: 14 }}
+                onClick={() => navigate('/role/add')}
+                sx={{
+                  backgroundColor: '#4318FF',
+                  color: '#fff',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  borderRadius: '8px',
+                  px: 2.5,
+                  py: 0.7,
+                  boxShadow: '0 2px 6px rgba(106, 27, 154, 0.3)',
+                  '&:hover': {
+                    backgroundColor: '#7B1FA2',
+                    boxShadow: '0 4px 12px rgba(106, 27, 154, 0.4)',
+                  },
+                }}
               >
-                Thêm mới
+                + Thêm mới
               </Button>
-            </Link>
+            )}
           </Box>
         </Box>
       </div>
 
-      <Card elevation={3} sx={{ p: 0, mt: 0 }}>
+      <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: '8px' }}>
         <CardContent sx={{ p: 0 }}>
           {loading ? (
-            <div className="role-loading-container">
+            <Box display="flex" justifyContent="center" alignItems="center" p={2}>
               <CircularProgress />
-              <Typography>Đang tải danh sách vai trò...</Typography>
-            </div>
+              <Typography ml={2}>Đang tải danh sách vai trò...</Typography>
+            </Box>
           ) : error ? (
-            <Typography color="error" className="role-error-message">
+            <Typography color="error" p={2} textAlign="center">
               {error}
             </Typography>
-          ) : filteredRoles.length === 0 ? (
-            <Typography className="role-no-data">
-              {searchQuery
-                ? "Không tìm thấy vai trò phù hợp."
-                : "Không có vai trò nào."}
+          ) : roles.length === 0 ? (
+            <Typography p={2} textAlign="center">
+              {searchQuery || activeFilters.length > 0
+                ? 'Không tìm thấy vai trò phù hợp'
+                : 'Không tìm thấy vai trò nào.'}
             </Typography>
           ) : (
-            <TableContainer component={Paper} className="role-table-container">
-              <Table className="role-table" sx={{ width: "100%" }}>
-                <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
-                  <TableRow>
-                    <TableCell>
-                      <b>Tên Vai Trò</b>
-                    </TableCell>
-                    <TableCell>
-                      <b>Mô Tả</b>
-                    </TableCell>
-                    <TableCell align="center">
-                      <b>Hành động</b>
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {roles.map((role) => (
-                    <React.Fragment key={role.id}>
-                      <TableRow hover>
+            <>
+              <TableContainer component={Paper} sx={{ maxWidth: '100%', overflowX: 'auto' }}>
+                <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
+                  <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
+                    <TableRow>
+                      <TableCell sx={{ minWidth: '100px' }}><b>ID</b></TableCell>
+                      <TableCell sx={{ minWidth: '150px' }}><b>Tên vai trò</b></TableCell>
+                      <TableCell sx={{ minWidth: '200px' }}><b>Mô tả</b></TableCell>
+                      {(hasPermission('edit_roles') || hasPermission('delete_roles')) && (
+                        <TableCell align="center" sx={{ minWidth: '150px' }}><b>Hành động</b></TableCell>
+                      )}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {roles.map((role) => (
+                      <TableRow key={role.id} hover>
+                        <TableCell>{role.id}</TableCell>
                         <TableCell>{role.name}</TableCell>
-                        <TableCell>{role.description || "—"}</TableCell>
-                        <TableCell align="center">
-                          <Box display="flex" justifyContent="center" gap={1}>
-                            <IconButton
-                              title="Xem chi tiết"
-                              sx={{
-                                color: "#1976d2",
-                                bgcolor: "#e3f2fd",
-                                "&:hover": {
-                                  bgcolor: "#bbdefb",
-                                  boxShadow:
-                                    "0 2px 6px rgba(25, 118, 210, 0.4)",
-                                },
-                                transition: "all 0.2s ease-in-out",
-                              }}
-                              onClick={() => handleViewDetails(role.id)}
-                            >
-                              <VisibilityIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              title="Sửa"
-                              sx={{
-                                color: "#f57c00",
-                                bgcolor: "#fff3e0",
-                                "&:hover": {
-                                  bgcolor: "#ffe0b2",
-                                  boxShadow: "0 2px 6px rgba(245, 124, 0, 0.4)",
-                                },
-                                transition: "all 0.2s ease-in-out",
-                              }}
-                              onClick={() => handleEdit(role)}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                            <IconButton
-                              title="Xóa"
-                              sx={{
-                                color: "#d32f2f",
-                                bgcolor: "#ffebee",
-                                "&:hover": {
-                                  bgcolor: "#ffcdd2",
-                                  boxShadow: "0 2px 6px rgba(211, 47, 47, 0.4)",
-                                },
-                                transition: "all 0.2s ease-in-out",
-                              }}
-                              onClick={() => handleDelete(role.id)}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell colSpan={3} style={{ padding: 0 }}>
-                          <Collapse
-                            in={selectedRoleId === role.id}
-                            timeout="auto"
-                            unmountOnExit
-                          >
-                            <Box
-                              sx={{
-                                width: "100%",
-                                bgcolor: "#f9f9f9",
-                                px: 3,
-                                py: 2,
-                                borderTop: "1px solid #ddd",
-                              }}
-                            >
-                              <div className="role-detail-container">
-                                {editRoleId === role.id && editFormData ? (
-                                  <>
-                                    <h3>Thông tin vai trò</h3>
-                                    <Box
-                                      display="flex"
-                                      flexDirection="column"
-                                      gap={2}
-                                    >
-                                      <TextField
-                                        label="Tên vai trò"
-                                        name="name"
-                                        value={editFormData.name}
-                                        onChange={handleChange}
-                                        variant="outlined"
-                                        size="small"
-                                        fullWidth
-                                        error={!!validationErrors.name}
-                                        helperText={validationErrors.name}
-                                        sx={{
-                                          "& .MuiOutlinedInput-root": {
-                                            "& fieldset": {
-                                              borderColor: "#ccc",
-                                            },
-                                            "&:hover fieldset": {
-                                              borderColor: "#888",
-                                            },
-                                            "&.Mui-focused fieldset": {
-                                              borderColor: "#1976d2",
-                                              borderWidth: "2px",
-                                            },
-                                          },
-                                          "& label": {
-                                            backgroundColor: "#fff",
-                                            padding: "0 4px",
-                                          },
-                                          "& label.Mui-focused": {
-                                            color: "#1976d2",
-                                          },
-                                        }}
-                                      />
-                                      <TextField
-                                        label="Mô tả"
-                                        name="description"
-                                        value={editFormData.description}
-                                        onChange={handleChange}
-                                        variant="outlined"
-                                        size="small"
-                                        fullWidth
-                                        multiline
-                                        rows={3}
-                                        error={!!validationErrors.description}
-                                        helperText={
-                                          validationErrors.description
-                                        }
-                                        sx={{
-                                          "& .MuiOutlinedInput-root": {
-                                            "& fieldset": {
-                                              borderColor: "#ccc",
-                                            },
-                                            "&:hover fieldset": {
-                                              borderColor: "#888",
-                                            },
-                                            "&.Mui-focused fieldset": {
-                                              borderColor: "#1976d2",
-                                              borderWidth: "2px",
-                                            },
-                                          },
-                                          "& label": {
-                                            backgroundColor: "#fff",
-                                            padding: "0 4px",
-                                          },
-                                          "& label.Mui-focused": {
-                                            color: "#1976d2",
-                                          },
-                                        }}
-                                      />
-                                    </Box>
-                                    <Box pb={3} mt={2} display="flex" gap={2}>
-                                      <Button
-                                        variant="contained"
-                                        color="primary"
-                                        className="role-btn-save"
-                                        onClick={handleSave}
-                                        disabled={editLoading}
-                                        sx={{
-                                          height: 35,
-                                          width: 60,
-                                          borderRadius: 2,
-                                          fontSize: 14,
-                                          fontWeight: 600,
-                                          textTransform: "none",
-                                          backgroundColor: "#6B48FF", // Custom purple color
-                                          "&:hover": {
-                                            backgroundColor: "#5A3CCC",
-                                          },
-                                        }}
-                                      >
-                                        Lưu
-                                      </Button>
-                                      <Button
-                                        variant="outlined"
-                                        className="role-btn-cancel"
-                                        color="error"
-                                        onClick={handleCancel}
-                                        disabled={editLoading}
-                                        sx={{
-                                          height: 35,
-                                          width: 60,
-                                          borderRadius: 2,
-                                          fontSize: 14,
-                                          fontWeight: 600,
-                                          textTransform: "none",
-                                          color: "#D32F2F", // Red color for text
-                                          borderColor: "#D32F2F",
-                                          "&:hover": {
-                                            borderColor: "#B71C1C",
-                                            color: "#B71C1C",
-                                          },
-                                        }}
-                                      >
-                                        Hủy
-                                      </Button>
-                                    </Box>
-                                    {editError && (
-                                      <Typography color="error" mt={1}>
-                                        {editError}
-                                      </Typography>
-                                    )}
-                                  </>
-                                ) : (
-                                  <>
-                                    <h3>Thông tin vai trò</h3>
-                                    <Table className="role-detail-table">
-                                      <TableBody>
-                                        <TableRow>
-                                          <TableCell>
-                                            <strong>Tên:</strong> {role.name}
-                                          </TableCell>
-                                        </TableRow>
-                                        <TableRow>
-                                          <TableCell>
-                                            <strong>Mô tả:</strong>{" "}
-                                            {role.description || "—"}
-                                          </TableCell>
-                                        </TableRow>
-                                      </TableBody>
-                                    </Table>
-                                  </>
-                                )}
-                              </div>
+                        <TableCell>{role.description || '–'}</TableCell>
+                        {(hasPermission('edit_roles') || hasPermission('delete_roles')) && (
+                          <TableCell align="center">
+                            <Box display="flex" justifyContent="center" gap={1} sx={{ flexWrap: 'wrap' }}>
+                              {hasPermission('edit_roles') && (
+                                <IconButton
+                                  title="Chỉnh sửa vai trò"
+                                  onClick={() => navigate(`/role/edit/${role.id}`)}
+                                  sx={{
+                                    color: '#FACC15',
+                                    bgcolor: '#fef9c3',
+                                    p: '6px',
+                                    '&:hover': {
+                                      bgcolor: '#fff9c4',
+                                      boxShadow: '0 2px 6px rgba(250, 204, 21, 0.4)',
+                                    },
+                                  }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              )}
+                              {hasPermission('delete_roles') && (
+                                <IconButton
+                                  title="Xóa vai trò"
+                                  onClick={() => handleDelete(role.id)}
+                                  sx={{
+                                    color: '#d32f2f',
+                                    bgcolor: '#ffebee',
+                                    p: '6px',
+                                    '&:hover': {
+                                      bgcolor: '#ffcdd2',
+                                      boxShadow: '0 2px 6px rgba(211, 47, 47, 0.4)',
+                                    },
+                                  }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              )}
                             </Box>
-                          </Collapse>
-                        </TableCell>
+                          </TableCell>
+                        )}
                       </TableRow>
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+                <Pagination
+                  count={lastPage}
+                  page={currentPage}
+                  onChange={handlePageChange}
+                  color="primary"
+                  shape="rounded"
+                  showFirstButton
+                  showLastButton
+                  sx={{ '& .MuiPaginationItem-root': { fontSize: '14px' } }}
+                />
+              </Box>
+            </>
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        sx={{
+          '& .MuiDialog-paper': {
+            borderRadius: '8px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Xác nhận xóa vai trò</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc chắn muốn xóa vai trò này không? Hành động này không thể hoàn tác.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            sx={{
+              color: '#d32f2f',
+              borderColor: '#d32f2f',
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.7,
+              '&:hover': { borderColor: '#b71c1c', backgroundColor: '#ffebee' },
+            }}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            variant="contained"
+            sx={{
+              bgcolor: '#d32f2f',
+              '&:hover': { bgcolor: '#b71c1c' },
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.7,
+            }}
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
+          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
+          sx={{ width: '100%' }}
         >
           {snackbarMessage}
         </Alert>

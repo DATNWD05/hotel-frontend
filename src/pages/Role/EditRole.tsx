@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Button, TextField, Typography, CircularProgress, FormControlLabel, Checkbox } from '@mui/material';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/axios';
 import { toast } from 'react-toastify';
 
 interface Role {
+  id: number;
   name: string;
   description: string | null;
-  permissions: number[];
+  permissions: { id: number; name: string }[];
 }
 
 interface Permission {
@@ -30,9 +31,10 @@ interface ApiError {
   };
 }
 
-const AddRole: React.FC = () => {
+const EditRole: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
-  const [role, setRole] = useState<Role>({ name: '', description: '', permissions: [] });
+  const [role, setRole] = useState<Role | null>(null);
   const [allPermissions, setAllPermissions] = useState<Permission[]>([]);
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,17 +42,25 @@ const AddRole: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (hasPermission('create_roles')) {
-      fetchPermissions();
+    if (hasPermission('edit_roles')) {
+      fetchRoleAndPermissions();
     } else {
-      setError('Bạn không có quyền tạo vai trò');
+      setError('Bạn không có quyền chỉnh sửa vai trò');
       setLoading(false);
     }
-  }, [hasPermission]);
+  }, [hasPermission, id]);
 
-  const fetchPermissions = async () => {
+  const fetchRoleAndPermissions = async () => {
     try {
       setLoading(true);
+      const roleResponse = await api.get(`/roles/${id}`);
+      const fetchedRole: Role = roleResponse.data.role || roleResponse.data;
+      if (!fetchedRole) {
+        throw new Error('Không tìm thấy vai trò');
+      }
+      setRole(fetchedRole);
+      setSelectedPermissions(fetchedRole.permissions?.map((p: Permission) => p.id) || []);
+
       const permissionsResponse = await api.get('/permissions');
       const fetchedPermissions: Permission[] = permissionsResponse.data.permissions || permissionsResponse.data || [];
       if (!Array.isArray(fetchedPermissions)) {
@@ -58,7 +68,7 @@ const AddRole: React.FC = () => {
       }
       setAllPermissions(fetchedPermissions);
     } catch (err: unknown) {
-      const errorMessage = (err as ApiError).response?.data?.message || 'Không thể tải danh sách quyền';
+      const errorMessage = (err as ApiError).response?.data?.message || 'Không thể tải vai trò hoặc quyền';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -75,32 +85,64 @@ const AddRole: React.FC = () => {
   };
 
   const handleChange = (field: keyof Role, value: string) => {
-    setRole((prev) => ({ ...prev, [field]: value }));
+    setRole((prev) => (prev ? { ...prev, [field]: value } : null));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!hasPermission('create_roles')) {
-      toast.error('Bạn không có quyền tạo vai trò');
+    if (!hasPermission('edit_roles')) {
+      toast.error('Bạn không có quyền chỉnh sửa vai trò');
       return;
     }
-    if (!role.name) {
-      toast.error('Vui lòng nhập tên vai trò');
+    if (!role) {
+      toast.error('Không có dữ liệu vai trò để cập nhật');
       return;
     }
 
     try {
-      await api.post('/roles', {
+      const roleUpdateResponse = await api.put(`/roles/${id}`, {
         name: role.name,
         description: role.description,
         permissions: selectedPermissions,
       });
 
-      toast.success('Tạo vai trò thành công');
+      const verifyResponse = await api.get(`/roles/${id}`);
+      const updatedRole: Role = verifyResponse.data.role || verifyResponse.data;
+      const updatedPermissions = updatedRole.permissions?.map((p: Permission) => p.id) || [];
+
+      if (JSON.stringify(updatedPermissions.sort()) !== JSON.stringify(selectedPermissions.sort())) {
+        const currentPermissions = role.permissions?.map((p) => p.id) || [];
+        const permissionsToAdd = selectedPermissions.filter((id) => !currentPermissions.includes(id));
+        const permissionsToRemove = currentPermissions.filter((id) => !selectedPermissions.includes(id));
+
+        if (permissionsToAdd.length > 0) {
+          await api.post(`/roles/${id}/permissions`, { permission_ids: permissionsToAdd });
+        }
+
+        if (permissionsToRemove.length > 0) {
+          await api.delete(`/roles/${id}/permissions`, { data: { permission_ids: permissionsToRemove } });
+        }
+      }
+
+      toast.success('Cập nhật vai trò và quyền thành công');
       navigate('/role', { state: { refetch: true } });
     } catch (err: unknown) {
-      const errorMessage = (err as ApiError).response?.data?.message || 'Không thể tạo vai trò';
+      const errorMessage = (err as ApiError).response?.data?.message || 'Không thể cập nhật vai trò hoặc quyền';
       setError(errorMessage);
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa vai trò này?')) {
+      return;
+    }
+    try {
+      await api.delete(`/roles/${id}`);
+      toast.success('Xóa vai trò thành công');
+      navigate('/role', { state: { refetch: true } });
+    } catch (err: unknown) {
+      const errorMessage = (err as ApiError).response?.data?.message || 'Không thể xóa vai trò';
       toast.error(errorMessage);
     }
   };
@@ -275,11 +317,11 @@ const AddRole: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (error || !role) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography color="error">{error}</Typography>
-        <Button variant="contained" onClick={() => navigate('/role')} sx={{ mt: 2, bgcolor: '#e0e0e0 !important', color: '#333', '&:hover': { bgcolor: '#d5d5d5 !important' } }}>
+        <Typography color="error">{error || 'Không tìm thấy vai trò'}</Typography>
+        <Button variant="contained" onClick={() => navigate('/role')} sx={{ mt: 2, bgcolor: '#e0e0e0', color: '#333', '&:hover': { bgcolor: '#d5d5d5' } }}>
           Quay lại
         </Button>
       </Box>
@@ -299,11 +341,26 @@ const AddRole: React.FC = () => {
     >
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: '24px' }}>
         <Box>
-          <Typography sx={{ fontSize: '14px', color: '#666', mb: '4px' }}>Vai Trò  Thêm mới</Typography>
+          <Typography sx={{ fontSize: '14px', color: '#666', mb: '4px' }}>Vai Trò  Chỉnh sửa</Typography>
           <Typography variant="h4" sx={{ fontSize: '24px', fontWeight: 600 }}>
-            Thêm Vai Trò
+            Chỉnh sửa Vai Trò
           </Typography>
         </Box>
+        <Button
+          onClick={handleDelete}
+          variant="contained"
+          sx={{
+            bgcolor: '#e53935 !important',
+            color: '#fff',
+            px: '16px',
+            py: '8px',
+            borderRadius: '4px',
+            fontSize: '14px',
+            '&:hover': { bgcolor: '#d32f2f !important' },
+          }}
+        >
+          Xóa
+        </Button>
       </Box>
       <form onSubmit={handleSubmit}>
         <Box sx={{ display: 'flex', gap: '16px', mb: '32px' }}>
@@ -374,7 +431,7 @@ const AddRole: React.FC = () => {
               '&:hover': { bgcolor: '#1565c0 !important' },
             }}
           >
-            Lưu
+            Lưu thay đổi
           </Button>
           <Button
             onClick={() => navigate('/role')}
@@ -397,4 +454,4 @@ const AddRole: React.FC = () => {
   );
 };
 
-export default AddRole;
+export default EditRole;

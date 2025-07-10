@@ -1,33 +1,36 @@
-// src/routes/helpers/RoleBasedRoute.tsx
-import React, { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { toast } from 'react-toastify';
 
-interface Props {
-  children: ReactNode;
-  allowedRoleIds: number[];
+interface RoleBasedRouteProps {
+  children: React.ReactNode;
+  permission: string;
 }
 
-const RoleBasedRoute = ({ children, allowedRoleIds }: Props) => {
-  const token = localStorage.getItem("auth_token");
-  const userJson = localStorage.getItem("user");
+const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({ children, permission }) => {
+  const { user, hasPermission, loading } = useAuth();
+  const navigate = useNavigate();
 
-  if (!token || !userJson) {
-    return <Navigate to="/auth/login" replace />;
-  }
+  console.log('RoleBasedRoute - User:', user, 'Required Permission:', permission, 'Loading:', loading);
 
-  try {
-    const user = JSON.parse(userJson);
-    const roleId = user.role_id;
-
-    if (!allowedRoleIds.includes(roleId)) {
-      return <Navigate to="/unauthorized" replace />;
+  useEffect(() => {
+    if (!loading && !user) {
+      console.log('No user, redirecting to /login');
+      toast.error('Vui lòng đăng nhập để truy cập');
+      navigate('/login', { replace: true });
+    } else if (!loading && permission && !hasPermission(permission)) {
+      console.log('Permission denied:', { user, permission });
+      toast.error('Bạn không có quyền truy cập vào trang này');
+      navigate('/unauthorized', { replace: true });
     }
+  }, [user, loading, hasPermission, permission, navigate]);
 
-    return children;
-  } catch (error) {
-    console.error("Failed to parse user JSON", error);
-    return <Navigate to="/login" replace />;
+  if (loading) {
+    return <div>Loading...</div>;
   }
+
+  return <>{children}</>;
 };
 
 export default RoleBasedRoute;

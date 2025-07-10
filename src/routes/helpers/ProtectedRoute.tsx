@@ -1,15 +1,28 @@
-import { Navigate } from "react-router-dom";
-import React, { ReactNode } from "react";
+import React from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { toast } from 'react-toastify';
 
-interface Props {
-  children: ReactNode;
+interface ProtectedRouteProps {
+  permission?: string;
+  children: React.ReactNode;
 }
 
-const ProtectedRoute = ({ children }: Props) => {
-  const token = localStorage.getItem("auth_token");
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ permission, children }) => {
+  const { user, hasPermission, loading } = useAuth();
 
-  if (!token) {
-    return <Navigate to="/auth/login" replace />;
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    toast.error('Vui lòng đăng nhập để truy cập');
+    return <Navigate to="/login" replace />;
+  }
+
+  if (permission && !hasPermission(permission)) {
+    toast.error('Bạn không có quyền truy cập vào trang này');
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <>{children}</>;

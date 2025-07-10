@@ -1,23 +1,20 @@
-import React from "react";
-import { Box, Typography, Button } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import { Box, Typography, Button } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
-const Unauthorized = () => {
+const Unauthorized: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <Box textAlign="center" mt={10}>
-      <Typography variant="h3" gutterBottom>
-        403 - Không có quyền truy cập
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 8 }}>
+      <Typography variant="h4" color="error" gutterBottom>
+        Không có quyền truy cập
       </Typography>
-      <Typography variant="body1" mb={4}>
-        Bạn không có quyền truy cập vào trang này. Vui lòng quay lại trang chính.
+      <Typography variant="body1" gutterBottom>
+        Bạn không có quyền truy cập vào trang này. Vui lòng liên hệ quản trị viên.
       </Typography>
-      <Button
-        variant="contained"
-        onClick={() => navigate("/")}
-      >
-        Quay về Dashboard
+      <Button variant="contained" onClick={() => navigate('/')}>
+        Quay về trang chủ
       </Button>
     </Box>
   );

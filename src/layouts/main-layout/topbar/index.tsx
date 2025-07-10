@@ -1,13 +1,11 @@
-// src/layouts/main-layout/topbar/index.tsx
-import React from 'react';
-import { Box, IconButton, Paper, useTheme } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, IconButton, Paper, useTheme, Menu, MenuItem, Typography } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-
-import LanguageSelect from './LanguageSelect';
-import ProfileMenu from './ProfileMenu';
+import AccountCircle from '@mui/icons-material/AccountCircle';
+import { useAuth } from '../../../contexts/AuthContext'; // Import useAuth từ AuthContext
 
 interface TopbarProps {
   onToggleSidebar: () => void;
@@ -18,6 +16,22 @@ interface TopbarProps {
 
 export default function Topbar({ onToggleSidebar, sidebarWidth, height }: TopbarProps) {
   const theme = useTheme();
+  const { user, logout } = useAuth(); // Lấy user và logout từ AuthContext
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    logout(); // Gọi hàm logout từ AuthContext
+    handleClose();
+  };
 
   return (
     <Paper
@@ -33,7 +47,7 @@ export default function Topbar({ onToggleSidebar, sidebarWidth, height }: Topbar
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        px: 3,
+        px: 2,
         borderBottom: `1px solid ${theme.palette.divider}`,
         bgcolor: 'white',
         zIndex: theme.zIndex.appBar,
@@ -45,7 +59,7 @@ export default function Topbar({ onToggleSidebar, sidebarWidth, height }: Topbar
       </IconButton>
 
       {/* Các control bên phải */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
         <IconButton size="large">
           <NotificationsNoneIcon />
         </IconButton>
@@ -55,8 +69,28 @@ export default function Topbar({ onToggleSidebar, sidebarWidth, height }: Topbar
         <IconButton size="large">
           <InfoOutlinedIcon />
         </IconButton>
-        <LanguageSelect />
-        <ProfileMenu />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="body1">
+            {user ? user.name : 'Khách'} {/* Hiển thị tên người dùng hoặc 'Khách' */}
+          </Typography>
+          <IconButton
+            size="large"
+            onClick={handleClick}
+            color="inherit"
+          >
+            <AccountCircle />
+          </IconButton>
+          <Menu
+            anchorEl={anchorEl}
+            open={open}
+            onClose={handleClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MenuItem onClick={handleClose}>Hồ sơ</MenuItem>
+            <MenuItem onClick={handleLogout}>Đăng xuất</MenuItem>
+          </Menu>
+        </Box>
       </Box>
     </Paper>
   );
