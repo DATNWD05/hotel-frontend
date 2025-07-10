@@ -19,7 +19,9 @@ import {
   Box,
   Paper,
   SelectChangeEvent,
+  InputAdornment,
 } from "@mui/material";
+import MeetingRoomIcon from "@mui/icons-material/MeetingRoom";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import PersonIcon from "@mui/icons-material/Person";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -436,8 +438,23 @@ const OrderRoom: React.FC = () => {
       };
 
       const response = await api.put(`/rooms/${editRoom.id}`, payload);
+
       if (response.status === 200) {
+        // 1. Gọi lại toàn bộ danh sách
         await fetchRooms();
+
+        // 2. Cập nhật selectedRoom dựa trên response (đã cập nhật thành công)
+        const updatedRoomData = response.data?.data;
+        if (updatedRoomData) {
+          setSelectedRoom((prev) => ({
+            ...prev!,
+            room_type: updatedRoomData.room_type, // cập nhật loại phòng
+            room_type_id: updatedRoomData.room_type_id,
+            room_number: updatedRoomData.room_number,
+            status: updatedRoomData.status,
+          }));
+        }
+
         setOpenEditDialog(false);
         setEditRoom({});
         setValidationErrors({});
@@ -709,7 +726,10 @@ const OrderRoom: React.FC = () => {
               <Card className="info-card room-info-card">
                 <CardContent>
                   <div className="card-header">
-                    <InfoIcon className="card-icon" />
+                    <MeetingRoomIcon
+                      className="card-icon"
+                      style={{ color: "#3f51b5" }}
+                    />
                     <Typography variant="h6" className="card-title">
                       Thông tin phòng
                     </Typography>
@@ -733,17 +753,17 @@ const OrderRoom: React.FC = () => {
                       value={selectedRoom.room_type.name}
                     />
                     <InfoRow
-                      icon=<InfoIcon />
+                      icon={<InfoIcon />}
                       label="Mã loại phòng"
                       value={selectedRoom.room_type.code}
                     />
                     <InfoRow
-                      icon=<PersonIcon />
+                      icon={<PersonIcon />}
                       label="Sức chứa tối đa"
                       value={`${selectedRoom.room_type.max_occupancy} người`}
                     />
                     <InfoRow
-                      icon=<PaymentIcon />
+                      icon={<PaymentIcon />}
                       label="Giá"
                       value={`${Number(
                         selectedRoom.room_type.base_rate
@@ -757,7 +777,10 @@ const OrderRoom: React.FC = () => {
                 <Card className="info-card booking-info-card">
                   <CardContent>
                     <div className="card-header">
-                      <CalendarTodayIcon className="card-icon" />
+                      <CalendarTodayIcon
+                        className="card-icon"
+                        style={{ color: "#3f51b5" }}
+                      />
                       <Typography variant="h6" className="card-title">
                         Thông tin đặt phòng
                       </Typography>
@@ -765,22 +788,22 @@ const OrderRoom: React.FC = () => {
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
                       <InfoRow
-                        icon=<PersonIcon />
+                        icon={<PersonIcon />}
                         label="Người đặt phòng"
                         value={selectedRoom.creator_name ?? "N/A"}
                       />
                       <InfoRow
-                        icon=<CalendarTodayIcon />
+                        icon={<CalendarTodayIcon />}
                         label="Ngày nhận phòng"
                         value={formatDate(selectedRoom.check_in_date)}
                       />
                       <InfoRow
-                        icon=<CalendarTodayIcon />
+                        icon={<CalendarTodayIcon />}
                         label="Ngày trả phòng"
                         value={formatDate(selectedRoom.check_out_date)}
                       />
                       <InfoRow
-                        icon=<InfoIcon />
+                        icon={<InfoIcon />}
                         label="Trạng thái"
                         value={
                           selectedRoom.booking_status === "Pending"
@@ -797,7 +820,7 @@ const OrderRoom: React.FC = () => {
                         }
                       />
                       <InfoRow
-                        icon=<PaymentIcon />
+                        icon={<PaymentIcon />}
                         label="Tiền đặt cọc"
                         value={
                           selectedRoom.deposit_amount
@@ -808,7 +831,7 @@ const OrderRoom: React.FC = () => {
                         }
                       />
                       <InfoRow
-                        icon=<PaymentIcon />
+                        icon={<PaymentIcon />}
                         label="Tổng gốc"
                         value={
                           selectedRoom.raw_total
@@ -819,7 +842,7 @@ const OrderRoom: React.FC = () => {
                         }
                       />
                       <InfoRow
-                        icon=<PaymentIcon />
+                        icon={<PaymentIcon />}
                         label="Tổng giảm"
                         value={
                           selectedRoom.discount_amount
@@ -830,7 +853,7 @@ const OrderRoom: React.FC = () => {
                         }
                       />
                       <InfoRow
-                        icon=<PaymentIcon />
+                        icon={<PaymentIcon />}
                         label="Tổng giá cuối"
                         value={
                           selectedRoom.total_amount
@@ -849,7 +872,10 @@ const OrderRoom: React.FC = () => {
                 <Card className="info-card guest-info-card">
                   <CardContent>
                     <div className="card-header">
-                      <ContactPhoneIcon className="card-icon" />
+                      <ContactPhoneIcon
+                        className="card-icon"
+                        style={{ color: "#3f51b5" }}
+                      />
                       <Typography variant="h6" className="card-title">
                         Thông tin khách hàng
                       </Typography>
@@ -857,17 +883,17 @@ const OrderRoom: React.FC = () => {
                     <Divider className="card-divider" />
                     <div className="info-grid-enhanced">
                       <InfoRow
-                        icon=<InfoIcon />
+                        icon={<InfoIcon />}
                         label="Số CCCD"
                         value={selectedRoom.guest_id_number ?? "N/A"}
                       />
                       <InfoRow
-                        icon=<PersonIcon />
+                        icon={<PersonIcon />}
                         label="Tên"
                         value={selectedRoom.guest_name ?? "N/A"}
                       />
                       <InfoRow
-                        icon=<InfoIcon />
+                        icon={<InfoIcon />}
                         label="Giới tính"
                         value={
                           selectedRoom.guest_gender === "male"
@@ -880,27 +906,27 @@ const OrderRoom: React.FC = () => {
                         }
                       />
                       <InfoRow
-                        icon=<ContactPhoneIcon />
+                        icon={<ContactPhoneIcon />}
                         label="Số điện thoại"
                         value={selectedRoom.guest_phone ?? "N/A"}
                       />
                       <InfoRow
-                        icon=<CalendarTodayIcon />
+                        icon={<CalendarTodayIcon />}
                         label="Ngày sinh"
                         value={formatDate(selectedRoom.guest_date_of_birth)}
                       />
                       <InfoRow
-                        icon=<InfoIcon />
+                        icon={<InfoIcon />}
                         label="Quốc tịch"
                         value={selectedRoom.guest_country ?? "N/A"}
                       />
                       <InfoRow
-                        icon=<HomeIcon />
+                        icon={<HomeIcon />}
                         label="Địa chỉ"
                         value={selectedRoom.guest_address ?? "N/A"}
                       />
                       <InfoRow
-                        icon=<InfoIcon />
+                        icon={<InfoIcon />}
                         label="Ghi chú"
                         value={selectedRoom.guest_note ?? "N/A"}
                       />
@@ -912,7 +938,10 @@ const OrderRoom: React.FC = () => {
               <Card className="info-card amenities-card">
                 <CardContent>
                   <div className="card-header">
-                    <StarIcon className="card-icon" />
+                    <StarIcon
+                      className="card-icon"
+                      style={{ color: "#3f51b5" }}
+                    />
                     <Typography variant="h6" className="card-title">
                       Tiện ích
                     </Typography>
@@ -1024,11 +1053,31 @@ const OrderRoom: React.FC = () => {
                 onChange={handleEditChange}
                 fullWidth
                 variant="outlined"
-                className="edit-form-input"
                 error={!!validationErrors.room_number}
                 helperText={validationErrors.room_number}
                 InputProps={{
-                  startAdornment: <HomeIcon sx={{ mr: 1, color: "#4a90e2" }} />,
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <HomeIcon />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  "& .MuiInputBase-root": {
+                    borderRadius: 2,
+                    paddingLeft: 0.5,
+                  },
+                  "& .MuiInputAdornment-root": {
+                    marginRight: 1,
+                    color: "#1976d2",
+                  },
+                  "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                    {
+                      borderWidth: "2px",
+                    },
+                  "& label.Mui-focused": {
+                    color: "#1976d2",
+                  },
                 }}
               />
               <FormControl

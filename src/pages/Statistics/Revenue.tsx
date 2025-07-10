@@ -93,7 +93,16 @@ export default function Revenue() {
 
   return (
     <Box sx={{ p: 4 }}>
-      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: 'wrap', gap: 2, mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 2,
+          mb: 3,
+        }}
+      >
         <Box>
           <Typography variant="body2" color="text.secondary" gutterBottom>
             Doanh thu &gt; Bảng tổng hợp
@@ -103,7 +112,7 @@ export default function Revenue() {
           </Typography>
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <DatePicker
               label="Từ ngày"
@@ -116,9 +125,12 @@ export default function Revenue() {
               format="DD/MM/YYYY"
               slotProps={{
                 textField: {
-                  size: 'small',
-                  sx: { width: '135px', "& .MuiInputBase-root": { height: "40px" } }
-                }
+                  size: "small",
+                  sx: {
+                    width: "135px",
+                    "& .MuiInputBase-root": { height: "40px" },
+                  },
+                },
               }}
             />
             <DatePicker
@@ -132,9 +144,12 @@ export default function Revenue() {
               format="DD/MM/YYYY"
               slotProps={{
                 textField: {
-                  size: 'small',
-                  sx: { width: '135px', "& .MuiInputBase-root": { height: "40px" } }
-                }
+                  size: "small",
+                  sx: {
+                    width: "135px",
+                    "& .MuiInputBase-root": { height: "40px" },
+                  },
+                },
               }}
             />
           </LocalizationProvider>
@@ -165,7 +180,14 @@ export default function Revenue() {
 
       <Paper sx={{ p: 2, borderRadius: 3, boxShadow: 3 }}>
         {loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: 200 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: 200,
+            }}
+          >
             <CircularProgress />
           </Box>
         ) : (
@@ -180,9 +202,15 @@ export default function Revenue() {
                     <TableCell sx={{ fontWeight: 600 }}>Phòng</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Nhận</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Trả</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Tổng</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Đặt cọc</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">Còn lại</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="right">
+                      Tổng
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="right">
+                      Đặt cọc
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }} align="right">
+                      Còn lại
+                    </TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Trạng thái</TableCell>
                   </TableRow>
                 </TableHead>
@@ -195,9 +223,15 @@ export default function Revenue() {
                       <TableCell>{row.room_number}</TableCell>
                       <TableCell>{row.check_in_date}</TableCell>
                       <TableCell>{row.check_out_date}</TableCell>
-                      <TableCell align="right">{row.total_amount.toLocaleString()} ₫</TableCell>
-                      <TableCell align="right">{row.deposit_amount.toLocaleString()} ₫</TableCell>
-                      <TableCell align="right">{row.remaining_amount.toLocaleString()} ₫</TableCell>
+                      <TableCell align="right">
+                        {row.total_amount.toLocaleString()} ₫
+                      </TableCell>
+                      <TableCell align="right">
+                        {row.deposit_amount.toLocaleString()} ₫
+                      </TableCell>
+                      <TableCell align="right">
+                        {row.remaining_amount.toLocaleString()} ₫
+                      </TableCell>
                       <TableCell>{row.status}</TableCell>
                     </TableRow>
                   ))}
@@ -206,12 +240,76 @@ export default function Revenue() {
             </TableContainer>
 
             {summary && (
-              <Box mt={3}>
-                <Typography variant="body2">
-                  <b>Tổng tiền:</b> {summary.total_amount.toLocaleString()}₫ |{" "}
-                  <b>Đặt cọc:</b> {summary.deposit_amount.toLocaleString()}₫ |{" "}
-                  <b>Còn lại:</b> {summary.remaining_amount.toLocaleString()}₫
-                </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 2,
+                  flexWrap: "wrap",
+                  mt: 3,
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ flex: 1, minWidth: 200 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Tổng cộng
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    sx={{ color: "#3f51b5" }}
+                  >
+                    {Number(summary.total_amount).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}{" "}
+                    ₫
+                  </Typography>
+                </Box>
+
+                <Box sx={{ flex: 1, minWidth: 200 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Đặt cọc
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    sx={{ color: "#1a237e" }}
+                  >
+                    {Number(summary.deposit_amount).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}{" "}
+                    ₫
+                  </Typography>
+                </Box>
+
+                <Box sx={{ flex: 1, minWidth: 200 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Còn lại
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    sx={{ color: "red" }}
+                  >
+                    {Number(summary.remaining_amount).toLocaleString(
+                      undefined,
+                      { minimumFractionDigits: 2 }
+                    )}{" "}
+                    ₫
+                  </Typography>
+                </Box>
               </Box>
             )}
 
@@ -237,9 +335,10 @@ export default function Revenue() {
                     color: "#fff",
                     fontWeight: "bold",
                   },
-                  "& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast": {
-                    color: "#999",
-                  },
+                  "& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast":
+                    {
+                      color: "#999",
+                    },
                 }}
               />
             </Box>

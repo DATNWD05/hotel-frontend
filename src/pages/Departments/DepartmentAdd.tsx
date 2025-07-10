@@ -9,7 +9,7 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
-import '../../css/Promotion.css';
+import '../../css/AddDepartment.css';
 import api from '../../api/axios';
 
 interface DepartmentFormData {
@@ -135,44 +135,25 @@ const AddDepartment: React.FC = () => {
               }}
             />
             <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleSave}
-                disabled={loading}
-                sx={{
-                  backgroundColor: "#4318FF",
-                  textTransform: "none",
-                  fontWeight: 600,
-                  borderRadius: "8px",
-                  px: 2.5,
-                  py: 0.7,
-                  "&:hover": { backgroundColor: "#7B1FA2" },
-                }}
-              >
-                {loading ? <CircularProgress size={24} /> : "Lưu"}
-              </Button>
-              <Button
-                variant="outlined"
-                className="promotion-btn-cancel"
-                color="secondary"
-                onClick={handleCancel}
-                disabled={loading}
-                component={Link}
-                to="/departments"
-                sx={{
-                  borderColor: "#d32f2f",
-                  color: "#d32f2f",
-                  textTransform: "none",
-                  fontWeight: 600,
-                  borderRadius: "8px",
-                  px: 2.5,
-                  py: 0.7,
-                  "&:hover": { borderColor: "#b71c1c", backgroundColor: "#ffebee" },
-                }}
-              >
-                Hủy
-              </Button>
+              <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
+  <Button
+    className="add-department-btn-save"
+    onClick={handleSave}
+    disabled={loading}
+  >
+    {loading ? <CircularProgress size={24} /> : "Lưu"}
+  </Button>
+
+  <Button
+    className="add-department-btn-cancel"
+    onClick={handleCancel}
+    disabled={loading}
+    component={Link}
+    to="/departments"
+  >
+    Hủy
+  </Button>
+</Box>
             </Box>
           </Box>
         </div>
