@@ -155,26 +155,38 @@ export default function Revenue() {
           </LocalizationProvider>
 
           <TextField
-            placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng)"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            size="small"
-            sx={{
-              width: 280,
-              backgroundColor: "white",
-              borderRadius: "10px",
-              "& .MuiOutlinedInput-root": {
-                borderRadius: "10px",
-              },
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={20} />
-                </InputAdornment>
-              ),
-            }}
-          />
+  placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng)"
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+  size="small"
+  sx={{
+    width: 400,
+    height: 40,
+    backgroundColor: "white",
+    borderRadius: "7px",
+    "& .MuiOutlinedInput-root": {
+      height: "40px",
+      borderRadius: "10px",
+      paddingRight: "8px",
+    },
+    "& input": {
+      padding: "12px 10px",
+      fontSize: "14px", // ✅ Tăng cỡ chữ tại đây
+      fontWeight: 500,   // ✅ (tuỳ chọn) làm đậm hơn một chút
+    },
+    "& .MuiInputAdornment-root svg": {
+      fontSize: "20px", // icon kính lúp cũng to ra nếu muốn
+    },
+  }}
+  InputProps={{
+    startAdornment: (
+      <InputAdornment position="start">
+        <Search size={22} /> {/* hoặc dùng icon lớn hơn chút */}
+      </InputAdornment>
+    ),
+  }}
+/>
+
         </Box>
       </Box>
 

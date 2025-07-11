@@ -46,7 +46,7 @@ export default function BookingService() {
   const [summary, setSummary] = useState<{ total: number } | null>(null);
   const [serviceTotal, setServiceTotal] = useState<number>(0);
 
-  const fetchServiceTotal = async () => { 
+  const fetchServiceTotal = async () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const params: any = {};
@@ -56,7 +56,7 @@ export default function BookingService() {
       const res = await api.get(`/statistics/total-service-revenue`, {
         params,
       });
-      console.log("Toonrg doanh thu:", res.data);   
+      console.log("Toonrg doanh thu:", res.data);
       setServiceTotal(res.data.total_service_revenue ?? 0);
     } catch (err) {
       console.error("Lỗi khi lấy tổng tiền dịch vụ:", err);
@@ -179,17 +179,28 @@ export default function BookingService() {
             onChange={(e) => setSearch(e.target.value)}
             size="small"
             sx={{
-              width: 280,
+              width: 350,
+              height: 40,
               backgroundColor: "white",
-              borderRadius: "10px",
+              borderRadius: "7px",
               "& .MuiOutlinedInput-root": {
+                height: "40px",
                 borderRadius: "10px",
+                paddingRight: "8px",
+              },
+              "& input": {
+                padding: "12px 10px",
+                fontSize: "16px", // ✅ Tăng cỡ chữ tại đây
+                fontWeight: 500, // ✅ (tuỳ chọn) làm đậm hơn một chút
+              },
+              "& .MuiInputAdornment-root svg": {
+                fontSize: "20px", // icon kính lúp cũng to ra nếu muốn
               },
             }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={20} />
+                  <Search size={22} /> {/* hoặc dùng icon lớn hơn chút */}
                 </InputAdornment>
               ),
             }}
