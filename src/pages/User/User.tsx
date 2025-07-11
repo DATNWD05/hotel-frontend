@@ -27,7 +27,6 @@ import { Search as SearchIcon } from 'lucide-react';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../api/axios';
-import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ProtectedComponent from '../../contexts/ProtectedComponent';
 
@@ -70,7 +69,7 @@ const User: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const navigate = useNavigate();
-  const { user } = useAuth(); // Chỉ cần user, không cần hasPermission ở đây
+  // const { user } = useAuth();
 
   const PER_PAGE = 10;
 
@@ -86,6 +85,7 @@ const User: React.FC = () => {
       setFilteredUsers(response.data.data);
       setLastPage(response.data.last_page);
       setCurrentPage(response.data.current_page);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const errorMessage = `Lỗi tải danh sách người dùng: ${error.response?.data?.message || error.message}`;
       setError(errorMessage);
@@ -143,6 +143,7 @@ const User: React.FC = () => {
   };
 
   const handleChange = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: any } }
   ) => {
     const { name, value } = e.target;
@@ -190,6 +191,7 @@ const User: React.FC = () => {
       } else {
         throw new Error('Không thể cập nhật người dùng');
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const errorMessage = `Không thể cập nhật người dùng: ${error.response?.data?.message || error.message}`;
       setSnackbarMessage(errorMessage);
@@ -216,6 +218,7 @@ const User: React.FC = () => {
         setCurrentPage(currentPage - 1);
         fetchUsers(currentPage - 1);
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const errorMessage = `Lỗi khi xóa người dùng: ${error.response?.data?.message || error.message}`;
       setSnackbarMessage(errorMessage);

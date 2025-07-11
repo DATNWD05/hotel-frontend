@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
@@ -20,6 +20,7 @@ interface User {
   status: string;
   created_at: string;
   updated_at: string;
+  permissions: string[]; // Add this line to match AuthContext's User interface
 }
 
 interface LoginResponse {
@@ -39,7 +40,7 @@ const Login: React.FC = () => {
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
+
   const { user, isAuthenticated, login } = useAuth();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginInputs>();
 
@@ -69,13 +70,19 @@ const Login: React.FC = () => {
     try {
       console.log('Logging in with:', { email: data.email });
       const response = await api.post<LoginResponse>('/login', data);
-      console.log('Login response:', JSON.stringify(response.data, null, 2));
       const { token, user } = response.data;
       if (!token || !user || !user.role_id) {
         throw new Error('Dữ liệu đăng nhập không hợp lệ');
       }
-      await login(token, user);
+      // Ensure permissions property exists
+      const userWithPermissions = {
+        ...user,
+        permissions: user.permissions ?? [],
+      };
+      await login(token, userWithPermissions);
       toast.success('Đăng nhập thành công!');
+      toast.success('Đăng nhập thành công!');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Lỗi đăng nhập:', {
         message: error.message,

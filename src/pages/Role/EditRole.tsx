@@ -100,11 +100,11 @@ const EditRole: React.FC = () => {
     }
 
     try {
-      const roleUpdateResponse = await api.put(`/roles/${id}`, {
-        name: role.name,
-        description: role.description,
-        permissions: selectedPermissions,
-      });
+      // const roleUpdateResponse = await api.put(`/roles/${id}`, {
+      //   name: role.name,
+      //   description: role.description,
+      //   permissions: selectedPermissions,
+      // });
 
       const verifyResponse = await api.get(`/roles/${id}`);
       const updatedRole: Role = verifyResponse.data.role || verifyResponse.data;

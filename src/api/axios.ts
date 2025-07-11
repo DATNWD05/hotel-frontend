@@ -25,13 +25,13 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError<{ message?: string }>) => {
     const status = error.response?.status;
-    const message = error.response?.data?.message || error.message;
+    // const message = error.response?.data?.message || error.message;
 
     if (status === 401) {
       toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
     } else if (status === 403) {
       // toast.warn('Bạn không có quyền truy cập chức năng này.');
-    } else if (status >= 500) {
+    } else if (status !== undefined && status >= 500) {
       toast.error('Lỗi server. Vui lòng thử lại sau.');
     }
 

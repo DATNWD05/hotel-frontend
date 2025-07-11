@@ -232,6 +232,7 @@ const Departments: React.FC = () => {
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message || "Đã xảy ra lỗi khi xóa phòng ban";
