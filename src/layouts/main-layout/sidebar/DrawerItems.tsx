@@ -38,7 +38,7 @@ export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
         items,
       };
     });
-  }, [pathname]);
+  }, [pathname]); 
 
   return (
     <>
@@ -93,7 +93,7 @@ export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
       <List component="nav" sx={{ mt: 3, mb: 10, px: collapsed ? 0 : 2 }}>
         {processedMenu.map(route =>
           route.items && route.items.length > 0 ? (
-            <CollapseListItem
+<CollapseListItem
               key={route.id}
               id={route.id}
               subheader={route.subheader}

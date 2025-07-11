@@ -239,6 +239,19 @@ const User: React.FC = () => {
 
   const memoizedUsers = useMemo(() => filteredUsers, [filteredUsers]);
 
+  const renderStatusLabel = (status: string | undefined) => {
+    switch (status) {
+      case "active":
+        return "Đang làm việc";
+      case "not_active":
+        return "Nghỉ làm";
+      case "pending":
+        return "Chờ xét duyệt";
+      default:
+        return "Không xác định";
+    }
+  };
+
   return (
     <div className="promotions-wrapper">
       <div className="promotions-title">

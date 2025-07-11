@@ -165,20 +165,23 @@
   color: #374151;
   margin-bottom: 0.5rem;
 }
-.form-label-note{
-    display: block;
+
+.form-label-note {
+  display: block;
   font-size: 0.875rem;
   font-weight: 500;
   color: #374151;
   margin-bottom: 0.5rem;
 }
-.form-label-deposit{
-      display: block;
+
+.form-label-deposit {
+  display: block;
   font-size: 0.875rem;
   font-weight: 500;
   color: #374151;
   margin-bottom: 0.5rem;
 }
+
 .form-input {
   width: 100%;
   height: 2.5rem;
@@ -281,7 +284,7 @@
 .select-trigger:disabled {
   background-color: #f3f4f6;
   cursor: not-allowed;
-  color: #9ca3af;
+  color: #c3af;
 }
 
 .select-placeholder {
@@ -411,11 +414,6 @@
   color: #1d4ed8;
 }
 
-.badge-success {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
 .price-info {
   margin-top: 1rem;
   padding: 0.75rem;
@@ -435,7 +433,7 @@
 
 .summary-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
   text-align: center;
   margin-bottom: 1rem;
@@ -450,10 +448,6 @@
   background-color: #eff6ff;
 }
 
-.stat-card-green {
-  background-color: #f0fdf4;
-}
-
 .stat-card-purple {
   background-color: #faf5ff;
 }
@@ -466,10 +460,6 @@
 
 .stat-number-blue {
   color: #2563eb;
-}
-
-.stat-number-green {
-  color: #16a34a;
 }
 
 .stat-number-purple {
@@ -516,22 +506,6 @@
   margin: 1rem 0;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 2rem 0;
-}
-
-.empty-state-icon {
-  width: 3rem;
-  height: 3rem;
-  color: #9ca3af;
-  margin: 0 auto 1rem;
-}
-
-.empty-state-text {
-  color: #6b7280;
-}
-
 .spinner {
   width: 1rem;
   height: 1rem;
@@ -566,7 +540,7 @@
   }
 
   .summary-stats {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
   }
 
@@ -650,47 +624,6 @@
 
 .w-5 {
   width: 1.25rem;
-}
-
-.service-form-grid {
-  display: grid;
-  grid-template-columns: 2fr 2fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.service-category,
-.service-name {
-  min-width: 0;
-}
-
-.service-quantity {
-  max-width: 120px;
-}
-
-.service-quantity .form-input {
-  text-align: center;
-}
-
-@media (max-width: 768px) {
-  .service-form-grid {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-
-  .service-quantity {
-    max-width: none;
-  }
-
-  .service-quantity .form-input {
-    text-align: left;
-  }
-}
-
-@media (max-width: 640px) {
-  .service-form-grid {
-    gap: 0.5rem;
-  }
 }
 
 .form-label.required::after {

@@ -21,24 +21,24 @@ import {
   Menu,
   Chip,
   MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Divider,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AppsIcon from "@mui/icons-material/Apps";
 import HighlightOffIcon from "@mui/icons-material/HighlightOff";
 import PrintIcon from "@mui/icons-material/Print";
+import EditIcon from "@mui/icons-material/Edit";
 import { CheckIcon, SearchIcon } from "lucide-react";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
+import CheckinDialog from "./CheckinDialog";
+import CheckoutDialog from "./CheckoutDialog";
+import InvoiceDialog from "./InvoiceDialog";
+import EditBookingDialog from "./EditBookingDialog";
 
-// Thêm interface cho Invoice
+// Interfaces
 interface Invoice {
   invoice_code: string;
   booking_id: number;
@@ -69,7 +69,21 @@ interface Invoice {
   };
 }
 
-// Các interface khác giữ nguyên...
+interface Promotion {
+  id: number;
+  code: string;
+  description: string;
+  discount_type: string;
+  discount_value: string;
+  start_date: string;
+  end_date: string;
+  usage_limit: number;
+  used_count: number;
+  status: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 interface CheckinInfo {
   booking_id: number;
   status: string;
@@ -182,6 +196,8 @@ interface Booking {
   updated_at: string | null;
   customer: Customer;
   room: Room;
+  rooms?: Room[]; // Add optional rooms array for multiple rooms
+  promotions: Promotion[]; // Add required promotions array
 }
 
 interface CheckoutInfo {
@@ -215,16 +231,6 @@ const formatDate = (date: string) => {
     const parsedDate = parseISO(date);
     if (!isValid(parsedDate)) throw new Error("Invalid date");
     return format(parsedDate, "dd/MM/yyyy");
-  } catch {
-    return "N/A";
-  }
-};
-
-const formatDateTime = (date: string) => {
-  try {
-    const parsedDate = parseISO(date);
-    if (!isValid(parsedDate)) throw new Error("Invalid date");
-    return format(parsedDate, "dd/MM/yyyy HH:mm:ss");
   } catch {
     return "N/A";
   }
@@ -273,17 +279,16 @@ const ListBookings: React.FC = () => {
   const [checkoutInfo, setCheckoutInfo] = useState<CheckoutInfo | null>(null);
   const [openCheckoutDialog, setOpenCheckoutDialog] = useState(false);
   const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
-  const [invoiceInfo, setInvoiceInfo] = useState<Invoice | null>(null); // Thêm state cho invoice
-  const [invoiceLoading, setInvoiceLoading] = useState<boolean>(false); // Thêm loading state cho invoice
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [invoiceInfo, setInvoiceInfo] = useState<Invoice | null>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "vnpay" | null>(
     null
   );
-  const [isPaying, setIsPaying] = useState<boolean>(false);
+  const [isPaying, setWorking] = useState<boolean>(false);
   const callbackProcessed = useRef(false);
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Các function khác giữ nguyên...
   const handleOpenCheckoutDialog = async (bookingId: number) => {
     try {
       const res = await api.get(`/check-out/${bookingId}`);
@@ -304,7 +309,7 @@ const ListBookings: React.FC = () => {
     }
 
     try {
-      setIsPaying(true);
+      setWorking(true);
       const res = await api.post(`/pay-cash/${checkoutInfo.booking_id}`);
       setCheckoutInfo({
         ...checkoutInfo,
@@ -319,15 +324,16 @@ const ListBookings: React.FC = () => {
       fetchAllBookings();
     } catch (err) {
       console.error("Lỗi khi thanh toán tiền mặt:", err);
+      setError("Thanh toán tiền mặt thất bại");
       setSnackbarOpen(true);
     } finally {
-      setIsPaying(false);
+      setWorking(false);
     }
   };
 
   const handleVNPayCheckout = async (bookingId: number) => {
     try {
-      setIsPaying(true);
+      setWorking(true);
       const res = await api.post("/vnpay/create-payment", {
         booking_id: bookingId,
       });
@@ -339,13 +345,13 @@ const ListBookings: React.FC = () => {
       }
     } catch (error) {
       console.error("Lỗi khi khởi tạo thanh toán VNPay:", error);
+      setError("Không thể khởi tạo thanh toán VNPay");
       setSnackbarOpen(true);
     } finally {
-      setIsPaying(false);
+      setWorking(false);
     }
   };
 
-  // Handle VNPay callback
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const transactionStatus = urlParams.get("vnp_TransactionStatus");
@@ -415,19 +421,43 @@ const ListBookings: React.FC = () => {
     }
   };
 
-  const handleOpenCheckinDialog = async () => {
+  const handleEditDialog = (booking: Booking) => {
+    setSelectedBookingId(booking.id);
+    setOpenEditDialog(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setOpenEditDialog(false);
+    setSelectedBookingId(null);
+  };
+
+  const handleEditConfirm = async (updatedBooking: {
+    id: number;
+    check_in_date: string;
+    check_out_date: string;
+    deposit_amount: string;
+  }) => {
     try {
-      const response = await api.get(`/check-in/${selectedBookingId}`);
-      if (response.status === 200) {
-        setCheckinInfo(response.data);
-        setOpenCheckinDialog(true);
-      }
-    } catch (error) {
-      console.log(error);
-      setError("Không thể tải thông tin check-in");
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === updatedBooking.id
+            ? { ...booking, ...updatedBooking }
+            : booking
+        )
+      );
+      setAllBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === updatedBooking.id
+            ? { ...booking, ...updatedBooking }
+            : booking
+        )
+      );
+      setSuccessMessage("Cập nhật đặt phòng thành công");
       setSnackbarOpen(true);
-    } finally {
-      handleCloseActionMenu();
+    } catch (error) {
+      console.error("Lỗi khi cập nhật đặt phòng:", error);
+      setError("Cập nhật đặt phòng thất bại");
+      setSnackbarOpen(true);
     }
   };
 
@@ -457,17 +487,13 @@ const ListBookings: React.FC = () => {
     }
   };
 
-  // Cập nhật function để handle opening invoice dialog
   const handleOpenInvoiceDialog = async (bookingId: number) => {
     try {
       setInvoiceLoading(true);
       setSelectedBookingId(bookingId);
       setOpenInvoiceDialog(true);
 
-      // Gọi API để lấy thông tin hóa đơn
       const response = await api.get(`/invoices/${bookingId}`);
-
-      console.log("Thông tin hóa đơn:", response.data);
       setInvoiceInfo(response.data);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin hóa đơn:", error);
@@ -479,109 +505,32 @@ const ListBookings: React.FC = () => {
     }
   };
 
-  // Cập nhật function để handle closing invoice dialog
   const handleCloseInvoiceDialog = () => {
     setOpenInvoiceDialog(false);
     setSelectedBookingId(null);
     setInvoiceInfo(null);
   };
 
-  // Function để in hóa đơn
-  const handlePrintInvoice = () => {
-    if (!invoiceInfo) return;
+  const handlePrintInvoice = async () => {
+    if (!selectedBookingId) return;
 
-    // Tạo nội dung HTML để in
-    const printContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #0288d1; margin-bottom: 10px;">HÓA ĐƠN THANH TOÁN</h1>
-          <h2 style="color: #666; margin: 0;">Mã hóa đơn: ${
-            invoiceInfo.invoice_code
-          }</h2>
-        </div>
-        
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #333; border-bottom: 2px solid #0288d1; padding-bottom: 5px;">Thông tin đặt phòng</h3>
-          <p><strong>Mã đặt phòng:</strong> #${invoiceInfo.booking_id}</p>
-          <p><strong>Ngày nhận phòng:</strong> ${formatDate(
-            invoiceInfo.booking.check_in_date
-          )}</p>
-          <p><strong>Ngày trả phòng:</strong> ${formatDate(
-            invoiceInfo.booking.check_out_date
-          )}</p>
-          <p><strong>Thời gian check-in:</strong> ${formatDateTime(
-            invoiceInfo.booking.check_in_at
-          )}</p>
-          <p><strong>Thời gian check-out:</strong> ${formatDateTime(
-            invoiceInfo.booking.check_out_at
-          )}</p>
-        </div>
-
-        <div style="margin-bottom: 20px;">
-          <h3 style="color: #333; border-bottom: 2px solid #0288d1; padding-bottom: 5px;">Chi tiết thanh toán</h3>
-          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
-            <tr style="background-color: #f5f5f5;">
-              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Tiền phòng</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(
-                invoiceInfo.room_amount
-              )}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Tiền dịch vụ</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(
-                invoiceInfo.service_amount
-              )}</td>
-            </tr>
-            <tr style="background-color: #f5f5f5;">
-              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Giảm giá</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(
-                invoiceInfo.discount_amount
-              )}</td>
-            </tr>
-            <tr>
-              <td style="padding: 10px; border: 1px solid #ddd;"><strong>Tiền đặt cọc</strong></td>
-              <td style="padding: 10px; border: 1px solid #ddd; text-align: right;">${formatCurrency(
-                invoiceInfo.deposit_amount
-              )}</td>
-            </tr>
-            <tr style="background-color: #e3f2fd; font-size: 18px;">
-              <td style="padding: 15px; border: 2px solid #0288d1;"><strong>TỔNG CỘNG</strong></td>
-              <td style="padding: 15px; border: 2px solid #0288d1; text-align: right;"><strong>${formatCurrency(
-                invoiceInfo.total_amount
-              )}</strong></td>
-            </tr>
-          </table>
-        </div>
-
-        <div style="margin-top: 30px; text-align: center; color: #666;">
-          <p>Ngày xuất hóa đơn: ${formatDateTime(invoiceInfo.issued_date)}</p>
-          <p style="margin-top: 20px;"><em>Cảm ơn quý khách đã sử dụng dịch vụ!</em></p>
-        </div>
-      </div>
-    `;
-
-    // Mở cửa sổ in
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Hóa đơn ${invoiceInfo.invoice_code}</title>
-            <style>
-              @media print {
-                body { margin: 0; }
-                @page { margin: 1cm; }
-              }
-            </style>
-          </head>
-          <body>
-            ${printContent}
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      printWindow.focus();
-      printWindow.print();
+    try {
+      setInvoiceLoading(true);
+      console.log("Calling print API for bookingId:", selectedBookingId);
+      const response = await api.get(
+        `/invoices/booking/${selectedBookingId}/print`
+      );
+      setSuccessMessage(
+        response.data.message || "Đã gửi yêu cầu in hóa đơn và email!"
+      );
+      setSnackbarOpen(true);
+      setOpenInvoiceDialog(false);
+    } catch (error) {
+      console.error("Lỗi khi gửi yêu cầu in hóa đơn:", error);
+      setError("Không thể in hóa đơn");
+      setSnackbarOpen(true);
+    } finally {
+      setInvoiceLoading(false);
     }
   };
 
@@ -969,6 +918,20 @@ const ListBookings: React.FC = () => {
                           </IconButton>
                           {["Chờ xác nhận", "Đã xác nhận"].includes(status) && (
                             <IconButton
+                              title="Sửa đặt phòng"
+                              onClick={() => handleEditDialog(booking)}
+                              sx={{
+                                ml: 1,
+                                color: "#0288d1",
+                                bgcolor: "#e1f5fe",
+                                "&:hover": { bgcolor: "#b3e5fc" },
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                          {["Chờ xác nhận", "Đã xác nhận"].includes(status) && (
+                            <IconButton
                               title="Xác nhận Check-in"
                               onClick={() => handleCheckinDialog(booking.id)}
                               sx={{
@@ -1058,7 +1021,7 @@ const ListBookings: React.FC = () => {
         open={Boolean(actionAnchorEl)}
         onClose={handleCloseActionMenu}
       >
-        <MenuItem onClick={handleOpenCheckinDialog}>
+        <MenuItem onClick={() => handleCheckinDialog(selectedBookingId!)}>
           <span style={{ marginRight: 8 }}>
             <CheckIcon />
           </span>{" "}
@@ -1066,806 +1029,42 @@ const ListBookings: React.FC = () => {
         </MenuItem>
       </Menu>
 
-      {/* Check-in Dialog - giữ nguyên */}
-      <Dialog
+      <CheckinDialog
         open={openCheckinDialog}
         onClose={handleCloseCheckinDialog}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{
-            fontWeight: 600,
-            fontSize: "25px",
-            color: "#4318FF",
-            mb: 2,
-          }}
-        >
-          🧾 Thông tin Check-in
-        </DialogTitle>
-        <DialogContent dividers sx={{ px: 4, py: 3 }}>
-          {checkinInfo ? (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", md: "row" },
-                  gap: 2,
-                }}
-              >
-                <Paper
-                  sx={{
-                    flex: 1,
-                    p: 2,
-                    borderRadius: 2,
-                    border: "1px solid #ccc",
-                    backgroundColor: "#fdfdfd",
-                  }}
-                >
-                  <Typography variant="h6" fontWeight={700} gutterBottom>
-                    🧑‍💼 Thông tin khách hàng
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>Họ tên:</b> {checkinInfo.customer.name}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>CCCD:</b> {checkinInfo.customer.cccd}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>Email:</b> {checkinInfo.customer.email}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>SĐT:</b> {checkinInfo.customer.phone}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>Quốc tịch:</b> {checkinInfo.customer.nationality}
-                  </Typography>
-                  <Typography variant="body2">
-                    <b>Địa chỉ:</b> {checkinInfo.customer.address}
-                  </Typography>
-                </Paper>
+        checkinInfo={checkinInfo}
+        onConfirm={handleCheckinConfirm}
+      />
 
-                <Paper
-                  sx={{
-                    flex: 1,
-                    p: 2,
-                    borderRadius: 2,
-                    border: "1px solid #ccc",
-                    backgroundColor: "#fdfdfd",
-                  }}
-                >
-                  <Typography variant="h6" fontWeight={700} gutterBottom>
-                    📅 Thông tin đặt phòng
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>Ngày nhận:</b> {formatDate(checkinInfo.check_in_date)}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>Ngày trả:</b> {formatDate(checkinInfo.check_out_date)}
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>Đặt cọc:</b>{" "}
-                    {numeral(checkinInfo.deposit_amount).format("0,0")} VNĐ
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>Tổng tiền:</b>{" "}
-                    {numeral(checkinInfo.total_amount).format("0,0")} VNĐ
-                  </Typography>
-                  <Typography variant="body2">
-                    <b>Người tạo:</b> {checkinInfo.created_by}
-                  </Typography>
-                </Paper>
-              </Box>
-
-              <Paper
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: "1px solid #ccc",
-                  backgroundColor: "#fdfdfd",
-                }}
-              >
-                <Typography variant="h6" fontWeight={700} gutterBottom>
-                  🛏️ Phòng
-                </Typography>
-                {checkinInfo.rooms.map((room, index) => (
-                  <Box key={index} sx={{ mb: 2 }}>
-                    <Typography variant="body2">
-                      <b>Phòng:</b> {room.room_number} - {room.type.name}
-                    </Typography>
-                    <Typography variant="body2">
-                      <b>Giá:</b> {numeral(room.rate).format("0,0")} VNĐ
-                    </Typography>
-                    <Typography variant="body2">
-                      <b>Sức chứa:</b> {room.type.max_occupancy} người
-                    </Typography>
-                    {room.type.amenities.map((a, i) => (
-                      <Typography key={i} variant="body2">
-                        - {a.name} x{a.quantity}
-                      </Typography>
-                    ))}
-                  </Box>
-                ))}
-              </Paper>
-
-              <Paper
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: "1px solid #ccc",
-                  backgroundColor: "#fdfdfd",
-                }}
-              >
-                <Typography variant="h6" fontWeight={700} gutterBottom>
-                  🛎️ Dịch vụ đi kèm
-                </Typography>
-                {checkinInfo.services.length === 0 ? (
-                  <Typography variant="body2" fontStyle="italic">
-                    Không có dịch vụ
-                  </Typography>
-                ) : (
-                  checkinInfo.services.map((s, i) => (
-                    <Typography key={i} variant="body2">
-                      - {s.name} x{s.quantity} ({numeral(s.price).format("0,0")}{" "}
-                      VNĐ)
-                    </Typography>
-                  ))
-                )}
-              </Paper>
-            </Box>
-          ) : (
-            <Typography>Đang tải thông tin...</Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCloseCheckinDialog} color="inherit">
-            Đóng
-          </Button>
-          <Button
-            onClick={handleCheckinConfirm}
-            variant="contained"
-            color="primary"
-            disabled={!checkinInfo}
-            sx={{ borderRadius: 2, px: 3 }}
-          >
-            Check-in ngay
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Check-out Dialog - giữ nguyên */}
-      <Dialog
+      <CheckoutDialog
         open={openCheckoutDialog}
         onClose={() => setOpenCheckoutDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{ fontWeight: 700, fontSize: "24px", color: "#FF9800" }}
-        >
-          💸 Thông tin thanh toán & trả phòng
-        </DialogTitle>
-        <DialogContent dividers sx={{ px: 4, py: 3 }}>
-          {checkoutInfo ? (
-            <>
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  borderRadius: 3,
-                  border: "1px solid #e0e0e0",
-                  backgroundColor: "#fafafa",
-                  mb: 3,
-                }}
-              >
-                <Typography variant="h6" fontWeight={700} gutterBottom>
-                  🧾 Thông tin đơn đặt phòng
-                </Typography>
-                <Box
-                  sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
-                >
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Mã đơn:</Typography>
-                    <Typography>#{checkoutInfo.booking_id}</Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Trạng thái:</Typography>
-                    <Typography
-                      sx={{
-                        color:
-                          checkoutInfo.status === "Checked-out"
-                            ? "#4caf50"
-                            : "#1976d2",
-                      }}
-                    >
-                      {getBookingStatus(checkoutInfo.status).status}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Ngày nhận phòng:</Typography>
-                    <Typography>
-                      {formatDate(checkoutInfo.check_in_date)}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Ngày trả phòng:</Typography>
-                    <Typography>
-                      {formatDate(checkoutInfo.check_out_date)}
-                    </Typography>
-                  </Box>
-                  {checkoutInfo.check_out_at && (
-                    <Box
-                      sx={{ display: "flex", justifyContent: "space-between" }}
-                    >
-                      <Typography fontWeight={600}>
-                        Thời gian trả phòng:
-                      </Typography>
-                      <Typography>
-                        {formatDate(checkoutInfo.check_out_at)}
-                      </Typography>
-                    </Box>
-                  )}
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Số đêm:</Typography>
-                    <Typography>{checkoutInfo.nights} đêm</Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Tiền đặt cọc:</Typography>
-                    <Typography>
-                      {numeral(checkoutInfo.deposit_amount).format("0,0")} VNĐ
-                    </Typography>
-                  </Box>
-                </Box>
-              </Paper>
+        checkoutInfo={checkoutInfo}
+        paymentMethod={paymentMethod}
+        setPaymentMethod={setPaymentMethod}
+        isPaying={isPaying}
+        onConfirmCheckout={handleConfirmCheckout}
+        onVNPayCheckout={handleVNPayCheckout}
+      />
 
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", md: "row" },
-                  gap: 4,
-                  alignItems: "flex-start",
-                  mb: 3,
-                }}
-              >
-                <Paper
-                  elevation={1}
-                  sx={{
-                    flex: 1,
-                    p: 2,
-                    borderRadius: 3,
-                    border: "1px solid #e0e0e0",
-                    backgroundColor: "#fafafa",
-                  }}
-                >
-                  <Typography variant="h6" fontWeight={700} gutterBottom>
-                    🛏️ Chi tiết phòng
-                  </Typography>
-                  <Box
-                    sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
-                  >
-                    {checkoutInfo.room_details.map((room, index) => (
-                      <Box
-                        key={index}
-                        sx={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Typography>- Phòng {room.room_number}:</Typography>
-                        <Typography>
-                          {numeral(room.base_rate).format("0,0")} ×{" "}
-                          {checkoutInfo.nights} đêm ={" "}
-                          {numeral(room.total).format("0,0")} VNĐ
-                        </Typography>
-                      </Box>
-                    ))}
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        mt: 1,
-                      }}
-                    >
-                      <Typography fontWeight={600}>Tổng tiền phòng:</Typography>
-                      <Typography>
-                        {numeral(checkoutInfo.room_total).format("0,0")} VNĐ
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Paper>
-
-                <Paper
-                  elevation={1}
-                  sx={{
-                    flex: 1,
-                    p: 2,
-                    borderRadius: 3,
-                    border: "1px solid #e0e0e0",
-                    backgroundColor: "#fafafa",
-                  }}
-                >
-                  <Typography variant="h6" fontWeight={700} gutterBottom>
-                    🛎️ Dịch vụ sử dụng
-                  </Typography>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Tổng tiền dịch vụ:</Typography>
-                    <Typography>
-                      {numeral(checkoutInfo.service_total).format("0,0")} VNĐ
-                    </Typography>
-                  </Box>
-                </Paper>
-              </Box>
-
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  borderRadius: 3,
-                  border: "1px solid #e0e0e0",
-                  backgroundColor: "#fafafa",
-                  mb: 3,
-                }}
-              >
-                <Typography variant="h6" fontWeight={700} gutterBottom>
-                  💳 Tóm tắt thanh toán
-                </Typography>
-                <Box
-                  sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
-                >
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography>Thành tiền (phòng + dịch vụ):</Typography>
-                    <Typography>
-                      {numeral(checkoutInfo.raw_total).format("0,0")} VNĐ
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography>Giảm giá:</Typography>
-                    <Typography>
-                      {numeral(checkoutInfo.discount_amount).format("0,0")} VNĐ
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography sx={{ fontSize: "18px", fontWeight: "bold" }}>
-                      Tổng cần thanh toán:
-                    </Typography>
-                    <Typography sx={{ fontSize: "18px", fontWeight: "bold" }}>
-                      {numeral(checkoutInfo.total_amount).format("0,0")} VNĐ
-                    </Typography>
-                  </Box>
-                </Box>
-              </Paper>
-
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: "1px solid #e0e0e0",
-                  backgroundColor: "#fafafa",
-                  mb: 3,
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                  gutterBottom
-                  sx={{ color: "#1a237e" }}
-                >
-                  🔘 Phương thức thanh toán
-                </Typography>
-                <Box sx={{ display: "flex", gap: 2 }}>
-                  {[
-                    { key: "cash", label: "Thanh toán tiền mặt" },
-                    { key: "vnpay", label: "Thanh toán online (VNPay)" },
-                  ].map((method) => (
-                    <Box
-                      key={method.key}
-                      onClick={() =>
-                        setPaymentMethod(method.key as "cash" | "vnpay")
-                      }
-                      sx={{
-                        flex: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        borderRadius: 2,
-                        border: "2px solid",
-                        borderColor:
-                          paymentMethod === method.key ? "#3f51b5" : "#c5cae9",
-                        backgroundColor:
-                          paymentMethod === method.key
-                            ? "#e8eaf6"
-                            : "transparent",
-                        padding: "10px 16px",
-                        cursor: "pointer",
-                        transition: "all 0.2s",
-                        "&:hover": {
-                          backgroundColor: "#f5f5f5",
-                        },
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 20,
-                          height: 20,
-                          border: "2px solid",
-                          borderColor:
-                            paymentMethod === method.key
-                              ? "#3f51b5"
-                              : "#9e9e9e",
-                          borderRadius: 2,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          backgroundColor:
-                            paymentMethod === method.key
-                              ? "#3f51b5"
-                              : "transparent",
-                        }}
-                      >
-                        {paymentMethod === method.key && (
-                          <span style={{ color: "white", fontSize: 14 }}>
-                            ✓
-                          </span>
-                        )}
-                      </Box>
-                      <Typography
-                        variant="body1"
-                        sx={{ fontWeight: 600, color: "#1a237e" }}
-                      >
-                        {method.label}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </Paper>
-            </>
-          ) : (
-            <Typography>Đang tải thông tin...</Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => setOpenCheckoutDialog(false)}
-            color="inherit"
-            sx={{
-              fontWeight: 600,
-              textTransform: "none",
-              borderRadius: 2,
-              fontSize: "15px",
-            }}
-          >
-            Hủy bỏ
-          </Button>
-          {paymentMethod && (
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => {
-                if (paymentMethod === "cash") {
-                  handleConfirmCheckout();
-                } else if (paymentMethod === "vnpay" && checkoutInfo) {
-                  handleVNPayCheckout(checkoutInfo.booking_id);
-                }
-              }}
-              disabled={!checkoutInfo || isPaying}
-              sx={{
-                ml: 1,
-                borderRadius: 2,
-                fontWeight: 600,
-                textTransform: "none",
-                fontSize: "15px",
-                px: 3,
-                py: 1.2,
-              }}
-            >
-              {isPaying ? <CircularProgress size={24} /> : "Thanh toán"}
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-
-      {/* Updated Invoice Dialog */}
-      <Dialog
+      <InvoiceDialog
         open={openInvoiceDialog}
         onClose={handleCloseInvoiceDialog}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{
-            fontWeight: 600,
-            fontSize: "25px",
-            color: "#0288d1",
-            mb: 2,
-            textAlign: "center",
-          }}
-        >
-          🧾 HÓA ĐƠN THANH TOÁN
-        </DialogTitle>
-        <DialogContent dividers sx={{ px: 4, py: 3 }}>
-          {invoiceLoading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-              <CircularProgress />
-              <Typography sx={{ ml: 2 }}>
-                Đang tải thông tin hóa đơn...
-              </Typography>
-            </Box>
-          ) : invoiceInfo ? (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              {/* Header thông tin hóa đơn */}
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 3,
-                  borderRadius: 3,
-                  border: "2px solid #0288d1",
-                  backgroundColor: "#e3f2fd",
-                  textAlign: "center",
-                }}
-              >
-                <Typography
-                  variant="h5"
-                  fontWeight={700}
-                  sx={{ color: "#0288d1", mb: 1 }}
-                >
-                  {invoiceInfo.invoice_code}
-                </Typography>
-                <Typography variant="body1" sx={{ color: "#666" }}>
-                  Ngày xuất: {formatDateTime(invoiceInfo.issued_date)}
-                </Typography>
-              </Paper>
+        invoiceInfo={invoiceInfo}
+        invoiceLoading={invoiceLoading}
+        onPrintInvoice={handlePrintInvoice}
+      />
 
-              {/* Thông tin đặt phòng */}
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: "1px solid #e0e0e0",
-                  backgroundColor: "#fafafa",
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                  gutterBottom
-                  sx={{ color: "#333" }}
-                >
-                  📋 Thông tin đặt phòng
-                </Typography>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 1,
-                  }}
-                >
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Mã đặt phòng:</Typography>
-                    <Typography>#{invoiceInfo.booking_id}</Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Trạng thái:</Typography>
-                    <Typography
-                      sx={{
-                        color: getBookingStatus(invoiceInfo.booking.status)
-                          .color,
-                      }}
-                    >
-                      {getBookingStatus(invoiceInfo.booking.status).status}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Ngày nhận phòng:</Typography>
-                    <Typography>
-                      {formatDate(invoiceInfo.booking.check_in_date)}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>Ngày trả phòng:</Typography>
-                    <Typography>
-                      {formatDate(invoiceInfo.booking.check_out_date)}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>
-                      Thời gian check-in:
-                    </Typography>
-                    <Typography>
-                      {formatDateTime(invoiceInfo.booking.check_in_at)}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Typography fontWeight={600}>
-                      Thời gian check-out:
-                    </Typography>
-                    <Typography>
-                      {formatDateTime(invoiceInfo.booking.check_out_at)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Paper>
-
-              {/* Chi tiết thanh toán */}
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: "1px solid #e0e0e0",
-                  backgroundColor: "#fafafa",
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                  gutterBottom
-                  sx={{ color: "#333" }}
-                >
-                  💰 Chi tiết thanh toán
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      py: 1,
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    <Typography fontWeight={600}>Tiền phòng:</Typography>
-                    <Typography>
-                      {formatCurrency(invoiceInfo.room_amount)}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      py: 1,
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    <Typography fontWeight={600}>Tiền dịch vụ:</Typography>
-                    <Typography>
-                      {formatCurrency(invoiceInfo.service_amount)}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      py: 1,
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    <Typography fontWeight={600}>Giảm giá:</Typography>
-                    <Typography sx={{ color: "#4caf50" }}>
-                      -{formatCurrency(invoiceInfo.discount_amount)}
-                    </Typography>
-                  </Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      py: 1,
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    <Typography fontWeight={600}>Tiền đặt cọc:</Typography>
-                    <Typography>
-                      {formatCurrency(invoiceInfo.deposit_amount)}
-                    </Typography>
-                  </Box>
-                  <Divider sx={{ my: 1 }} />
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      py: 2,
-                      backgroundColor: "#e3f2fd",
-                      px: 2,
-                      borderRadius: 2,
-                      border: "2px solid #0288d1",
-                    }}
-                  >
-                    <Typography
-                      variant="h6"
-                      fontWeight={700}
-                      sx={{ color: "#0288d1" }}
-                    >
-                      TỔNG CỘNG:
-                    </Typography>
-                    <Typography
-                      variant="h6"
-                      fontWeight={700}
-                      sx={{ color: "#0288d1" }}
-                    >
-                      {formatCurrency(invoiceInfo.total_amount)}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Paper>
-
-              {/* Footer */}
-              <Box sx={{ textAlign: "center", mt: 2, color: "#666" }}>
-                <Typography variant="body2" sx={{ fontStyle: "italic" }}>
-                  Cảm ơn quý khách đã sử dụng dịch vụ của chúng tôi!
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  Hóa đơn được tạo tự động bởi hệ thống
-                </Typography>
-              </Box>
-            </Box>
-          ) : (
-            <Typography sx={{ textAlign: "center", py: 4 }}>
-              Không thể tải thông tin hóa đơn
-            </Typography>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between" }}>
-          <Button
-            onClick={handleCloseInvoiceDialog}
-            color="inherit"
-            sx={{
-              fontWeight: 600,
-              textTransform: "none",
-              borderRadius: 2,
-              fontSize: "15px",
-            }}
-          >
-            Đóng
-          </Button>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={handlePrintInvoice}
-            disabled={!invoiceInfo}
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              fontWeight: 600,
-              textTransform: "none",
-              fontSize: "15px",
-            }}
-          >
-            🖨️ In hóa đơn
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <EditBookingDialog
+        open={openEditDialog}
+        onClose={handleCloseEditDialog}
+        bookingInfo={
+          selectedBookingId
+            ? bookings.find((b) => b.id === selectedBookingId) || null
+            : null
+        }
+        onConfirm={handleEditConfirm}
+      />
     </div>
   );
 };
