@@ -86,8 +86,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         await fetchPermissions(userData.role_id);
       }
-
-      toast.success('Đăng nhập thành công!');
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Lỗi đăng nhập:', err);
