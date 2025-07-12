@@ -107,13 +107,6 @@ const sitemap: MenuItem[] = [
     hidden: !token,
   },
   {
-    id: 'finance',
-    subheader: 'Tài chính',
-    path: '/finance',
-    icon: 'mdi:finance',
-    hidden: !token,
-  },
-  {
     id: 'service',
     subheader: 'Dịch vụ',
     icon: 'material-symbols:room-service-outline',
@@ -174,13 +167,6 @@ const sitemap: MenuItem[] = [
     path: '/role',
     icon: 'material-symbols:admin-panel-settings',
     hidden: !token,
-  },
-  {
-    id: 'authentication',
-    subheader: 'Đăng nhập',
-    icon: 'material-symbols:security',
-    path: '/login',
-    hidden: !!token, // Ẩn khi đã đăng nhập
   },
 ];
 

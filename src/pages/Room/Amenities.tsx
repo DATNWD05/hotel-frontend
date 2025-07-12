@@ -570,7 +570,7 @@ const Amenities: React.FC = () => {
                 <Table sx={{ width: '100%', tableLayout: 'fixed' }}>
                   <TableHead sx={{ backgroundColor: '#f4f6fa' }}>
                     <TableRow>
-                      <TableCell sx={{ minWidth: '120px' }}><b>Nhóm</b></TableCell>
+                      <TableCell sx={{ minWidth: '120px' }}><b>Danh mục</b></TableCell>
                       <TableCell sx={{ minWidth: '100px' }}><b>Mã</b></TableCell>
                       <TableCell sx={{ minWidth: '150px' }}><b>Tên</b></TableCell>
                       <TableCell sx={{ minWidth: '120px' }}><b>Giá</b></TableCell>

@@ -54,10 +54,10 @@ const App: React.FC = () => {
           <Route path="listbookings/detail/:id" element={<ProtectedRoute permission="view_bookings"><DetailBookings /></ProtectedRoute>} />
 
           <Route path="statistics" element={<ProtectedRoute permission="view_total_revenue_statistics"><Statistics /></ProtectedRoute>} />
-          <Route path="statistics-services" element={<ProtectedRoute permission=""><BookingService /></ProtectedRoute>} />
-          <Route path="statistics-revenues" element={<ProtectedRoute permission=""><Revenue /></ProtectedRoute>} />
+          <Route path="statistics-services" element={<ProtectedRoute permission="view_total_service_revenue_statistics"><BookingService /></ProtectedRoute>} />
+          <Route path="statistics-revenues" element={<ProtectedRoute permission="view_revenue_table_statistics"><Revenue /></ProtectedRoute>} />
 
-          <Route path="departments" element={<ProtectedRoute permission=""><Departments  /></ProtectedRoute>} />
+          <Route path="departments" element={<ProtectedRoute permission=""><Departments /></ProtectedRoute>} />
           <Route path="departments/add" element={<ProtectedRoute permission=""><AddDepartment /></ProtectedRoute>} />
 
           <Route path="hiddenrooms" element={<ProtectedRoute permission="restore_rooms"><HiddenRoom /></ProtectedRoute>} />

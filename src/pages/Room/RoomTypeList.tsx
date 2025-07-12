@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import {
   Table,
   TableBody,
@@ -19,8 +21,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
   Chip,
   Select,
   MenuItem,
@@ -70,14 +70,13 @@ interface AmenityPayload {
 }
 
 const RoomTypesList: React.FC = () => {
+  const navigate = useNavigate();
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [allAmenities, setAllAmenities] = useState<Amenity[]>([]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
   const [selectedRoomTypeId, setSelectedRoomTypeId] = useState<number | null>(null);
   const [editRoomTypeId, setEditRoomTypeId] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<RoomType | null>(null);
@@ -132,6 +131,7 @@ const RoomTypesList: React.FC = () => {
       } catch (err) {
         const errorMessage = (err as AxiosError)?.message || 'Lỗi không xác định';
         setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -207,16 +207,14 @@ const RoomTypesList: React.FC = () => {
         setEditFormData(null);
         setSelectedRoomTypeId(null);
         setSelectedAmenities([]);
-        setSnackbarMessage('Cập nhật loại phòng thành công!');
-        setSnackbarOpen(true);
+        toast.success('Cập nhật loại phòng thành công!');
       } else {
         throw new Error('Không thể cập nhật loại phòng');
       }
     } catch (err) {
       const errorMessage = (err as AxiosError)?.message || 'Đã xảy ra lỗi khi cập nhật loại phòng';
       setEditError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setEditLoading(false);
     }
@@ -255,6 +253,7 @@ const RoomTypesList: React.FC = () => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
       setError('Không tìm thấy token xác thực');
+      toast.error('Không tìm thấy token xác thực');
       return;
     }
 
@@ -265,16 +264,14 @@ const RoomTypesList: React.FC = () => {
 
       if (response.status === 200) {
         setRoomTypes((prev) => prev.filter((rt) => rt.id !== roomTypeToDelete));
-        setSnackbarMessage('Xóa loại phòng thành công!');
-        setSnackbarOpen(true);
+        toast.success('Xóa loại phòng thành công!');
       } else {
         throw new Error('Không thể xóa loại phòng');
       }
     } catch (err) {
       const errorMessage = (err as AxiosError)?.message || 'Lỗi không xác định';
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setDeleteDialogOpen(false);
       setRoomTypeToDelete(null);
@@ -283,11 +280,6 @@ const RoomTypesList: React.FC = () => {
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
     setCurrentPage(page);
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage('');
   };
 
   const handleRemoveAmenity = (amenityId: number) => {
@@ -303,6 +295,7 @@ const RoomTypesList: React.FC = () => {
       const token = localStorage.getItem('auth_token');
       if (!token) {
         setError('Không tìm thấy token xác thực');
+        toast.error('Không tìm thấy token xác thực');
         return;
       }
 
@@ -329,8 +322,7 @@ const RoomTypesList: React.FC = () => {
           );
           setAddAmenityDialogOpen(false);
           setSelectedAmenitiesToAdd([]);
-          setSnackbarMessage('Thêm tiện nghi thành công!');
-          setSnackbarOpen(true);
+          toast.success('Thêm tiện nghi thành công!');
         } else {
           throw new Error(`Yêu cầu thất bại với mã: ${response.status}`);
         }
@@ -340,8 +332,7 @@ const RoomTypesList: React.FC = () => {
           ? `Không thể cập nhật tiện nghi: ${JSON.stringify(error.response.data) || error.response.statusText} (Mã: ${error.response.status})`
           : `Không thể cập nhật tiện nghi: ${error.message || 'Lỗi không xác định'}`;
         setError(errorMessage);
-        setSnackbarMessage(errorMessage);
-        setSnackbarOpen(true);
+        toast.error(errorMessage);
       }
     }
   };
@@ -349,6 +340,15 @@ const RoomTypesList: React.FC = () => {
   const handleCancelAddAmenity = () => {
     setAddAmenityDialogOpen(false);
     setSelectedAmenitiesToAdd([]);
+  };
+
+  const handleAddNew = () => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      toast.error('Bạn cần đăng nhập để thêm loại phòng mới');
+      return;
+    }
+    navigate('/room-types/add');
   };
 
   return (
@@ -371,7 +371,7 @@ const RoomTypesList: React.FC = () => {
             />
             <Button
               variant="contained"
-              onClick={() => window.location.href = '/room-types/add'}
+              onClick={handleAddNew}
               sx={{
                 backgroundColor: '#4318FF',
                 color: '#fff',
@@ -791,21 +791,6 @@ const RoomTypesList: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

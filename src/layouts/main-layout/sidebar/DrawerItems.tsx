@@ -2,16 +2,13 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Link from '@mui/material/Link';
-import Box from '@mui/material/Box';
 import List from '@mui/material/List';
 import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
 import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
 import CollapseListItem from './list-items/CollapseListItem';
 import DrawerItem from './list-items/DrawerItem';
 import Image from '../../../components/base/Image';
-import IconifyIcon from '../../../components/base/IconifyIcon';
 import LogoImg from '../../../assets/images/logo.png';
 import sitemap, { MenuItem, SubMenuItem } from '../../../routes/sitemap';
 import { fontFamily } from '../../../theme/typography';
@@ -114,32 +111,6 @@ export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
           )
         )}
       </List>
-
-      {/* Logout */}
-      <Box mt="auto" px={collapsed ? 1 : 3} pb={4} textAlign={collapsed ? 'center' : 'left'}>
-        <Button
-          variant="contained"
-          fullWidth={!collapsed}
-          startIcon={<IconifyIcon icon="ic:baseline-logout" />}
-          onClick={() => {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            navigate('/login');
-          }}
-          sx={{
-            bgcolor: '#FFD700',
-            color: '#1A2A44',
-            fontWeight: 600,
-            borderRadius: 2,
-            py: 1.5,
-            px: collapsed ? 1 : undefined,
-            '&:hover': { bgcolor: '#E6C200', transform: 'translateY(-2px)' },
-            transition: 'all 0.3s ease',
-          }}
-        >
-          {!collapsed && 'Đăng xuất'}
-        </Button>
-      </Box>
     </>
   );
 }

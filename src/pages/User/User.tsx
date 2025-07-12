@@ -20,10 +20,12 @@ import {
   Snackbar,
   Alert,
   Collapse,
-  MenuItem,
   Select,
+  MenuItem,
 } from '@mui/material';
 import { Search as SearchIcon } from 'lucide-react';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../api/axios';
@@ -38,6 +40,11 @@ interface User {
   role: string;
   status: string;
   created_at: string;
+}
+
+interface Role {
+  id: number;
+  name: string;
 }
 
 interface PaginatedResponse {
@@ -57,6 +64,7 @@ interface ValidationErrors {
 const User: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
@@ -65,11 +73,11 @@ const User: React.FC = () => {
   const [lastPage, setLastPage] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [editUserId, setEditUserId] = useState<number | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<User | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const navigate = useNavigate();
-  // const { user } = useAuth();
 
   const PER_PAGE = 10;
 
@@ -85,13 +93,11 @@ const User: React.FC = () => {
       setFilteredUsers(response.data.data);
       setLastPage(response.data.last_page);
       setCurrentPage(response.data.current_page);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const errorMessage = `Lỗi tải danh sách người dùng: ${error.response?.data?.message || error.message}`;
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
-      // Không chuyển hướng /unauthorized ở đây, để ProtectedRoute xử lý
     } finally {
       setLoading(false);
     }
@@ -99,7 +105,18 @@ const User: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [navigate]); // Loại bỏ user và hasPermission khỏi dependency
+    api
+      .get('/role')
+      .then((res) => {
+        console.log('Role API response:', res.data);
+        setRoles(res.data.roles);
+      })
+      .catch(() => {
+        setError('Không thể tải danh sách vai trò');
+        setSnackbarMessage('Không thể tải danh sách vai trò');
+        setSnackbarOpen(true);
+      });
+  }, [navigate]);
 
   useEffect(() => {
     const filtered: User[] = users.filter(
@@ -128,7 +145,9 @@ const User: React.FC = () => {
       errors.email = 'Email không hợp lệ';
     }
     if (!data.role_id) {
-      errors.role_id = 'Vai trò không được để trống';
+      errors.role_id = 'Vui lòng chọn vai trò';
+    } else if (!roles.some((r) => r.id === data.role_id)) {
+      errors.role_id = 'Vai trò không hợp lệ';
     }
     if (!data.status) {
       errors.status = 'Trạng thái không được để trống';
@@ -139,11 +158,22 @@ const User: React.FC = () => {
   const handleEdit = (user: User) => {
     setEditUserId(user.id);
     setEditFormData({ ...user });
+    setSelectedUserId(null);
     setValidationErrors({});
   };
 
+  const handleViewDetails = (id: number) => {
+    if (selectedUserId === id && editUserId !== id) {
+      setSelectedUserId(null);
+    } else {
+      setSelectedUserId(id);
+      setEditUserId(null);
+      setEditFormData(null);
+      setValidationErrors({});
+    }
+  };
+
   const handleChange = (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | { target: { name: string; value: any } }
   ) => {
     const { name, value } = e.target;
@@ -151,7 +181,7 @@ const User: React.FC = () => {
       const updatedData = {
         ...editFormData,
         [name]: name === 'role_id' ? Number(value) : value,
-        role: name === 'role_id' ? (value === 1 ? 'Admin' : 'User') : editFormData.role,
+        role: name === 'role_id' ? (roles.find((r) => r.id === Number(value))?.name || editFormData.role) : editFormData.role,
       };
       setEditFormData(updatedData);
       const errors = validateForm(updatedData);
@@ -191,7 +221,6 @@ const User: React.FC = () => {
       } else {
         throw new Error('Không thể cập nhật người dùng');
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const errorMessage = `Không thể cập nhật người dùng: ${error.response?.data?.message || error.message}`;
       setSnackbarMessage(errorMessage);
@@ -204,6 +233,7 @@ const User: React.FC = () => {
   const handleCancel = () => {
     setEditUserId(null);
     setEditFormData(null);
+    setSelectedUserId(null);
     setValidationErrors({});
   };
 
@@ -218,7 +248,6 @@ const User: React.FC = () => {
         setCurrentPage(currentPage - 1);
         fetchUsers(currentPage - 1);
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const errorMessage = `Lỗi khi xóa người dùng: ${error.response?.data?.message || error.message}`;
       setSnackbarMessage(errorMessage);
@@ -244,14 +273,14 @@ const User: React.FC = () => {
 
   const renderStatusLabel = (status: string | undefined) => {
     switch (status) {
-      case "active":
-        return "Đang làm việc";
-      case "not_active":
-        return "Nghỉ làm";
-      case "pending":
-        return "Chờ xét duyệt";
+      case 'active':
+        return 'Đang làm việc';
+      case 'not_active':
+        return 'Nghỉ làm';
+      case 'pending':
+        return 'Chờ xét duyệt';
       default:
-        return "Không xác định";
+        return 'Không xác định';
     }
   };
 
@@ -362,11 +391,23 @@ const User: React.FC = () => {
                                 variant="body2"
                                 color={user.status === 'active' ? '#00796b' : '#d32f2f'}
                               >
-                                {user.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                                {renderStatusLabel(user.status)}
                               </Typography>
                             </TableCell>
                             <TableCell align="center">
                               <Box display="flex" justifyContent="center" gap={1} sx={{ flexWrap: 'wrap' }}>
+                                <IconButton
+                                  title={selectedUserId === user.id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                                  onClick={() => handleViewDetails(user.id)}
+                                  sx={{
+                                    color: '#1976d2',
+                                    bgcolor: '#e3f2fd',
+                                    p: '6px',
+                                    '&:hover': { bgcolor: '#bbdefb', boxShadow: '0 2px 6px rgba(25, 118, 210, 0.4)' },
+                                  }}
+                                >
+                                  {selectedUserId === user.id ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                                </IconButton>
                                 <ProtectedComponent permission="edit_users">
                                   <IconButton
                                     title="Chỉnh sửa người dùng"
@@ -406,110 +447,138 @@ const User: React.FC = () => {
                           </TableRow>
                           <TableRow>
                             <TableCell colSpan={6} style={{ padding: 0 }}>
-                              <Collapse in={editUserId === user.id}>
+                              <Collapse in={selectedUserId === user.id || editUserId === user.id}>
                                 <Box sx={{ p: 2, bgcolor: '#fff', borderRadius: '8px' }}>
-                                  <Typography
-                                    variant="h6"
-                                    gutterBottom
-                                    sx={{ fontWeight: 600, color: '#333' }}
-                                  >
-                                    Chỉnh sửa người dùng
-                                  </Typography>
-                                  <Box display="flex" flexDirection="column" gap={2}>
-                                    <TextField
-                                      label="Tên"
-                                      name="name"
-                                      value={editFormData?.name || ''}
-                                      onChange={handleChange}
-                                      fullWidth
-                                      variant="outlined"
-                                      size="small"
-                                      error={!!validationErrors.name}
-                                      helperText={validationErrors.name}
-                                      sx={{ bgcolor: '#fff', borderRadius: '4px' }}
-                                    />
-                                    <TextField
-                                      label="Email"
-                                      name="email"
-                                      value={editFormData?.email || ''}
-                                      onChange={handleChange}
-                                      fullWidth
-                                      variant="outlined"
-                                      size="small"
-                                      error={!!validationErrors.email}
-                                      helperText={validationErrors.email}
-                                      sx={{ bgcolor: '#fff', borderRadius: '4px' }}
-                                    />
-                                    <Select
-                                      label="Vai trò"
-                                      name="role_id"
-                                      value={editFormData?.role_id || ''}
-                                      onChange={(e) => handleChange({ target: { name: 'role_id', value: e.target.value } })}
-                                      fullWidth
-                                      variant="outlined"
-                                      size="small"
-                                      error={!!validationErrors.role_id}
-                                      sx={{ bgcolor: '#fff', borderRadius: '4px' }}
-                                    >
-                                      <MenuItem value={1}>Admin</MenuItem>
-                                      <MenuItem value={2}>User</MenuItem>
-                                    </Select>
-                                    <Select
-                                      label="Trạng thái"
-                                      name="status"
-                                      value={editFormData?.status || ''}
-                                      onChange={(e) => handleChange({ target: { name: 'status', value: e.target.value } })}
-                                      fullWidth
-                                      variant="outlined"
-                                      size="small"
-                                      error={!!validationErrors.status}
-                                      sx={{ bgcolor: '#fff', borderRadius: '4px' }}
-                                    >
-                                      <MenuItem value="active">Hoạt động</MenuItem>
-                                      <MenuItem value="inactive">Không hoạt động</MenuItem>
-                                    </Select>
-                                    <Box mt={2} display="flex" gap={2}>
-                                      <Button
-                                        variant="contained"
-                                        onClick={handleSave}
-                                        disabled={editLoading}
-                                        sx={{
-                                          backgroundColor: '#4318FF',
-                                          color: '#fff',
-                                          textTransform: 'none',
-                                          fontWeight: 600,
-                                          borderRadius: '8px',
-                                          px: 2.5,
-                                          py: 0.7,
-                                          '&:hover': { backgroundColor: '#7B1FA2' },
-                                          '&:disabled': { backgroundColor: '#a9a9a9' },
-                                        }}
+                                  {editUserId === user.id && editFormData ? (
+                                    <>
+                                      <Typography
+                                        variant="h6"
+                                        gutterBottom
+                                        sx={{ fontWeight: 600, color: '#333' }}
                                       >
-                                        {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
-                                      </Button>
-                                      <Button
-                                        variant="outlined"
-                                        onClick={handleCancel}
-                                        disabled={editLoading}
-                                        sx={{
-                                          color: '#f44336',
-                                          borderColor: '#f44336',
-                                          textTransform: 'none',
-                                          fontWeight: 600,
-                                          borderRadius: '8px',
-                                          px: 2.5,
-                                          py: 0.7,
-                                          '&:hover': {
-                                            borderColor: '#d32f2f',
-                                            backgroundColor: '#ffebee',
-                                          },
-                                          '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
-                                        }}
+                                        Chỉnh sửa người dùng
+                                      </Typography>
+                                      <Box display="flex" flexDirection="column" gap={2}>
+                                        <TextField
+                                          label="Tên"
+                                          name="name"
+                                          value={editFormData.name || ''}
+                                          onChange={handleChange}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={!!validationErrors.name}
+                                          helperText={validationErrors.name}
+                                          sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                        />
+                                        <TextField
+                                          label="Email"
+                                          name="email"
+                                          value={editFormData.email || ''}
+                                          onChange={handleChange}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={!!validationErrors.email}
+                                          helperText={validationErrors.email}
+                                          sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                        />
+                                        <Select
+                                          label="Vai trò"
+                                          name="role_id"
+                                          value={editFormData.role_id.toString() || ''}
+                                          onChange={(e) => handleChange({ target: { name: 'role_id', value: e.target.value } })}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={!!validationErrors.role_id}
+                                          sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                        >
+                                          <MenuItem value="">-- Không chọn --</MenuItem>
+                                          {Array.isArray(roles) &&
+                                            roles.map((role) => (
+                                              <MenuItem key={role.id} value={String(role.id)}>
+                                                {role.name}
+                                              </MenuItem>
+                                            ))}
+                                        </Select>
+                                        <Select
+                                          label="Trạng thái"
+                                          name="status"
+                                          value={editFormData.status || ''}
+                                          onChange={(e) => handleChange({ target: { name: 'status', value: e.target.value } })}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={!!validationErrors.status}
+                                          sx={{ bgcolor: '#fff', borderRadius: '4px' }}
+                                        >
+                                          <MenuItem value="active">Hoạt động</MenuItem>
+                                          <MenuItem value="not_active">Nghỉ làm</MenuItem>
+                                          <MenuItem value="pending">Chờ xét duyệt</MenuItem>
+                                        </Select>
+                                        <Box mt={2} display="flex" gap={2}>
+                                          <Button
+                                            variant="contained"
+                                            onClick={handleSave}
+                                            disabled={editLoading}
+                                            sx={{
+                                              backgroundColor: '#4318FF',
+                                              color: '#fff',
+                                              textTransform: 'none',
+                                              fontWeight: 600,
+                                              borderRadius: '8px',
+                                              px: 2.5,
+                                              py: 0.7,
+                                              '&:hover': { backgroundColor: '#7B1FA2' },
+                                              '&:disabled': { backgroundColor: '#a9a9a9' },
+                                            }}
+                                          >
+                                            {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
+                                          </Button>
+                                          <Button
+                                            variant="outlined"
+                                            onClick={handleCancel}
+                                            disabled={editLoading}
+                                            sx={{
+                                              color: '#f44336',
+                                              borderColor: '#f44336',
+                                              textTransform: 'none',
+                                              fontWeight: 600,
+                                              borderRadius: '8px',
+                                              px: 2.5,
+                                              py: 0.7,
+                                              '&:hover': {
+                                                borderColor: '#d32f2f',
+                                                backgroundColor: '#ffebee',
+                                              },
+                                              '&:disabled': { color: '#a9a9a9', borderColor: '#a9a9a9' },
+                                            }}
+                                          >
+                                            Hủy
+                                          </Button>
+                                        </Box>
+                                      </Box>
+                                    </>
+                                  ) : selectedUserId === user.id ? (
+                                    <>
+                                      <Typography
+                                        variant="h6"
+                                        gutterBottom
+                                        sx={{ fontWeight: 600, color: '#333' }}
                                       >
-                                        Hủy
-                                      </Button>
-                                    </Box>
-                                  </Box>
+                                        Thông tin người dùng
+                                      </Typography>
+                                      <Box display="grid" gap={1}>
+                                        <Typography><strong>ID:</strong> {user.id}</Typography>
+                                        <Typography><strong>Tên:</strong> {user.name}</Typography>
+                                        <Typography><strong>Email:</strong> {user.email}</Typography>
+                                        <Typography><strong>Vai trò:</strong> {user.role}</Typography>
+                                        <Typography><strong>Trạng thái:</strong> {renderStatusLabel(user.status)}</Typography>
+                                        <Typography><strong>Ngày tạo:</strong> {new Date(user.created_at).toLocaleDateString('vi-VN')}</Typography>
+                                      </Box>
+                                    </>
+                                  ) : null}
                                 </Box>
                               </Collapse>
                             </TableCell>
