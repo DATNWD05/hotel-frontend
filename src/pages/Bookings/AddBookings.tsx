@@ -389,7 +389,7 @@ export default function HotelBooking() {
         if (!value.trim()) {
           errors.customer.address = "Vui lòng nhập địa chỉ";
         } else if (value.trim().length < 10) {
-          errors.customer.address = "Địa chỉ phải có ít nhất 10 ký tự";
+          errors.customer.address = "Vui lòng nhập đầy đủ địa chỉ";
         } else {
           delete errors.customer.address;
         }
