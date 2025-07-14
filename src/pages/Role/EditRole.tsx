@@ -40,6 +40,7 @@ const EditRole: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const isOwnerRole = role?.name.toLowerCase() === 'owner';
 
   useEffect(() => {
     if (hasPermission('edit_roles')) {
@@ -77,6 +78,7 @@ const EditRole: React.FC = () => {
   };
 
   const handlePermissionToggle = (permissionId: number) => {
+    if (isOwnerRole) return;
     setSelectedPermissions((prev) =>
       prev.includes(permissionId)
         ? prev.filter((id) => id !== permissionId)
@@ -85,11 +87,16 @@ const EditRole: React.FC = () => {
   };
 
   const handleChange = (field: keyof Role, value: string) => {
+    if (isOwnerRole) return;
     setRole((prev) => (prev ? { ...prev, [field]: value } : null));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isOwnerRole) {
+      toast.error('Không thể chỉnh sửa vai trò Owner');
+      return;
+    }
     if (!hasPermission('edit_roles')) {
       toast.error('Bạn không có quyền chỉnh sửa vai trò');
       return;
@@ -100,12 +107,6 @@ const EditRole: React.FC = () => {
     }
 
     try {
-      // const roleUpdateResponse = await api.put(`/roles/${id}`, {
-      //   name: role.name,
-      //   description: role.description,
-      //   permissions: selectedPermissions,
-      // });
-
       const verifyResponse = await api.get(`/roles/${id}`);
       const updatedRole: Role = verifyResponse.data.role || verifyResponse.data;
       const updatedPermissions = updatedRole.permissions?.map((p: Permission) => p.id) || [];
@@ -134,6 +135,10 @@ const EditRole: React.FC = () => {
   };
 
   const handleDelete = async () => {
+    if (isOwnerRole) {
+      toast.error('Không thể xóa vai trò Owner');
+      return;
+    }
     if (!window.confirm('Bạn có chắc chắn muốn xóa vai trò này?')) {
       return;
     }
@@ -216,7 +221,10 @@ const EditRole: React.FC = () => {
     },
     {
       name: 'Phòng',
-      permissions: ['view_rooms', 'create_rooms', 'edit_rooms', 'delete_rooms', 'restore_rooms', 'force_delete_rooms'],
+      permissions: [
+        'view_rooms', 'create_rooms', 'edit_rooms', 'delete_rooms', 'restore_rooms', 'force_delete_rooms',
+        'hide_rooms', 'unhide_rooms',
+      ],
       labels: {
         view_rooms: 'Xem phòng',
         create_rooms: 'Thêm phòng',
@@ -224,6 +232,8 @@ const EditRole: React.FC = () => {
         delete_rooms: 'Xóa phòng',
         restore_rooms: 'Khôi phục phòng',
         force_delete_rooms: 'Xóa phòng vĩnh viễn',
+        hide_rooms: 'Ẩn phòng',
+        unhide_rooms: 'Bỏ ẩn phòng',
       },
     },
     {
@@ -349,6 +359,7 @@ const EditRole: React.FC = () => {
         <Button
           onClick={handleDelete}
           variant="contained"
+          disabled={isOwnerRole}
           sx={{
             bgcolor: '#e53935 !important',
             color: '#fff',
@@ -357,6 +368,7 @@ const EditRole: React.FC = () => {
             borderRadius: '4px',
             fontSize: '14px',
             '&:hover': { bgcolor: '#d32f2f !important' },
+            '&:disabled': { bgcolor: '#e0e0e0 !important', color: '#666 !important' },
           }}
         >
           Xóa
@@ -370,10 +382,12 @@ const EditRole: React.FC = () => {
             value={role.name}
             onChange={(e) => handleChange('name', e.target.value)}
             required
+            disabled={isOwnerRole}
             sx={{
               '& .MuiInputBase-input': { p: '10px' },
               '& .MuiInputLabel-root': { fontWeight: 500, mb: '6px' },
               '& .MuiOutlinedInput-root': { borderRadius: '4px' },
+              '& .MuiInputBase-input:disabled': { bgcolor: '#f5f5f5', color: '#666' },
             }}
           />
           <TextField
@@ -381,10 +395,12 @@ const EditRole: React.FC = () => {
             label="Mô tả"
             value={role.description || ''}
             onChange={(e) => handleChange('description', e.target.value)}
+            disabled={isOwnerRole}
             sx={{
               '& .MuiInputBase-input': { p: '10px' },
               '& .MuiInputLabel-root': { fontWeight: 500, mb: '6px' },
               '& .MuiOutlinedInput-root': { borderRadius: '4px' },
+              '& .MuiInputBase-input:disabled': { bgcolor: '#f5f5f5', color: '#666' },
             }}
           />
         </Box>
@@ -408,6 +424,7 @@ const EditRole: React.FC = () => {
                         checked={selectedPermissions.includes(permission.id)}
                         onChange={() => handlePermissionToggle(permission.id)}
                         sx={{ mr: '8px' }}
+                        disabled={isOwnerRole}
                       />
                     }
                     label={category.labels[permission.name] || permission.name}
@@ -421,6 +438,7 @@ const EditRole: React.FC = () => {
           <Button
             type="submit"
             variant="contained"
+            disabled={isOwnerRole}
             sx={{
               bgcolor: '#1976d2 !important',
               color: '#fff',
@@ -429,6 +447,7 @@ const EditRole: React.FC = () => {
               borderRadius: '4px',
               fontSize: '14px',
               '&:hover': { bgcolor: '#1565c0 !important' },
+              '&:disabled': { bgcolor: '#e0e0e0 !important', color: '#666 !important' },
             }}
           >
             Lưu thay đổi

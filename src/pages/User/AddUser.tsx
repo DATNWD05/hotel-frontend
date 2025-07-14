@@ -10,10 +10,9 @@ import {
   CircularProgress,
   Box,
   SelectChangeEvent,
-  Snackbar,
-  Alert,
 } from "@mui/material";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "react-toastify";
 import api from "../../api/axios";
 import axios from "axios";
 import "../../css/AddUser.css";
@@ -69,14 +68,15 @@ const AddUser: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
 
   useEffect(() => {
     api
       .get("/departments")
       .then((res) => setDepartments(res.data.data))
-      .catch(() => setError("Không thể tải danh sách phòng ban"));
+      .catch(() => {
+        setError("Không thể tải danh sách phòng ban");
+        toast.error("Không thể tải danh sách phòng ban");
+      });
 
     api
       .get("/role")
@@ -84,7 +84,10 @@ const AddUser: React.FC = () => {
         console.log("Role API response:", res.data);
         setRoles(res.data.roles);
       })
-      .catch(() => setError("Không thể tải danh sách vai trò"));
+      .catch(() => {
+        setError("Không thể tải danh sách vai trò");
+        toast.error("Không thể tải danh sách vai trò");
+      });
   }, []);
 
   const validateForm = (data: FormData): ValidationErrors => {
@@ -168,8 +171,7 @@ const AddUser: React.FC = () => {
       console.log("Dữ liệu gửi lên:", payload);
       const response = await api.post("/users", payload);
       if (response.status === 201) {
-        setSnackbarMessage("Thêm nhân viên thành công!");
-        setSnackbarOpen(true);
+        toast.success("Thêm nhân viên thành công!");
         setTimeout(() => navigate("/user"), 2000);
       } else {
         throw new Error("Thêm nhân viên thất bại");
@@ -188,6 +190,7 @@ const AddUser: React.FC = () => {
       } else {
         const msg = err instanceof Error ? err.message : "Lỗi không xác định";
         setError(msg);
+        toast.error(msg);
       }
     } finally {
       setLoading(false);
@@ -195,11 +198,6 @@ const AddUser: React.FC = () => {
   };
 
   const handleCancel = () => navigate("/user");
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
-  };
 
   const statusOptions = [
     { value: "active", label: "Hoạt động" },
@@ -436,45 +434,43 @@ const AddUser: React.FC = () => {
                 helperText={errors.password}
               />
             </Box>
-<Box
-  display="flex"
-  justifyContent="flex-end"
-  gap={2}
-  mt={2}
-  className="adduser-btn-container"
->
-  <Button
-  variant="contained"
-  onClick={handleSave}
-  disabled={loading}
-  className="adduser-btn-save"
->
-  {loading ? (
-    <>
-      <CircularProgress
-        size={18}
-        color="inherit"
-        style={{ marginRight: 8 }}
-      />
-      Đang lưu...
-    </>
-  ) : (
-    "Lưu"
-  )}
-</Button>
-
-  <Button
-  variant="outlined"
-    className="adduser-btn-cancel"
-    onClick={handleCancel}
-    component={Link}
-    to="/user"
-    disabled={loading}
-  >
-    Hủy
-  </Button>
-</Box>
-
+            <Box
+              display="flex"
+              justifyContent="flex-end"
+              gap={2}
+              mt={2}
+              className="adduser-btn-container"
+            >
+              <Button
+                variant="contained"
+                onClick={handleSave}
+                disabled={loading}
+                className="adduser-btn-save"
+              >
+                {loading ? (
+                  <>
+                    <CircularProgress
+                      size={18}
+                      color="inherit"
+                      style={{ marginRight: 8 }}
+                    />
+                    Đang lưu...
+                  </>
+                ) : (
+                  "Lưu"
+                )}
+              </Button>
+              <Button
+                variant="outlined"
+                className="adduser-btn-cancel"
+                onClick={handleCancel}
+                component={Link}
+                to="/user"
+                disabled={loading}
+              >
+                Hủy
+              </Button>
+            </Box>
           </Box>
           {error && (
             <Typography color="error" className="user-error-message" mt={2}>
@@ -483,23 +479,6 @@ const AddUser: React.FC = () => {
           )}
         </div>
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

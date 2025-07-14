@@ -20,7 +20,7 @@ interface User {
   status: string;
   created_at: string;
   updated_at: string;
-  permissions: string[]; // Add this line to match AuthContext's User interface
+  permissions: string[];
 }
 
 interface LoginResponse {
@@ -74,22 +74,22 @@ const Login: React.FC = () => {
       if (!token || !user || !user.role_id) {
         throw new Error('Dữ liệu đăng nhập không hợp lệ');
       }
-      // Ensure permissions property exists
+      if (user.status !== 'active') {
+        throw new Error('Tài khoản không hoạt động, vui lòng liên hệ quản trị viên.');
+      }
       const userWithPermissions = {
         ...user,
         permissions: user.permissions ?? [],
       };
       await login(token, userWithPermissions);
       toast.success('Đăng nhập thành công!');
-      toast.success('Đăng nhập thành công!');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('Lỗi đăng nhập:', {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
       });
-      toast.error(error.response?.status === 401 ? 'Sai email hoặc mật khẩu!' : 'Đã có lỗi xảy ra!');
+      toast.error(error.message || (error.response?.status === 401 ? 'Sai email hoặc mật khẩu!' : 'Đã có lỗi xảy ra!'));
     } finally {
       setLoading(false);
     }

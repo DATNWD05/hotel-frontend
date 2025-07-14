@@ -88,6 +88,10 @@ const AddRole: React.FC = () => {
       toast.error('Vui lòng nhập tên vai trò');
       return;
     }
+    if (role.name.toLowerCase() === 'owner') {
+      toast.error('Không thể tạo vai trò với tên "Owner"');
+      return;
+    }
 
     try {
       await api.post('/roles', {
@@ -174,7 +178,10 @@ const AddRole: React.FC = () => {
     },
     {
       name: 'Phòng',
-      permissions: ['view_rooms', 'create_rooms', 'edit_rooms', 'delete_rooms', 'restore_rooms', 'force_delete_rooms'],
+      permissions: [
+        'view_rooms', 'create_rooms', 'edit_rooms', 'delete_rooms', 'restore_rooms', 'force_delete_rooms',
+        'hide_rooms', 'unhide_rooms',
+      ],
       labels: {
         view_rooms: 'Xem phòng',
         create_rooms: 'Thêm phòng',
@@ -182,6 +189,8 @@ const AddRole: React.FC = () => {
         delete_rooms: 'Xóa phòng',
         restore_rooms: 'Khôi phục phòng',
         force_delete_rooms: 'Xóa phòng vĩnh viễn',
+        hide_rooms: 'Ẩn phòng',
+        unhide_rooms: 'Bỏ ẩn phòng',
       },
     },
     {
@@ -326,7 +335,7 @@ const AddRole: React.FC = () => {
             onChange={(e) => handleChange('description', e.target.value)}
             sx={{
               '& .MuiInputBase-input': { p: '10px' },
-              '& .MuiInputLabel-root': { fontWeight: 500, mb: '6px' },
+              '& .MuiInputLabel-root': { fontWeight: 500, mb: '6pxãn'},
               '& .MuiOutlinedInput-root': { borderRadius: '4px' },
             }}
           />
