@@ -69,7 +69,7 @@ const App: React.FC = () => {
           {/* Users */}
           <Route
             path="user"
-            element={<ProtectedRoute permission="view_users"><User /></ProtectedRoute>}
+            element={<ProtectedRoute permissions={['view_users', 'edit_users', 'delete_users','view_employees','edit_employees',]}><User /></ProtectedRoute>}
           />
           <Route
             path="user/add"
