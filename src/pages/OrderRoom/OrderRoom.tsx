@@ -181,7 +181,7 @@ const OrderRoom: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await api.get("/rooms");
-      console.log(response.data);
+      // console.log(response.data);
 
       if (response.status === 200) {
         const data: Room[] = Array.isArray(response.data.data)

@@ -48,6 +48,7 @@ import Revenue from './pages/Statistics/Revenue';
 import Departments from './pages/Departments/DepartmentList';
 import AddDepartment from './pages/Departments/DepartmentAdd';
 import OrderRoom from './pages/OrderRoom/OrderRoom';
+import RosterTable from './pages/WorkAssignment/RosterTable';
 
 const App: React.FC = () => {
   return (
@@ -192,6 +193,12 @@ const App: React.FC = () => {
                 <OrderRoom />
               </ProtectedRoute>
             }
+          />
+
+          {/* WorkAssignment */}
+          <Route
+            path="work-assignment"
+            element={<ProtectedRoute permission=""><RosterTable /></ProtectedRoute>}
           />
 
           {/* Amenities */}
