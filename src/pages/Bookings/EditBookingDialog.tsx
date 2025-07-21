@@ -357,7 +357,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
             }}
           >
             <Typography variant="h6" fontWeight={700} gutterBottom>
-              🛏️ Chọn phòng *
+              🛏️ Chọn phòng
             </Typography>
 
             {/* Display selected rooms as chips */}
@@ -489,7 +489,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                               ).toLocaleString()}{" "}
                               VNĐ -{" "}
                               {room.status === "available"
-                                ? "Có sẵn"
+                                ? "Đang Trống"
                                 : "Đã đặt"}
                             </Typography>
                           </Box>
@@ -520,7 +520,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
             }}
           >
             <Typography variant="h6" fontWeight={700} gutterBottom>
-              📅 Ngày nhận phòng *
+              📅 Ngày nhận phòng
             </Typography>
             <TextField
               type="date"
@@ -546,7 +546,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
             }}
           >
             <Typography variant="h6" fontWeight={700} gutterBottom>
-              📅 Ngày trả phòng *
+              📅 Ngày trả phòng
             </Typography>
             <TextField
               type="date"
@@ -572,7 +572,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
             }}
           >
             <Typography variant="h6" fontWeight={700} gutterBottom>
-              💰 Số tiền đặt cọc (VNĐ) *
+              💰 Số tiền đặt cọc (VNĐ)
             </Typography>
             <TextField
               type="number"
