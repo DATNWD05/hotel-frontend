@@ -21,25 +21,33 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Menu,
-  MenuItem as MenuItemMenu,
   InputAdornment,
   Card,
   CardContent,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  SelectChangeEvent,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import FilterListIcon from "@mui/icons-material/FilterList";
 import { SearchIcon } from "lucide-react";
 import api from "../../api/axios";
 import "../../css/Promotion.css";
 import { Link } from "react-router-dom";
 
+interface Employee {
+  id: number;
+  name: string;
+}
+
 interface Department {
   id: number;
   name: string;
-  manager?: { name: string };
+  manager_name?: string;
+  manager_id?: number;
 }
 
 interface Meta {
@@ -65,18 +73,17 @@ const Departments: React.FC = () => {
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Department>>({});
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
     {}
   );
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [departmentToDelete, setDepartmentToDelete] = useState<number | null>(
-    null
-  );
-  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(
     null
   );
 
@@ -84,12 +91,13 @@ const Departments: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get<{ data: Department[]; meta: Meta }>(
-        "/departments",
-        {
-          params: { page: currentPage },
-        }
-      );
+      const response = await api.get<{
+        status: string;
+        data: Department[];
+        meta: Meta;
+      }>("/departments", {
+        params: { page: currentPage },
+      });
       if (response.status === 200) {
         setDepartments(response.data.data);
         setAllDepartments(response.data.data);
@@ -106,6 +114,34 @@ const Departments: React.FC = () => {
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchEmployees = async (departmentId: number) => {
+    try {
+      setLoading(true);
+      console.log("Fetching employees for department ID:", departmentId); // Debug log
+      const response = await api.get<{ status: string; data: Employee[] }>(
+        `/departments/${departmentId}/employees`
+      );
+      console.log("API Response:", response); // Debug log
+      if (response.status === 200) {
+        setEmployees(response.data.data || []);
+      } else {
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      console.error("Error fetching employees:", err); // Debug log
+      const errorMessage =
+        err.response?.data?.message ||
+        "Đã xảy ra lỗi khi tải danh sách nhân viên";
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarOpen(true);
+      setEmployees([]); // Đặt mảng rỗng khi có lỗi
     } finally {
       setLoading(false);
     }
@@ -147,24 +183,49 @@ const Departments: React.FC = () => {
   };
 
   const handleEditDetail = (department: Department) => {
+    console.log("Editing department:", department); // Debug log
     setViewDetailId(department.id);
     setEditingDetailId(department.id);
     setEditedDetail({
       id: department.id,
       name: department.name,
+      manager_id: department.manager_id,
+      manager_name: department.manager_name,
     });
     setValidationErrors({});
+    fetchEmployees(department.id);
   };
 
-  const handleChangeDetail = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setEditedDetail((prev) => ({ ...prev, [name]: value }));
-    setValidationErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors[name as keyof typeof prev];
-      return newErrors;
-    });
-  };
+// TextField
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const { name, value } = e.target;
+  setEditedDetail((prev) => ({
+    ...prev,
+    [name]: value,
+  }));
+  setValidationErrors((prev) => {
+    const newErrors = { ...prev };
+    delete newErrors[name as keyof typeof prev];
+    return newErrors;
+  });
+};
+
+// Select
+const handleSelectChange = (e: SelectChangeEvent) => {
+  const { name, value } = e.target;
+  const selectedEmployee = employees.find((emp) => emp.id === Number(value));
+  setEditedDetail((prev) => ({
+    ...prev,
+    manager_id: Number(value),
+    manager_name: selectedEmployee?.name ?? "",
+  }));
+  setValidationErrors((prev) => {
+    const newErrors = { ...prev };
+    delete newErrors[name as keyof typeof prev];
+    return newErrors;
+  });
+};
+
 
   const handleSaveDetail = async () => {
     if (!editedDetail || !editedDetail.id) return;
@@ -179,6 +240,7 @@ const Departments: React.FC = () => {
       setLoading(true);
       const payload = {
         name: editedDetail.name?.trim() ?? "",
+        manager_id: editedDetail.manager_id ?? null,
       };
       const response = await api.put(
         `/departments/${editedDetail.id}`,
@@ -189,16 +251,16 @@ const Departments: React.FC = () => {
         setEditingDetailId(null);
         setViewDetailId(null);
         setValidationErrors({});
+        setEmployees([]);
         setSnackbarMessage("Cập nhật phòng ban thành công!");
         setSnackbarOpen(true);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
       const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Đã xảy ra lỗi khi cập nhật phòng ban";
+        err.response?.data?.message || "Đã xảy ra lỗi khi cập nhật phòng ban";
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
@@ -211,6 +273,7 @@ const Departments: React.FC = () => {
     setEditingDetailId(null);
     setViewDetailId(null);
     setValidationErrors({});
+    setEmployees([]);
   };
 
   const handleDelete = (id: number) => {
@@ -232,7 +295,7 @@ const Departments: React.FC = () => {
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message || "Đã xảy ra lỗi khi xóa phòng ban";
@@ -256,14 +319,6 @@ const Departments: React.FC = () => {
     page: number
   ) => {
     setCurrentPage(page);
-  };
-
-  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
-    setFilterAnchorEl(event.currentTarget);
-  };
-
-  const handleFilterClose = () => {
-    setFilterAnchorEl(null);
   };
 
   return (
@@ -304,37 +359,6 @@ const Departments: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <IconButton
-              onClick={handleFilterClick}
-              sx={{
-                bgcolor: "#fff",
-                borderRadius: "8px",
-                p: 1,
-                "&:hover": { bgcolor: "#f0f0f0" },
-              }}
-              className="filter-button"
-            >
-              <FilterListIcon />
-            </IconButton>
-            <Menu
-              anchorEl={filterAnchorEl}
-              open={Boolean(filterAnchorEl)}
-              onClose={handleFilterClose}
-              anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-              transformOrigin={{ vertical: "top", horizontal: "left" }}
-              sx={{
-                "& .MuiPaper-root": {
-                  borderRadius: "8px",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                },
-              }}
-            >
-              <MenuItemMenu onClick={handleFilterClose}>
-                <Typography variant="body2">
-                  Không có bộ lọc nào khả dụng
-                </Typography>
-              </MenuItemMenu>
-            </Menu>
             <Button
               component={Link}
               to="/departments/add"
@@ -407,7 +431,7 @@ const Departments: React.FC = () => {
                           <TableCell>{department.id}</TableCell>
                           <TableCell>{department.name}</TableCell>
                           <TableCell>
-                            {department.manager?.name || "N/A"}
+                            {department.manager_name || "N/A"}
                           </TableCell>
                           <TableCell align="center">
                             <Box display="flex" justifyContent="center" gap={1}>
@@ -492,7 +516,7 @@ const Departments: React.FC = () => {
                                           label="Tên phòng ban"
                                           name="name"
                                           value={editedDetail.name || ""}
-                                          onChange={handleChangeDetail}
+                                          onChange={handleInputChange}
                                           fullWidth
                                           variant="outlined"
                                           size="small"
@@ -520,6 +544,51 @@ const Departments: React.FC = () => {
                                             },
                                           }}
                                         />
+                                        <FormControl
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                        >
+                                          <InputLabel>Trưởng phòng</InputLabel>
+                                          <Select
+                                            name="manager_id"
+                                            value={editedDetail.manager_id?.toString() || ""}
+                                            onChange={handleSelectChange}
+                                            label="Trưởng phòng"
+                                            sx={{
+                                              "& .MuiOutlinedInput-root": {
+                                                "& fieldset": {
+                                                  borderColor: "#ccc",
+                                                },
+                                                "&:hover fieldset": {
+                                                  borderColor: "#888",
+                                                },
+                                                "&.Mui-focused fieldset": {
+                                                  borderColor: "#1976d2",
+                                                  borderWidth: "2px",
+                                                },
+                                              },
+                                            }}
+                                          >
+                                            <MenuItem value="">
+                                              <em>Không có trưởng phòng</em>
+                                            </MenuItem>
+                                            {employees.length > 0 ? (
+                                              employees.map((employee) => (
+                                                <MenuItem
+                                                  key={employee.id}
+                                                  value={employee.id}
+                                                >
+                                                  {employee.name}
+                                                </MenuItem>
+                                              ))
+                                            ) : (
+                                              <MenuItem disabled>
+                                                <em>Không có nhân viên</em>
+                                              </MenuItem>
+                                            )}
+                                          </Select>
+                                        </FormControl>
                                       </Box>
                                       <Box pb={3} mt={2} display="flex" gap={2}>
                                         <Button
@@ -566,7 +635,7 @@ const Departments: React.FC = () => {
                                         <TableRow>
                                           <TableCell colSpan={2}>
                                             <strong>Quản lý:</strong>{" "}
-                                            {department.manager?.name || "N/A"}
+                                            {department.manager_name || "N/A"}
                                           </TableCell>
                                         </TableRow>
                                       </TableBody>

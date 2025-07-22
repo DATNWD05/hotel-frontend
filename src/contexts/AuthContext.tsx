@@ -21,6 +21,7 @@ interface AuthContextType {
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -89,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const superUser = { ...initial, permissions: ['*'] };
         setUser(superUser);
         localStorage.setItem('auth_user', JSON.stringify(superUser));
+        localStorage.setItem('auth_user_id', userData.id.toString()); // ✅ lưu lại user_id cho owner
       } else {
         await fetchPermissions(userData.role_id, initial);
       }
@@ -124,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth phải được dùng trong AuthProvider');

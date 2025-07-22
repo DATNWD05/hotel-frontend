@@ -100,9 +100,9 @@ const sitemap: MenuItem[] = [
     hidden: !token,
   },
   {
-    id: 'calenda',
-    subheader: 'Lịch',
-    path: '/calenda',
+    id: 'work-assignment',
+    subheader: 'Phân công',
+    path: '/work-assignment',
     icon: 'material-symbols:calendar-month',
     hidden: !token,
   },

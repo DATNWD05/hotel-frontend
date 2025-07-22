@@ -182,7 +182,7 @@ const OrderRoom: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await api.get("/rooms");
-      console.log(response.data);
+      // console.log(response.data);
 
       if (response.status === 200) {
         const data: Room[] = Array.isArray(response.data.data)
@@ -318,14 +318,16 @@ const OrderRoom: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    let filtered = [...allRooms];
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(
-        (room) => mapStatusToUI(room.status) === statusFilter
-      );
+    if (allRooms.length > 0) {
+      let filtered = [...allRooms];
+      if (statusFilter !== "all") {
+        filtered = filtered.filter(
+          (room) => mapStatusToUI(room.status) === statusFilter
+        );
+      }
+      setFilteredRooms(filtered);
+      setRooms(filtered);
     }
-    setFilteredRooms(filtered);
-    setRooms(filtered);
   }, [statusFilter, allRooms]);
 
   const mapStatusToUI = (
@@ -991,16 +993,6 @@ const OrderRoom: React.FC = () => {
         </DialogContent>
 
         <DialogActions className="dialog-actions-enhanced">
-          {selectedRoom?.status === "available" && (
-            <Link to="/listbookings/add">
-              <button
-                className="order-room-filter order-room-filter-book"
-                style={{ marginLeft: "auto" }}
-              >
-                Đặt phòng
-              </button>
-            </Link>
-          )}
           {selectedRoom &&
             (selectedRoom.status === "available" ||
               selectedRoom.status === "maintenance") && (
