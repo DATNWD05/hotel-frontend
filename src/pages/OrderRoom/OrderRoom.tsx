@@ -34,7 +34,8 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import "../../css/OrderRoom.css";
 import api from "../../api/axios";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
 
 interface RoomType {
   id: number;
@@ -157,6 +158,8 @@ interface ValidationErrors {
 }
 
 const OrderRoom: React.FC = () => {
+  const { hasPermission } = useAuth(); // Sử dụng useAuth để kiểm tra quyền
+  const navigate = useNavigate(); // Thêm useNavigate để chuyển hướng
   const [rooms, setRooms] = useState<Room[]>([]);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
@@ -167,9 +170,7 @@ const OrderRoom: React.FC = () => {
   const [openDialog, setOpenDialog] = useState<boolean>(false);
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
   const [editRoom, setEditRoom] = useState<Partial<Room>>({});
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [roomTypes, setRoomTypes] = useState<SimpleRoomType[]>([]);
@@ -440,15 +441,12 @@ const OrderRoom: React.FC = () => {
       const response = await api.put(`/rooms/${editRoom.id}`, payload);
 
       if (response.status === 200) {
-        // 1. Gọi lại toàn bộ danh sách
         await fetchRooms();
-
-        // 2. Cập nhật selectedRoom dựa trên response (đã cập nhật thành công)
         const updatedRoomData = response.data?.data;
         if (updatedRoomData) {
           setSelectedRoom((prev) => ({
             ...prev!,
-            room_type: updatedRoomData.room_type, // cập nhật loại phòng
+            room_type: updatedRoomData.room_type,
             room_type_id: updatedRoomData.room_type_id,
             room_number: updatedRoomData.room_number,
             status: updatedRoomData.status,
@@ -483,17 +481,18 @@ const OrderRoom: React.FC = () => {
       if (response.status === 200) {
         await fetchRooms();
         setOpenDialog(false);
-        setSnackbarMessage("Phòng đã được xóa (mềm) thành công!");
+        setSnackbarMessage("Phòng đã được ẩn thành công!");
         setSnackbarOpen(true);
+        navigate('/hiddenrooms'); // Chuyển hướng tới HiddenRoom
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi xóa phòng";
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi ẩn phòng";
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
-      console.error("Lỗi khi xóa phòng:", errorMessage);
+      console.error("Lỗi khi ẩn phòng:", errorMessage);
     } finally {
       setLoading(false);
     }
@@ -576,7 +575,6 @@ const OrderRoom: React.FC = () => {
     );
   }
 
-  // Calculate room counts
   const totalRooms = allRooms.length;
   const availableRooms = allRooms.filter(
     (room) => room.status === "available"
@@ -1015,7 +1013,8 @@ const OrderRoom: React.FC = () => {
             )}
           {selectedRoom &&
             (selectedRoom.status === "available" ||
-              selectedRoom.status === "maintenance") && (
+              selectedRoom.status === "maintenance") &&
+            hasPermission('hide_rooms') && ( // Kiểm tra quyền hide_rooms
               <button onClick={handleSoftDeleteRoom} className="delete-button">
                 <DeleteIcon /> Ẩn phòng
               </button>
