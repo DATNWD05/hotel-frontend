@@ -18,5 +18,7 @@ export default defineConfig({
       theme: path.resolve(__dirname, 'src/theme'),
     },
   },
+  optimizeDeps: {
+    include: ['dayjs'], // 👈 Bắt buộc để MUI x-date-pickers hoạt động đúng
+  },
 });
-

@@ -3,12 +3,13 @@
     "target": "es5",
     "module": "esnext",
     "lib": ["dom", "esnext"],
-    "jsx": "react-jsx",            // hoặc "react" nếu bạn dùng React <17
+    "jsx": "react-jsx",
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node"]                       // ✅ Thêm dòng này để fix lỗi
   },
   "include": ["src"]
 }

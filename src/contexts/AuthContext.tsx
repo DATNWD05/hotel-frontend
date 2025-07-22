@@ -3,13 +3,25 @@ import api from '../api/axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
-interface User {
+/** ================== CONFIG SHARE ================== */
+const DEFAULT_AVATAR = '/default-avatar.png';
+const FILES_URL = import.meta.env.VITE_FILES_URL || 'http://127.0.0.1:8000';
+const resolvePath = (p?: string) => {
+  if (!p) return DEFAULT_AVATAR;
+  const path = p.replace(/^storage\/app\/public\//, '');
+  if (path.startsWith('storage/')) return `${FILES_URL}/${path}`;
+  return `${FILES_URL}/storage/${path}`;
+};
+/** =================================================== */
+
+export interface User {
   id: number;
   name: string;
   email: string;
   role_id: number;
   permissions: string[];
   avatarUrl?: string;
+  avatarVer?: number; // dùng để ép Topbar re-render
 }
 
 interface AuthContextType {
@@ -21,13 +33,32 @@ interface AuthContextType {
   setUser: React.Dispatch<React.SetStateAction<User | null>>;
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
+
+  // ===== Helper: fetch avatar of current user if missing =====
+  const fetchAvatarForCurrentUser = async (uid: number) => {
+    try {
+      const res = await api.get('/employees', { params: { page: 1 } });
+      const emps: any[] = res.data.data;
+      const me = emps.find(e => e.user_id === uid);
+      if (me?.face_image) {
+        const url = resolvePath(me.face_image);
+        setUser(u => {
+          if (!u) return u;
+          const nu = { ...u, avatarUrl: url, avatarVer: Date.now() };
+          localStorage.setItem('auth_user', JSON.stringify(nu));
+          return nu;
+        });
+      }
+    } catch (err) {
+      console.warn('Fetch avatar fail:', err);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
@@ -40,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthenticated(true);
 
         if (parsed.role_id === 1) {
-          const superUser = { ...parsed, permissions: ['*'] };
+          const superUser: User = { ...parsed, permissions: ['*'] };
           setUser(superUser);
           localStorage.setItem('auth_user', JSON.stringify(superUser));
           localStorage.setItem('auth_user_id', String(parsed.id));
@@ -49,6 +80,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             fetchPermissions(parsed.role_id, parsed);
           }
           localStorage.setItem('auth_user_id', String(parsed.id));
+        }
+
+        // Nếu chưa có avatarUrl => gọi fetch avatar
+        if (!parsed.avatarUrl) {
+          fetchAvatarForCurrentUser(parsed.id);
         }
       } catch (err) {
         console.error('Parse user error:', err);
@@ -62,13 +98,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchPermissions = async (roleId: number, currentUser: User | null = user) => {
     try {
       const res = await api.get(`/roles/${roleId}`);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const permissions = (res.data.role?.permissions || []).map((p: any) => p.name);
       const updated = { ...(currentUser as User), permissions };
       setUser(updated);
       localStorage.setItem('auth_user', JSON.stringify(updated));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+    } catch (err) {
       console.error('Get permission error:', err);
       toast.warn('Không thể lấy quyền, dùng mặc định');
       const updated = { ...(currentUser as User), permissions: [] };
@@ -80,23 +114,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (token: string, userData: User) => {
     try {
       localStorage.setItem('auth_token', token);
-      const initial = { ...userData, permissions: userData.permissions || [] };
+      const initial: User = { ...userData, permissions: userData.permissions || [] };
       setUser(initial);
       setIsAuthenticated(true);
       localStorage.setItem('auth_user', JSON.stringify(initial));
       localStorage.setItem('auth_user_id', String(userData.id));
 
       if (userData.role_id === 1) {
-        const superUser = { ...initial, permissions: ['*'] };
+        const superUser: User = { ...initial, permissions: ['*'] };
         setUser(superUser);
         localStorage.setItem('auth_user', JSON.stringify(superUser));
-        localStorage.setItem('auth_user_id', userData.id.toString()); // ✅ lưu lại user_id cho owner
       } else {
         await fetchPermissions(userData.role_id, initial);
       }
 
+      // Lấy avatar ngay khi login nếu chưa có
+      await fetchAvatarForCurrentUser(userData.id);
+
       navigate('/dashboard');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('Login error:', err);
       toast.error('Đăng nhập thất bại: ' + (err.response?.data?.message || err.message));
@@ -126,7 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth phải được dùng trong AuthProvider');

@@ -64,6 +64,7 @@ export default function Topbar({ onToggleSidebar, sidebarWidth, height }: Topbar
           <Typography variant="body1">{user?.name || 'Khách'}</Typography>
           <IconButton size="large" onClick={handleClick} color="inherit" sx={{ p: 0.5 }}>
             <Avatar
+              key={user?.avatarVer || avatarSrc}
               src={avatarSrc}
               sx={{ width: 32, height: 32 }}
               onError={(e) => { (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR; }}
