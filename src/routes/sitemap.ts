@@ -25,7 +25,7 @@ const sitemap: MenuItem[] = [
   {
     id: 'Room',
     subheader: 'Phòng',
-    path: '/rooms',
+    path: '/',
     icon: 'material-symbols:hotel',
     active: true,
     hidden: !token,
