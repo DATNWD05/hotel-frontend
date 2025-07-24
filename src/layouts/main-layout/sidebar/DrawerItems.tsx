@@ -1,20 +1,17 @@
 // src/layouts/main-layout/sidebar/DrawerItems.tsx
-import React from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Link as RouterLink } from "react-router-dom";
-import Box from "@mui/material/Box";
-import List from "@mui/material/List";
-import Stack from "@mui/material/Stack";
-import Button from "@mui/material/Button";
-import ButtonBase from "@mui/material/ButtonBase";
-import Typography from "@mui/material/Typography";
-import CollapseListItem from "./list-items/CollapseListItem";
-import DrawerItem from "./list-items/DrawerItem";
-import Image from "../../../components/base/Image";
-import IconifyIcon from "../../../components/base/IconifyIcon";
-import LogoImg from "../../../assets/images/logo.png";
-import sitemap, { MenuItem, SubMenuItem } from "../../../routes/sitemap";
-import { fontFamily } from "../../../theme/typography";
+import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import Link from '@mui/material/Link';
+import List from '@mui/material/List';
+import Stack from '@mui/material/Stack';
+import ButtonBase from '@mui/material/ButtonBase';
+import Typography from '@mui/material/Typography';
+import CollapseListItem from './list-items/CollapseListItem';
+import DrawerItem from './list-items/DrawerItem';
+import Image from '../../../components/base/Image';
+import LogoImg from '../../../assets/images/logo.png';
+import sitemap, { MenuItem, SubMenuItem } from '../../../routes/sitemap';
+import { fontFamily } from '../../../theme/typography';
 
 export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
   const navigate = useNavigate();
@@ -22,10 +19,10 @@ export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
 
   // Bật cờ active cho từng route và item con dựa trên current URL (pathname)
   const processedMenu = React.useMemo<MenuItem[]>(() => {
-    return sitemap.map((route) => {
+    return sitemap.map(route => {
       const isParentActive =
         route.path === pathname ||
-        !!route.items?.some((item) => item.path === pathname);
+        !!route.items?.some(item => item.path === pathname);
 
       const items = route.items?.map((item: SubMenuItem) => ({
         ...item,
@@ -38,7 +35,7 @@ export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
         items,
       };
     });
-  }, [pathname]);
+  }, [pathname]); 
 
   return (
     <>
@@ -50,21 +47,21 @@ export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
         position="sticky"
         top={0}
         bgcolor="#1A2A44"
-        alignItems={collapsed ? "center" : "flex-start"}
+        alignItems={collapsed ? 'center' : 'flex-start'}
         justifyContent="center"
         borderBottom={1}
         borderColor="rgba(255, 255, 255, 0.2)"
         zIndex={1000}
       >
         <ButtonBase
-          component={RouterLink}
-          to="/"
+          component={Link}
+          href="/"
           disableRipple
           sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: collapsed ? "center" : "flex-start",
-            width: "100%",
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            width: '100%',
           }}
         >
           <Image
@@ -91,9 +88,9 @@ export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
 
       {/* Menu */}
       <List component="nav" sx={{ mt: 3, mb: 10, px: collapsed ? 0 : 2 }}>
-        {processedMenu.map((route) =>
+        {processedMenu.map(route =>
           route.items && route.items.length > 0 ? (
-            <CollapseListItem
+<CollapseListItem
               key={route.id}
               id={route.id}
               subheader={route.subheader}
@@ -114,37 +111,6 @@ export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
           )
         )}
       </List>
-
-      {/* Logout */}
-      <Box
-        mt="auto"
-        px={collapsed ? 1 : 3}
-        pb={4}
-        textAlign={collapsed ? "center" : "left"}
-      >
-        <Button
-          variant="contained"
-          fullWidth={!collapsed}
-          startIcon={<IconifyIcon icon="ic:baseline-logout" />}
-          onClick={() => {
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            navigate("/login");
-          }}
-          sx={{
-            bgcolor: "#FFD700",
-            color: "#1A2A44",
-            fontWeight: 600,
-            borderRadius: 2,
-            py: 1.5,
-            px: collapsed ? 1 : undefined,
-            "&:hover": { bgcolor: "#E6C200", transform: "translateY(-2px)" },
-            transition: "all 0.3s ease",
-          }}
-        >
-          {!collapsed && "Đăng xuất"}
-        </Button>
-      </Box>
     </>
   );
 }

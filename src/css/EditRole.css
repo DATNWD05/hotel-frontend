@@ -1,0 +1,100 @@
+/* EditRole.css */
+
+/* Container & Card */
+.edit-role-container {
+  max-width: 960px;
+  margin: 32px auto;
+  padding: 16px;
+  background: #f5f8fc;
+}
+.edit-role-container .MuiCard-root {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.edit-role-container .MuiCardContent-root {
+  padding: 24px;
+}
+
+/* Header */
+.edit-role-container .MuiTypography-h5 {
+  font-size: 1.5rem;
+  color: #1a237e;
+}
+.edit-role-container .MuiButton-contained {
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: 600;
+}
+
+/* Form Fields: equal width inputs */
+.edit-role-container form .MuiBox-root:first-child {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.edit-role-container form .MuiBox-root:first-child .MuiTextField-root {
+  flex: 1;
+}
+
+/* Permission Sections */
+.edit-role-container .MuiTypography-subtitle1 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+/* Grid layout for permissions */
+.permissions-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 12px 24px !important;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+/* Checkbox labels */
+.permissions-grid .MuiFormControlLabel-root {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #333;
+}
+
+/* Shrink checkboxes */
+.edit-role-container .MuiCheckbox-root {
+  transform: scale(0.75);
+}
+.edit-role-container .MuiCheckbox-root svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Action Buttons */
+.edit-role-container .MuiButton-outlined {
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: 600;
+}
+
+/* Dialog overrides */
+.MuiDialog-paper {
+  border-radius: 8px;
+}
+.MuiDialogTitle-root {
+  font-weight: 600;
+}
+
+/* Snackbar */
+.MuiSnackbar-root {
+  top: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .permissions-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}

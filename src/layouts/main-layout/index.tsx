@@ -1,4 +1,3 @@
-// src/layouts/main-layout/index.tsx
 import React, { useState } from 'react';
 import { Box } from '@mui/material';
 import Sidebar from './sidebar';
@@ -7,7 +6,7 @@ import { Outlet } from 'react-router-dom';
 
 const SIDEBAR_WIDTH = 280;
 const COLLAPSED_WIDTH = 72;
-const TOPBAR_HEIGHT = 64; // Phù hợp với py=1.5, px=3, font-size mặc định
+const TOPBAR_HEIGHT = 64;
 
 export default function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -29,7 +28,6 @@ export default function MainLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          // Scroll nội dung ở đây
           overflowY: 'auto',
         }}
       >

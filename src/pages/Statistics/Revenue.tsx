@@ -14,8 +14,11 @@ import {
   Pagination,
   InputAdornment,
 } from "@mui/material";
-import api from "../../api/axios";
 import { Search } from "lucide-react";
+import api from "../../api/axios";
+import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { Dayjs } from "dayjs";
 import "../../css/Revenue.css";
 
 interface RevenueItem {
@@ -45,11 +48,18 @@ export default function Revenue() {
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [fromDate, setFromDate] = useState<Dayjs | null>(null);
+  const [toDate, setToDate] = useState<Dayjs | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/statistics/revenue-table?page=${page}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const params: any = { page };
+      if (fromDate) params.from_date = fromDate.format("YYYY-MM-DD");
+      if (toDate) params.to_date = toDate.format("YYYY-MM-DD");
+
+      const res = await api.get(`/statistics/revenue-table`, { params });
       setData(res.data.data);
       setFiltered(res.data.data);
       setTotalPage(res.data.pagination.last_page);
@@ -63,7 +73,7 @@ export default function Revenue() {
 
   useEffect(() => {
     fetchData();
-  }, [page]);
+  }, [page, fromDate, toDate]);
 
   useEffect(() => {
     if (!search) {
@@ -88,6 +98,8 @@ export default function Revenue() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 2,
           mb: 3,
         }}
       >
@@ -100,27 +112,82 @@ export default function Revenue() {
           </Typography>
         </Box>
 
-        <TextField
-          placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng)"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          size="small"
-          sx={{
-            width: 300,
-            backgroundColor: "white",
-            borderRadius: "10px",
-            "& .MuiOutlinedInput-root": {
-              borderRadius: "10px",
-            },
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search size={20} />
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
+          <LocalizationProvider dateAdapter={AdapterDayjs}>
+            <DatePicker
+              label="Từ ngày"
+              value={fromDate}
+              onChange={(newValue) => {
+                setFromDate(newValue);
+                setPage(1);
+              }}
+              maxDate={toDate ?? undefined}
+              format="DD/MM/YYYY"
+              slotProps={{
+                textField: {
+                  size: "small",
+                  sx: {
+                    width: "135px",
+                    "& .MuiInputBase-root": { height: "40px" },
+                  },
+                },
+              }}
+            />
+            <DatePicker
+              label="Đến ngày"
+              value={toDate}
+              onChange={(newValue) => {
+                setToDate(newValue);
+                setPage(1);
+              }}
+              minDate={fromDate ?? undefined}
+              format="DD/MM/YYYY"
+              slotProps={{
+                textField: {
+                  size: "small",
+                  sx: {
+                    width: "135px",
+                    "& .MuiInputBase-root": { height: "40px" },
+                  },
+                },
+              }}
+            />
+          </LocalizationProvider>
+
+          <TextField
+  placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng)"
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+  size="small"
+  sx={{
+    width: 400,
+    height: 40,
+    backgroundColor: "white",
+    borderRadius: "7px",
+    "& .MuiOutlinedInput-root": {
+      height: "40px",
+      borderRadius: "10px",
+      paddingRight: "8px",
+    },
+    "& input": {
+      padding: "12px 10px",
+      fontSize: "14px", // ✅ Tăng cỡ chữ tại đây
+      fontWeight: 500,   // ✅ (tuỳ chọn) làm đậm hơn một chút
+    },
+    "& .MuiInputAdornment-root svg": {
+      fontSize: "20px", // icon kính lúp cũng to ra nếu muốn
+    },
+  }}
+  InputProps={{
+    startAdornment: (
+      <InputAdornment position="start">
+        <Search size={22} /> {/* hoặc dùng icon lớn hơn chút */}
+      </InputAdornment>
+    ),
+  }}
+/>
+
+        </Box>
       </Box>
 
       <Paper sx={{ p: 2, borderRadius: 3, boxShadow: 3 }}>
@@ -169,17 +236,13 @@ export default function Revenue() {
                       <TableCell>{row.check_in_date}</TableCell>
                       <TableCell>{row.check_out_date}</TableCell>
                       <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(row.total_amount)} ₫
+                        {row.total_amount.toLocaleString()} ₫
                       </TableCell>
                       <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(row.deposit_amount)}{" "}
-                        ₫
+                        {row.deposit_amount.toLocaleString()} ₫
                       </TableCell>
                       <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(
-                          row.remaining_amount
-                        )}{" "}
-                        ₫
+                        {row.remaining_amount.toLocaleString()} ₫
                       </TableCell>
                       <TableCell>{row.status}</TableCell>
                     </TableRow>
@@ -189,12 +252,76 @@ export default function Revenue() {
             </TableContainer>
 
             {summary && (
-              <Box mt={3}>
-                <Typography variant="body2">
-                  <b>Tổng tiền:</b> {summary.total_amount.toLocaleString()}₫ |{" "}
-                  <b>Đặt cọc:</b> {summary.deposit_amount.toLocaleString()}₫ |{" "}
-                  <b>Còn lại:</b> {summary.remaining_amount.toLocaleString()}₫
-                </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 2,
+                  flexWrap: "wrap",
+                  mt: 3,
+                  mb: 2,
+                }}
+              >
+                <Box sx={{ flex: 1, minWidth: 200 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Tổng cộng
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    sx={{ color: "#3f51b5" }}
+                  >
+                    {Number(summary.total_amount).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}{" "}
+                    ₫
+                  </Typography>
+                </Box>
+
+                <Box sx={{ flex: 1, minWidth: 200 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Đặt cọc
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    sx={{ color: "#1a237e" }}
+                  >
+                    {Number(summary.deposit_amount).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}{" "}
+                    ₫
+                  </Typography>
+                </Box>
+
+                <Box sx={{ flex: 1, minWidth: 200 }}>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                    gutterBottom
+                  >
+                    Còn lại
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    fontWeight="bold"
+                    sx={{ color: "red" }}
+                  >
+                    {Number(summary.remaining_amount).toLocaleString(
+                      undefined,
+                      { minimumFractionDigits: 2 }
+                    )}{" "}
+                    ₫
+                  </Typography>
+                </Box>
               </Box>
             )}
 

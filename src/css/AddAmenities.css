@@ -1,4 +1,8 @@
-.add-room-type-wrapper {
+/* =======================
+   AddAmenities.css - Giao diện thêm tiện ích
+   ======================= */
+
+.amenities-wrapper {
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
@@ -8,17 +12,17 @@
   overflow-x: hidden;
 }
 
-.add-room-type-title h2 {
+.amenities-title h2 {
   margin: 0;
   font-size: 28px;
   color: #1a73e8;
 }
 
-.add-room-type-title h2 b {
+.amenities-title h2 b {
   color: #d93025;
 }
 
-.room-type-detail-container {
+.amenities-detail-container {
   width: 100%;
   max-width: 100%;
   background-color: #fff;
@@ -30,16 +34,12 @@
   overflow-x: hidden;
 }
 
-.room-type-detail-container h3 {
+.amenities-detail-container h3 {
   margin-bottom: 16px;
   margin-top: 12px;
 }
 
-.room-type-detail-container > .MuiBox-root:first-of-type {
-  margin-top: 16px;
-}
-
-.room-type-loading-container {
+.amenities-loading-container {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -47,7 +47,7 @@
   padding: 20px;
 }
 
-.room-type-error-message {
+.amenities-error-message {
   text-align: center;
   padding: 10px;
   color: #d32f2f;
@@ -57,8 +57,8 @@
   margin-bottom: 20px;
 }
 
-/* Save Button (Lưu) - giống AddUser */
-.room-type-btn-save {
+/* Save Button */
+.amenities-btn-save {
   height: 42px;
   min-width: 100px !important;
   padding: 0 24px;
@@ -75,19 +75,19 @@
   box-shadow: none;
 }
 
-.room-type-btn-save:hover {
+.amenities-btn-save:hover {
   background-color: #3700b3 !important;
 }
 
-.room-type-btn-save:disabled {
+.amenities-btn-save:disabled {
   background-color: #a29bfe !important;
   color: white !important;
   opacity: 1 !important;
   pointer-events: none;
 }
 
-/* Cancel Button (Hủy) - giống AddUser */
-.room-type-btn-cancel {
+/* Cancel Button */
+.amenities-btn-cancel {
   height: 42px;
   min-width: 100px !important;
   padding: 0 24px;
@@ -104,10 +104,10 @@
   justify-content: center;
 }
 
-.room-type-btn-cancel:hover {
+.amenities-btn-cancel:hover {
   background-color: #fdeaea !important;
 }
 
-.room-type-btn-cancel:active {
+.amenities-btn-cancel:active {
   transform: scale(0.97);
 }

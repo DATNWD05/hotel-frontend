@@ -1,0 +1,19 @@
+.account-wrapper {
+  padding: 30px;
+  background-color: #f8f9fa;
+}
+
+.account-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.account-info-card,
+.account-avatar-card {
+  flex: 1;
+  min-width: 320px;
+  padding: 24px;
+  border-radius: 10px;
+  background-color: white;
+}

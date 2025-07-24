@@ -1,96 +1,124 @@
-import { Routes, Route } from "react-router-dom";
-import MainLayout from "./layouts/main-layout";
-import Login from "./components/auth/Login";
-import User from "./pages/User/User";
-import AddUser from "./pages/User/AddUser";
-import Dashboard from "./pages/OrderRoom/OrderRoom";
-import AddPromotion from "./pages/Promotion/AddPromotion";
-import Promotions from "./pages/Promotion/Promotions";
-import RoleBasedRoute from "./routes/helpers/RoleBasedRoute";
-import Unauthorized from "./pages/Unauthorized";
-import ProtectedRoute from "./routes/helpers/ProtectedRoute";
-import Role from "./pages/Role/Role";
-import AddRole from "./pages/Role/AddRole";
-import Customer from "./pages/Customer/Customer";
-import CreateService from "./pages/Services/CreateService";
-import ServiceCategoryList from "./pages/Services/Service_category";
-import AddServiceCategory from "./pages/Services/AddServiceCategory";
-import RoomTypesList from "./pages/Room/RoomTypeList";
-import AddRoomType from "./pages/Room/AddRoomType";
-import Amenities from "./pages/Room/Amenities";
-import AmenitiesAdd from "./pages/Room/AmenitiesAdd";
-import AmenitiesCategoryList from "./pages/Room/Amenities_Category";
-import AddAmenityCategory from "./pages/Room/AddAmenitiesCaregory";
-import ListBookings from "./pages/Bookings/ListBookings";
-import AddBookings from "./pages/Bookings/AddBookings";
-import DetailBookings from "./pages/Bookings/DetailBookings";
-import Statistics from "./pages/Statistics/Statistics";
-import Service from "./pages/Services/service";
-import Departments from "./pages/Departments/DepartmentList";
-import AddDepartment from "./pages/Departments/DepartmentAdd";
-import HiddenRoom from "./pages/Room/HiddenRoom";
-import BookingService from "./pages/Statistics/BookingService";
-import Revenue from "./pages/Statistics/Revenue";
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-function App() {
+import Login from './components/auth/Login';
+import Unauthorized from './pages/Unauthorized';
+import MainLayout from './layouts/main-layout';
+import ProtectedRoute from './routes/helpers/ProtectedRoute';
+
+// Pages
+import Dashboard from './pages/OrderRoom/OrderRoom';
+import User from './pages/User/User';
+import AddUser from './pages/User/AddUser';
+import Profile from './pages/User/Profile';
+
+import Role from './pages/Role/Role';
+import AddRole from './pages/Role/AddRole';
+import EditRole from './pages/Role/EditRole';
+
+import Customer from './pages/Customer/Customer';
+import AddCustomer from './pages/Customer/AddCustomer';
+
+import Promotions from './pages/Promotion/Promotions';
+import AddPromotion from './pages/Promotion/AddPromotion';
+
+import CreateService from './pages/Services/CreateService';
+import Service from './pages/Services/service';
+import ServiceCategoryList from './pages/Services/Service_category';
+import AddServiceCategory from './pages/Services/AddServiceCategory';
+
+import RoomTypesList from './pages/Room/RoomTypeList';
+import AddRoomType from './pages/Room/AddRoomType';
+import HiddenRoom from './pages/Room/HiddenRoom';
+
+import Amenities from './pages/Room/Amenities';
+import AmenitiesAdd from './pages/Room/AmenitiesAdd';
+import AmenitiesCategoryList from './pages/Room/Amenities_Category';
+import AddAmenityCategory from './pages/Room/AddAmenitiesCaregory';
+
+import ListBookings from './pages/Bookings/ListBookings';
+import AddBookings from './pages/Bookings/AddBookings';
+import DetailBookings from './pages/Bookings/DetailBookings';
+
+import Statistics from './pages/Statistics/Statistics';
+import BookingService from './pages/Statistics/BookingService';
+import Revenue from './pages/Statistics/Revenue';
+
+import Departments from './pages/Departments/DepartmentList';
+import AddDepartment from './pages/Departments/DepartmentAdd';
+
+import RosterTable from './pages/WorkAssignment/RosterTable';
+
+const App: React.FC = () => {
   return (
-    <Routes>
-      {/* Main */}
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Dashboard />} />
-        
-        <Route path="user" element={<ProtectedRoute><RoleBasedRoute allowedRoleIds={[1]}><User /></RoleBasedRoute></ProtectedRoute>}/>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/" element={<MainLayout />}>
+          <Route index element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
-        <Route path="user/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddUser /></RoleBasedRoute>} />
+          {/* Users */}
+          <Route path="user" element={<ProtectedRoute permission="view_users"><User /></ProtectedRoute>} />
+          <Route path="user/add" element={<ProtectedRoute permission="create_users"><AddUser /></ProtectedRoute>} />
+          <Route path="profile" element={<ProtectedRoute permission="view_employees"><Profile /></ProtectedRoute>} />
 
-        <Route path="/listbookings" element={<RoleBasedRoute allowedRoleIds={[1]}><ListBookings /></RoleBasedRoute>} />
-        <Route path="/listbookings/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddBookings /></RoleBasedRoute>} />
-        <Route path="/listbookings/detail/:id" element={<RoleBasedRoute allowedRoleIds={[1]}><DetailBookings /></RoleBasedRoute>} />
+          {/* Roles */}
+          <Route path="role" element={<ProtectedRoute permission="view_roles"><Role /></ProtectedRoute>} />
+          <Route path="role/add" element={<ProtectedRoute permission="create_roles"><AddRole /></ProtectedRoute>} />
+          <Route path="role/edit/:id" element={<ProtectedRoute permission="edit_roles"><EditRole /></ProtectedRoute>} />
 
-        <Route path="/statistics" element={<RoleBasedRoute allowedRoleIds={[1]}><Statistics /></RoleBasedRoute>} />
-        <Route path="/statistics-services" element={<RoleBasedRoute allowedRoleIds={[1]}><BookingService  /></RoleBasedRoute>} />
-        <Route path="/statistics-revenues" element={<RoleBasedRoute allowedRoleIds={[1]}><Revenue  /></RoleBasedRoute>} />
+          {/* Bookings */}
+          <Route path="listbookings" element={<ProtectedRoute permission="view_bookings"><ListBookings /></ProtectedRoute>} />
+          <Route path="listbookings/add" element={<ProtectedRoute permission="create_bookings"><AddBookings /></ProtectedRoute>} />
+          <Route path="listbookings/detail/:id" element={<ProtectedRoute permission="view_bookings"><DetailBookings /></ProtectedRoute>} />
 
-        <Route path="/hiddenrooms" element={<RoleBasedRoute allowedRoleIds={[1]}><HiddenRoom /></RoleBasedRoute>} />
+          {/* Customers */}
+          <Route path="customer" element={<ProtectedRoute permission="view_customers"><Customer /></ProtectedRoute>} />
+          <Route path="customer/add" element={<ProtectedRoute permission="create_customers"><AddCustomer /></ProtectedRoute>} />
 
+          {/* Promotions */}
+          <Route path="promotions" element={<ProtectedRoute permission="view_promotions"><Promotions /></ProtectedRoute>} />
+          <Route path="promotions/add" element={<ProtectedRoute permission="create_promotions"><AddPromotion /></ProtectedRoute>} />
 
+          {/* Services */}
+          <Route path="service" element={<ProtectedRoute permission="view_services"><Service /></ProtectedRoute>} />
+          <Route path="service/add" element={<ProtectedRoute permission="create_services"><CreateService /></ProtectedRoute>} />
+          <Route path="service-categories" element={<ProtectedRoute permission="view_service_categories"><ServiceCategoryList /></ProtectedRoute>} />
+          <Route path="service-categories/add" element={<ProtectedRoute permission="create_service_categories"><AddServiceCategory /></ProtectedRoute>} />
 
-        <Route path="customer" element={<RoleBasedRoute allowedRoleIds={[1]}><Customer /></RoleBasedRoute>} />
+          {/* Room Types */}
+          <Route path="room-types" element={<ProtectedRoute permission="view_room_types"><RoomTypesList /></ProtectedRoute>} />
+          <Route path="room-types/add" element={<ProtectedRoute permission="create_room_types"><AddRoomType /></ProtectedRoute>} />
 
-        <Route path="/promotions" element={<RoleBasedRoute allowedRoleIds={[1]}><Promotions /></RoleBasedRoute>} />
-        <Route path="promotions/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddPromotion /></RoleBasedRoute>} />
+          {/* Amenities */}
+          <Route path="amenities" element={<ProtectedRoute permission="view_amenities"><Amenities /></ProtectedRoute>} />
+          <Route path="amenities/add" element={<ProtectedRoute permission="create_amenities"><AmenitiesAdd /></ProtectedRoute>} />
+          <Route path="amenity-categories" element={<ProtectedRoute permission="view_amenity_categories"><AmenitiesCategoryList /></ProtectedRoute>} />
+          <Route path="amenity-categories/add" element={<ProtectedRoute permission="create_amenity_categories"><AddAmenityCategory /></ProtectedRoute>} />
 
-        <Route path="/role" element={<RoleBasedRoute allowedRoleIds={[1]}><Role /></RoleBasedRoute>} />
-        <Route path="role/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRole /></RoleBasedRoute>} />
+          {/* Departments */}
+          <Route path="departments" element={<ProtectedRoute permission="view_departments"><Departments /></ProtectedRoute>} />
+          <Route path="departments/add" element={<ProtectedRoute permission="create_departments"><AddDepartment /></ProtectedRoute>} />
 
-        <Route path="/service" element={<RoleBasedRoute allowedRoleIds={[1]}><Service /></RoleBasedRoute>} />
-        <Route path="service/add" element={<RoleBasedRoute allowedRoleIds={[1]}><CreateService /></RoleBasedRoute>} />
-        <Route path="/service-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><ServiceCategoryList /></RoleBasedRoute>} />
-        <Route path="service-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddServiceCategory /></RoleBasedRoute>} />
+          {/* Statistics */}
+          <Route path="statistics" element={<ProtectedRoute permission="view_total_revenue_statistics"><Statistics /></ProtectedRoute>} />
+          <Route path="statistics-services" element={<ProtectedRoute permission="view_total_service_revenue_statistics"><BookingService /></ProtectedRoute>} />
+          <Route path="statistics-revenues" element={<ProtectedRoute permission="view_revenue_table_statistics"><Revenue /></ProtectedRoute>} />
 
-        <Route path="/room-types" element={<RoleBasedRoute allowedRoleIds={[1]}><RoomTypesList /></RoleBasedRoute>} />
-        <Route path="/room-types/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddRoomType /></RoleBasedRoute>} />
+          {/* Hidden Rooms */}
+          <Route path="hiddenrooms" element={<ProtectedRoute permission="restore_rooms"><HiddenRoom /></ProtectedRoute>} />
 
-        <Route path="/amenities" element={<RoleBasedRoute allowedRoleIds={[1]}><Amenities /></RoleBasedRoute>} />
-        <Route path="/amenities/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AmenitiesAdd /></RoleBasedRoute>} />
-
-        <Route path="/amenity-categories" element={<RoleBasedRoute allowedRoleIds={[1]}><AmenitiesCategoryList /></RoleBasedRoute>} />
-        <Route path="/amenity-categories/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddAmenityCategory /></RoleBasedRoute>} />
-
-        <Route path="/departments" element={<RoleBasedRoute allowedRoleIds={[1]}><Departments /></RoleBasedRoute>} />
-        <Route path="/departments/add" element={<RoleBasedRoute allowedRoleIds={[1]}><AddDepartment /></RoleBasedRoute>} />
-
-        
-        {/* Add more routes as needed */}
-      </Route>
-
-      {/* Auth */}
-        <Route path="login" element={<Login />} />
-
-      {/* Unauthorized */}
-      <Route path="/unauthorized" element={<Unauthorized />} />
-    </Routes>
+          {/* Work Assignment */}
+          <Route path="work-assignment" element={<ProtectedRoute permission="view_work_assignments"><RosterTable /></ProtectedRoute>} />
+        </Route>
+      </Routes>
+      <ToastContainer />
+    </AuthProvider>
   );
-}
+};
 
 export default App;

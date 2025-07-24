@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -15,11 +15,11 @@ import {
   Alert,
   Pagination,
   Collapse,
-} from '@mui/material';
-import RestoreIcon from '@mui/icons-material/Restore';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import api from '../../api/axios';
-import '../../css/HiddenRoom.css';
+} from "@mui/material";
+import RestoreIcon from "@mui/icons-material/Restore";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import api from "../../api/axios";
+import "../../css/HiddenRoom.css";
 
 interface Amenity {
   id: number;
@@ -61,7 +61,7 @@ const HiddenRoom: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
+  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
@@ -70,7 +70,7 @@ const HiddenRoom: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get<RoomResponse>('/rooms/trashed');
+      const response = await api.get<RoomResponse>("/rooms/trashed");
       if (response.status === 200) {
         setRooms(response.data.data);
         setFilteredRooms(response.data.data.slice(0, 10));
@@ -79,7 +79,8 @@ const HiddenRoom: React.FC = () => {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi tải dữ liệu';
+      const errorMessage =
+        err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu";
       setError(errorMessage);
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
@@ -101,14 +102,17 @@ const HiddenRoom: React.FC = () => {
     try {
       const response = await api.post(`/rooms/${roomId}/restore`);
       if (response.status === 200) {
-        setSnackbarMessage('Phòng đã được khôi phục thành công!');
+        setSnackbarMessage("Phòng đã được khôi phục thành công!");
         setSnackbarOpen(true);
         fetchTrashedRooms();
       } else {
-        throw new Error('Không thể khôi phục phòng');
+        throw new Error("Không thể khôi phục phòng");
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Đã xảy ra lỗi khi khôi phục phòng';
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Đã xảy ra lỗi khi khôi phục phòng";
       setSnackbarMessage(errorMessage);
       setSnackbarOpen(true);
     }
@@ -116,19 +120,26 @@ const HiddenRoom: React.FC = () => {
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
-    setSnackbarMessage('');
+    setSnackbarMessage("");
   };
 
-  const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
     setCurrentPage(page);
   };
 
   const getStatusText = (status: string) => {
-    return status === 'booked' ? 'Đã đặt'
-      : status === 'available' ? 'Đang trống'
-      : status === 'cleaning' ? 'Đang dọn dẹp'
-      : status === 'maintenance' ? 'Bảo trì'
-      : 'Không xác định';
+    return status === "booked"
+      ? "Đã đặt"
+      : status === "available"
+      ? "Đang trống"
+      : status === "cleaning"
+      ? "Đang dọn dẹp"
+      : status === "maintenance"
+      ? "Bảo trì"
+      : "Không xác định";
   };
 
   const handleViewDetails = (roomId: number) => {
@@ -169,7 +180,10 @@ const HiddenRoom: React.FC = () => {
         </Typography>
       ) : (
         <>
-          <TableContainer component={Paper} className="hidden-room-table-container">
+          <TableContainer
+            component={Paper}
+            className="hidden-room-table-container"
+          >
             <Table className="hidden-room-table">
               <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
                 <TableRow>
@@ -258,7 +272,11 @@ const HiddenRoom: React.FC = () => {
                     </TableRow>
                     <TableRow>
                       <TableCell colSpan={4} style={{ padding: 0 }}>
-                        <Collapse in={selectedRoomId === room.id} timeout="auto" unmountOnExit>
+                        <Collapse
+                          in={selectedRoomId === room.id}
+                          timeout="auto"
+                          unmountOnExit
+                        >
                           <Box
                             sx={{
                               width: "100%",
@@ -274,21 +292,25 @@ const HiddenRoom: React.FC = () => {
                               <TableBody>
                                 <TableRow>
                                   <TableCell>
-                                    <strong>Số Phòng:</strong> {room.room_number}
+                                    <strong>Số Phòng:</strong>{" "}
+                                    {room.room_number}
                                   </TableCell>
                                   <TableCell>
-                                    <strong>Loại Phòng:</strong> {room.room_type.name}
+                                    <strong>Loại Phòng:</strong>{" "}
+                                    {room.room_type.name}
                                   </TableCell>
                                 </TableRow>
                                 <TableRow>
                                   <TableCell>
-                                    <strong>Trạng Thái:</strong> {getStatusText(room.status)}
+                                    <strong>Trạng Thái:</strong>{" "}
+                                    {getStatusText(room.status)}
                                   </TableCell>
                                 </TableRow>
                               </TableBody>
                             </Table>
                             <h3>Tiện nghi</h3>
-                            {room.room_type.amenities && room.room_type.amenities.length > 0 ? (
+                            {room.room_type.amenities &&
+                            room.room_type.amenities.length > 0 ? (
                               <Table className="hidden-room-detail-table">
                                 <TableHead>
                                   <TableRow>
@@ -300,7 +322,9 @@ const HiddenRoom: React.FC = () => {
                                   {room.room_type.amenities.map((amenity) => (
                                     <TableRow key={amenity.id}>
                                       <TableCell>{amenity.name}</TableCell>
-                                      <TableCell>{amenity.pivot.quantity}</TableCell>
+                                      <TableCell>
+                                        {amenity.pivot.quantity}
+                                      </TableCell>
                                     </TableRow>
                                   ))}
                                 </TableBody>
@@ -335,12 +359,14 @@ const HiddenRoom: React.FC = () => {
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
+          severity={
+            snackbarMessage.includes("thành công") ? "success" : "error"
+          }
+          sx={{ width: "100%" }}
         >
           {snackbarMessage}
         </Alert>

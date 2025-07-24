@@ -596,7 +596,7 @@ const Customer: React.FC = () => {
               ),
             }}
             sx={{
-              width: 300,
+              width: 330,
               bgcolor: "#fff",
               borderRadius: "8px",
               mt: { xs: 2, sm: 0 },

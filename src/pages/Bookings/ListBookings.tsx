@@ -21,6 +21,10 @@ import {
   Menu,
   Chip,
   MenuItem,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AppsIcon from "@mui/icons-material/Apps";
@@ -84,6 +88,7 @@ interface Promotion {
   created_at: string;
   updated_at: string;
 }
+
 interface CheckinInfo {
   booking_id: number;
   status: string;
@@ -196,8 +201,8 @@ interface Booking {
   updated_at: string | null;
   customer: Customer;
   room: Room;
-  rooms?: Room[]; // Add optional rooms array for multiple rooms
-  promotions: Promotion[]; // Add required promotions array
+  rooms?: Room[];
+  promotions: Promotion[];
 }
 
 interface CheckoutInfo {
@@ -251,7 +256,7 @@ const getBookingStatus = (
     case "cancelled":
       return { status: "Đã hủy", color: "#D32F2F" };
     default:
-      return { status: "Không xác định", color: "#757575" };
+      return { status: "Đã hủy", color: "#D32F2F" };
   }
 };
 
@@ -280,6 +285,8 @@ const ListBookings: React.FC = () => {
   const [openCheckoutDialog, setOpenCheckoutDialog] = useState(false);
   const [openInvoiceDialog, setOpenInvoiceDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openCancelDialog, setOpenCancelDialog] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<number | null>(null);
   const [invoiceInfo, setInvoiceInfo] = useState<Invoice | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState<boolean>(false);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "vnpay" | null>(
@@ -392,19 +399,26 @@ const ListBookings: React.FC = () => {
     }
   }, [location, navigate]);
 
-  const handleCancelBooking = async (bookingId: number) => {
-    if (!window.confirm("Bạn có chắc chắn muốn hủy đơn đặt phòng này không?"))
-      return;
+  const handleCancelBooking = (bookingId: number) => {
+    setBookingToCancel(bookingId);
+    setOpenCancelDialog(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!bookingToCancel) return;
 
     try {
-      await api.post(`/bookings/${bookingId}/cancel`);
+      await api.post(`/bookings/${bookingToCancel}/cancel`);
       await fetchAllBookings();
       setSuccessMessage("Hủy đặt phòng thành công");
       setSnackbarOpen(true);
     } catch (error) {
-      console.log(error);
+      console.error("Lỗi khi hủy đặt phòng:", error);
       setError("Hủy đặt phòng thất bại");
       setSnackbarOpen(true);
+    } finally {
+      setOpenCancelDialog(false);
+      setBookingToCancel(null);
     }
   };
 
@@ -889,7 +903,20 @@ const ListBookings: React.FC = () => {
                     return (
                       <TableRow key={booking.id} hover sx={{ opacity: 1 }}>
                         <TableCell>{booking.customer.name}</TableCell>
-                        <TableCell>{booking.room.room_number}</TableCell>
+                        <TableCell>
+                          {booking.rooms && booking.rooms.length > 0
+                            ? booking.rooms.length > 3
+                              ? `${booking.rooms
+                                  .slice(0, 2)
+                                  .map((room) => room.room_number)
+                                  .join(", ")} ...và ${
+                                  booking.rooms.length - 3
+                                } phòng khác`
+                              : booking.rooms
+                                  .map((room) => room.room_number)
+                                  .join(", ")
+                            : booking.room.room_number || "N/A"}
+                        </TableCell>
                         <TableCell>
                           {formatDate(booking.check_in_date)}
                         </TableCell>
@@ -1015,6 +1042,51 @@ const ListBookings: React.FC = () => {
           {successMessage || error}
         </Alert>
       </Snackbar>
+
+      <Dialog
+        open={openCancelDialog}
+        onClose={() => setOpenCancelDialog(false)}
+        sx={{
+          "& .MuiDialog-paper": {
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+          },
+        }}
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Xác nhận hủy đặt phòng
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc chắn muốn hủy đặt phòng này không? Hành động này không
+            thể hoàn tác.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setOpenCancelDialog(false)}
+            sx={{
+              color: "#d32f2f",
+              borderColor: "#d32f2f",
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: "8px",
+              px: 2.5,
+              py: 0.7,
+              "&:hover": { borderColor: "#b71c1c", backgroundColor: "#ffebee" },
+            }}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={confirmCancel}
+            variant="contained"
+            sx={{ bgcolor: "#d32f2f", "&:hover": { bgcolor: "#b71c1c" } }}
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Menu
         anchorEl={actionAnchorEl}
