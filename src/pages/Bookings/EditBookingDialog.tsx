@@ -384,16 +384,19 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                       color="primary"
                       variant="outlined"
                       size="small"
+                      sx={{
+                        bgcolor: "#e3f2fd",
+                        "&:hover": { bgcolor: "#bbdefb" },
+                      }}
                     />
                   );
                 })}
               </Box>
             )}
 
-            {/* Custom Dropdown */}
+            {/* Custom Dropdown with Enhanced Styling */}
             <ClickAwayListener onClickAway={() => setRoomDropdownOpen(false)}>
               <Box sx={{ position: "relative" }}>
-                {/* Input Field */}
                 <Box
                   onClick={() => setRoomDropdownOpen(!roomDropdownOpen)}
                   sx={{
@@ -403,15 +406,10 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                     p: "12px 14px",
                     border: "1px solid #ccc",
                     borderRadius: 1,
-                    backgroundColor: "#fff",
+                    bgcolor: "#fff",
                     cursor: "pointer",
-                    "&:hover": {
-                      borderColor: "#4318FF",
-                    },
-                    "&:focus": {
-                      borderColor: "#4318FF",
-                      outline: "none",
-                    },
+                    "&:hover": { borderColor: "#4318FF", bgcolor: "#f5f5f5" },
+                    "&:focus": { borderColor: "#4318FF", outline: "none" },
                   }}
                 >
                   <Typography
@@ -431,7 +429,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                   )}
                 </Box>
 
-                {/* Dropdown Menu */}
+                {/* Enhanced Dropdown Menu */}
                 {roomDropdownOpen && (
                   <Paper
                     sx={{
@@ -446,6 +444,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                       borderTop: "none",
                       borderRadius: "0 0 4px 4px",
                       mt: 0,
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                     }}
                   >
                     {roomsLoading ? (
@@ -461,51 +460,59 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                         <Typography>Đang tải...</Typography>
                       </Box>
                     ) : (
-                      availableRooms.map((room) => (
-                        <Box
-                          key={room.id}
-                          onClick={() => handleRoomToggle(room.id)}
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            p: "8px 12px",
-                            cursor: "pointer",
-                            "&:hover": {
-                              backgroundColor: "#f5f5f5",
-                            },
-                            borderBottom: "1px solid #f0f0f0",
-                            "&:last-child": {
-                              borderBottom: "none",
-                            },
-                          }}
-                        >
-                          <Checkbox
-                            checked={selectedRoomIds.includes(room.id)}
-                            onChange={() => handleRoomToggle(room.id)}
-                            color="primary"
-                            size="small"
-                            sx={{ mr: 1, p: 0 }}
-                          />
-                          <Box sx={{ flex: 1 }}>
-                            <Typography variant="body2" fontWeight="medium">
-                              {getRoomDisplayName(room)}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {room.room_type.name} -{" "}
-                              {Number.parseInt(
-                                room.room_type.base_rate
-                              ).toLocaleString()}{" "}
-                              VNĐ -{" "}
-                              {room.status === "available"
-                                ? "Đang Trống"
-                                : "Đã đặt"}
-                            </Typography>
+                      <Box sx={{ p: 1 }}>
+                        {availableRooms.map((room) => (
+                          <Box
+                            key={room.id}
+                            onClick={() => handleRoomToggle(room.id)}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              p: "10px",
+                              cursor: "pointer",
+                              bgcolor: selectedRoomIds.includes(room.id)
+                                ? "#e3f2fd"
+                                : "transparent",
+                              "&:hover": { bgcolor: "#f5f5f5" },
+                              borderBottom: "1px solid #eee",
+                              "&:last-child": { borderBottom: "none" },
+                              borderRadius: 1,
+                            }}
+                          >
+                            <Checkbox
+                              checked={selectedRoomIds.includes(room.id)}
+                              onChange={() => handleRoomToggle(room.id)}
+                              color="primary"
+                              size="small"
+                              sx={{ mr: 1, p: 0 }}
+                            />
+                            <Box sx={{ flex: 1 }}>
+                              <Typography
+                                variant="body2"
+                                fontWeight="medium"
+                                color={
+                                  room.status === "available" ? "green" : "red"
+                                }
+                              >
+                                {getRoomDisplayName(room)}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {room.room_type.name} -{" "}
+                                {Number.parseInt(
+                                  room.room_type.base_rate
+                                ).toLocaleString()}{" "}
+                                VNĐ -{" "}
+                                {room.status === "available"
+                                  ? "Đang Trống"
+                                  : "Đã đặt"}
+                              </Typography>
+                            </Box>
                           </Box>
-                        </Box>
-                      ))
+                        ))}
+                      </Box>
                     )}
                   </Paper>
                 )}
