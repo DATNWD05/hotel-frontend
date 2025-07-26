@@ -18,8 +18,6 @@ import {
   InputLabel,
   Box,
   Button,
-  Snackbar,
-  Alert,
   Pagination,
   CardContent,
   Card,
@@ -32,6 +30,7 @@ import { useNavigate } from "react-router-dom";
 import "../../css/Customer.css";
 import api from "../../api/axios";
 import { SearchIcon } from "lucide-react";
+import { toast } from 'react-toastify';
 
 interface Room {
   id: number;
@@ -204,8 +203,6 @@ const Customer: React.FC = () => {
   );
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const navigate = useNavigate();
@@ -390,9 +387,9 @@ const Customer: React.FC = () => {
       setLastPage(Math.ceil(allData.length / 10));
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu";
+        err instanceof Error ? err.message : "Không thể tải danh sách khách hàng";
       setError(errorMessage);
-      console.error("Lỗi khi tải danh sách khách hàng:", errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -481,6 +478,7 @@ const Customer: React.FC = () => {
     const errors = validateForm(editFormData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu");
       return;
     }
 
@@ -499,13 +497,12 @@ const Customer: React.FC = () => {
         await fetchCustomers();
         setEditCustomerId(null);
         setEditFormData(null);
-        setSnackbarMessage("Cập nhật khách hàng thành công!");
-        setSnackbarOpen(true);
+        toast.success("Cập nhật khách hàng thành công!");
       } else {
         throw new Error("Không thể cập nhật khách hàng");
       }
     } catch (err: unknown) {
-      let errorMessage = "Đã xảy ra lỗi khi cập nhật khách hàng";
+      let errorMessage = "Không thể cập nhật khách hàng";
       if (err instanceof Error) {
         errorMessage = err.message;
       }
@@ -523,8 +520,7 @@ const Customer: React.FC = () => {
           errorMessage;
       }
       setEditError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
       console.error("Lỗi khi cập nhật khách hàng:", err);
     } finally {
       setEditLoading(false);
@@ -552,11 +548,6 @@ const Customer: React.FC = () => {
 
   const handleViewBookingDetails = (bookingId: number) => {
     navigate(`/listbookings/detail/${bookingId}`);
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   const handlePageChange = (
@@ -1259,23 +1250,6 @@ const Customer: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

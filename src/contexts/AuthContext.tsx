@@ -44,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchAvatarForCurrentUser = async (uid: number) => {
     try {
       const res = await api.get('/employees', { params: { page: 1 } });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const emps: any[] = res.data.data;
       const me = emps.find(e => e.user_id === uid);
       if (me?.face_image) {
@@ -98,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchPermissions = async (roleId: number, currentUser: User | null = user) => {
     try {
       const res = await api.get(`/roles/${roleId}`);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const permissions = (res.data.role?.permissions || []).map((p: any) => p.name);
       const updated = { ...(currentUser as User), permissions };
       setUser(updated);
@@ -132,6 +134,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await fetchAvatarForCurrentUser(userData.id);
 
       navigate('/dashboard');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('Login error:', err);
       toast.error('Đăng nhập thất bại: ' + (err.response?.data?.message || err.message));

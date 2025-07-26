@@ -45,6 +45,7 @@ const AddRole: React.FC = () => {
     } else {
       setError('Bạn không có quyền tạo vai trò');
       setLoading(false);
+      toast.error('Bạn không có quyền tạo vai trò');
     }
   }, [hasPermission]);
 
@@ -85,7 +86,7 @@ const AddRole: React.FC = () => {
       return;
     }
     if (!role.name) {
-      toast.error('Vui lòng nhập tên vai trò');
+      toast.error('Tên vai trò không được để trống');
       return;
     }
     if (role.name.toLowerCase() === 'owner') {
@@ -100,10 +101,10 @@ const AddRole: React.FC = () => {
         permissions: selectedPermissions,
       });
 
-      toast.success('Tạo vai trò thành công');
-      navigate('/role', { state: { refetch: true } });
+      toast.success('Thêm vai trò thành công!');
+      setTimeout(() => navigate('/role'), 2000);
     } catch (err: unknown) {
-      const errorMessage = (err as ApiError).response?.data?.message || 'Không thể tạo vai trò';
+      const errorMessage = (err as ApiError).response?.data?.message || 'Không thể thêm vai trò';
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -335,7 +336,7 @@ const AddRole: React.FC = () => {
             onChange={(e) => handleChange('description', e.target.value)}
             sx={{
               '& .MuiInputBase-input': { p: '10px' },
-              '& .MuiInputLabel-root': { fontWeight: 500, mb: '6pxãn'},
+              '& .MuiInputLabel-root': { fontWeight: 500, mb: '6px' },
               '& .MuiOutlinedInput-root': { borderRadius: '4px' },
             }}
           />

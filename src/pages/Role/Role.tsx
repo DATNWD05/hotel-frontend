@@ -24,18 +24,17 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
 } from '@mui/material';
 import { Search as SearchIcon } from 'lucide-react';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/axios';
 import { AxiosError } from 'axios';
-import '../../css/Amenities.css'; // Reuse the same CSS file for consistent styling
+import '../../css/Amenities.css';
 
 interface Role {
   id: number;
@@ -59,8 +58,6 @@ const Role: React.FC = () => {
   const [allRoles, setAllRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [roleToDelete, setRoleToDelete] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -80,8 +77,7 @@ const Role: React.FC = () => {
     } else {
       setError('Bạn không có quyền xem danh sách vai trò');
       setLoading(false);
-      setSnackbarMessage('Bạn không có quyền xem danh sách vai trò');
-      setSnackbarOpen(true);
+      toast.error('Bạn không có quyền xem danh sách vai trò');
     }
   }, [hasPermission, user, location]);
 
@@ -95,11 +91,9 @@ const Role: React.FC = () => {
       if (!Array.isArray(fetchedRoles)) {
         throw new Error('Dữ liệu vai trò không đúng định dạng');
       }
-      // Deduplicate roles by id using Array.from
       const uniqueRoles = Array.from(
         new Map(fetchedRoles.map((role: Role) => [role.id, role])).values()
       );
-      // Reset allRoles for the first page; otherwise, merge and deduplicate
       if (page === 1) {
         setAllRoles(uniqueRoles);
       } else {
@@ -119,8 +113,7 @@ const Role: React.FC = () => {
       console.error('Error fetching roles:', error);
       const errorMessage = error.response?.data?.message || 'Không thể tải danh sách vai trò';
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -133,7 +126,6 @@ const Role: React.FC = () => {
     );
     if (activeFilters.length > 0 && !activeFilters.includes('all')) {
       // Add filter logic if roles have a status field
-      // Example: filtered = filtered.filter((role) => activeFilters.includes(role.status));
     }
     setRoles(filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE));
     setLastPage(Math.ceil(filtered.length / PER_PAGE));
@@ -141,8 +133,7 @@ const Role: React.FC = () => {
 
   const handleDelete = async (id: number) => {
     if (!hasPermission('delete_roles')) {
-      setSnackbarMessage('Bạn không có quyền xóa vai trò');
-      setSnackbarOpen(true);
+      toast.error('Bạn không có quyền xóa vai trò');
       return;
     }
     setRoleToDelete(id);
@@ -155,14 +146,12 @@ const Role: React.FC = () => {
       await api.delete(`/roles/${roleToDelete}`);
       setAllRoles((prev) => prev.filter((role) => role.id !== roleToDelete));
       fetchRoles(currentPage);
-      setSnackbarMessage('Xóa vai trò thành công!');
-      setSnackbarOpen(true);
+      toast.success('Xóa vai trò thành công!');
     } catch (err: unknown) {
       const error = err as AxiosError<{ message?: string }>;
       console.error('Error deleting role:', error);
       const errorMessage = error.response?.data?.message || 'Không thể xóa vai trò';
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setDeleteDialogOpen(false);
       setRoleToDelete(null);
@@ -191,11 +180,6 @@ const Role: React.FC = () => {
       }
     });
     handleFilterClose();
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage('');
   };
 
   return (
@@ -469,21 +453,6 @@ const Role: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

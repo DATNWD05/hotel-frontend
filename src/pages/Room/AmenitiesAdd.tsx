@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   TextField,
   Button,
   Typography,
   CircularProgress,
   Box,
-  Snackbar,
-  Alert,
   MenuItem,
   Select,
   SelectChangeEvent,
 } from "@mui/material";
+import api from "../../api/axios";
+import { AxiosError } from "axios";
 import "../../css/AddAmenities.css";
 
 interface AmenityCategory {
@@ -57,65 +58,52 @@ const AmenitiesAdd: React.FC = () => {
     default_quantity: 1,
     status: "active",
   });
-  const [amenityCategories, setAmenityCategories] = useState<AmenityCategory[]>(
-    []
-  );
+  const [amenityCategories, setAmenityCategories] = useState<AmenityCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const navigate = useNavigate();
 
   useEffect(() => {
     document.title = "Thêm Tiện ích";
     const token = localStorage.getItem("auth_token");
     if (!token) {
-      setError("Không tìm thấy token xác thực");
+      setError("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+      toast.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+      setTimeout(() => navigate("/login"), 2000);
       return;
     }
 
-    fetch("http://127.0.0.1:8000/api/amenity-categories", {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then((res) => {
-        if (!res.ok) {
-          return res.text().then((text) => {
-            throw new Error(
-              `Lỗi tải danh mục: ${res.status} ${res.statusText}. Chi tiết: ${text}`
-            );
-          });
-        }
-        return res.json();
-      })
-      .then((response) => {
-        const data = response.data || response;
-        if (!Array.isArray(data)) {
-          setError("Dữ liệu danh mục không đúng định dạng");
-          return;
-        }
-        const categories: AmenityCategory[] = data.map(
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get<{ data: RawAmenityCategory[] }>("/amenity-categories");
+        const categories: AmenityCategory[] = response.data.data.map(
           (cat: RawAmenityCategory) => ({
             id: cat.id.toString(),
             name: cat.name,
           })
         );
         setAmenityCategories(categories);
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         const errorMessage =
-          err instanceof Error
+          err instanceof AxiosError
+            ? err.response?.status === 401
+              ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+              : err.response?.data?.message || `Không thể tải danh mục tiện ích: ${err.message}`
+            : err instanceof Error
             ? `Không thể tải danh mục tiện ích: ${err.message}`
             : "Lỗi không xác định";
         setError(errorMessage);
-      });
-  }, []);
+        toast.error(errorMessage);
+        if (err instanceof AxiosError && err.response?.status === 401) {
+          localStorage.removeItem("auth_token");
+          navigate("/login");
+        }
+      }
+    };
+
+    fetchCategories();
+  }, [navigate]);
 
   const validateForm = (data: FormData): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -147,9 +135,7 @@ const AmenitiesAdd: React.FC = () => {
   };
 
   const handleChange = (
-    e:
-      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-      | SelectChangeEvent<string>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -166,61 +152,51 @@ const AmenitiesAdd: React.FC = () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error("Vui lòng sửa các lỗi trong biểu mẫu trước khi lưu.");
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/amenities", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("auth_token")}`,
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        return response.text().then((text) => {
-          throw new Error(
-            `Lỗi thêm tiện ích: ${response.status} ${response.statusText}. Chi tiết: ${text}`
-          );
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+      }
+      const response = await api.post("/amenities", formData);
+      if (response.status === 201 || response.status === 200) {
+        toast.success("Thêm tiện ích thành công!");
+        setFormData({
+          category_id: "",
+          code: "",
+          name: "",
+          description: "",
+          icon: "",
+          price: 0,
+          default_quantity: 1,
+          status: "active",
         });
+        setTimeout(() => navigate("/amenities"), 2000);
+      } else {
+        throw new Error(`Yêu cầu thất bại với mã: ${response.status}`);
       }
-
-      setSnackbarMessage("Thêm tiện ích thành công!");
-      setSnackbarOpen(true);
-      setFormData({
-        category_id: "",
-        code: "",
-        name: "",
-        description: "",
-        icon: "",
-        price: 0,
-        default_quantity: 1,
-        status: "active",
-      });
-      setTimeout(() => navigate("/amenities"), 2000);
     } catch (err: unknown) {
-      let errorMessage = "Đã xảy ra lỗi khi thêm tiện ích";
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      if (typeof err === "object" && err !== null && "response" in err) {
-        const axiosError = err as {
-          response?: {
-            data?: { message?: string; errors?: { [key: string]: string[] } };
-          };
-        };
-        errorMessage =
-          axiosError.response?.data?.message ||
-          JSON.stringify(axiosError.response?.data?.errors) ||
-          errorMessage;
-      }
+      const errorMessage =
+        err instanceof AxiosError
+          ? err.response?.status === 401
+            ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+            : err.response?.data?.message ||
+              err.response?.data?.errors
+              ? JSON.stringify(err.response.data.errors)
+              : `Không thể thêm tiện ích: ${err.message}`
+          : err instanceof Error
+          ? `Không thể thêm tiện ích: ${err.message}`
+          : "Lỗi không xác định";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem("auth_token");
+        navigate("/login");
+      }
     } finally {
       setLoading(false);
     }
@@ -228,11 +204,6 @@ const AmenitiesAdd: React.FC = () => {
 
   const handleCancel = () => {
     navigate("/amenities");
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   return (
@@ -248,10 +219,20 @@ const AmenitiesAdd: React.FC = () => {
               className="amenities-btn-save"
               onClick={handleSubmit}
               disabled={loading}
+              sx={{
+                backgroundColor: "#4318FF",
+                color: "#fff",
+                textTransform: "none",
+                fontWeight: 600,
+                borderRadius: "8px",
+                px: 2.5,
+                py: 0.7,
+                "&:hover": { backgroundColor: "#7B1FA2" },
+                "&:disabled": { backgroundColor: "#a9a9a9" },
+              }}
             >
-              Lưu
+              {loading ? <CircularProgress size={24} /> : "Lưu"}
             </Button>
-
             <Button
               variant="outlined"
               className="amenities-btn-cancel"
@@ -259,6 +240,17 @@ const AmenitiesAdd: React.FC = () => {
               disabled={loading}
               component={Link}
               to="/amenities"
+              sx={{
+                color: "#f44336",
+                borderColor: "#f44336",
+                textTransform: "none",
+                fontWeight: 600,
+                borderRadius: "8px",
+                px: 2.5,
+                py: 0.7,
+                "&:hover": { borderColor: "#d32f2f", backgroundColor: "#ffebee" },
+                "&:disabled": { color: "#a9a9a9", borderColor: "#a9a9a9" },
+              }}
             >
               Hủy
             </Button>
@@ -271,7 +263,7 @@ const AmenitiesAdd: React.FC = () => {
           <CircularProgress />
           <Typography>Đang xử lý...</Typography>
         </div>
-      ) : error && !snackbarOpen ? (
+      ) : error ? (
         <Typography color="error" className="promotion-error-message">
           {error}
         </Typography>
@@ -290,6 +282,7 @@ const AmenitiesAdd: React.FC = () => {
                 size="small"
                 error={!!validationErrors.category_id}
                 displayEmpty
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               >
                 <MenuItem value="" disabled>
                   Chọn nhóm tiện ích
@@ -310,6 +303,7 @@ const AmenitiesAdd: React.FC = () => {
                 size="small"
                 error={!!validationErrors.code}
                 helperText={validationErrors.code}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
             </Box>
             <Box display="flex" gap={2}>
@@ -323,6 +317,7 @@ const AmenitiesAdd: React.FC = () => {
                 size="small"
                 error={!!validationErrors.name}
                 helperText={validationErrors.name}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
               <TextField
                 label="URL biểu tượng"
@@ -334,6 +329,7 @@ const AmenitiesAdd: React.FC = () => {
                 size="small"
                 error={!!validationErrors.icon}
                 helperText={validationErrors.icon}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
             </Box>
             <Box display="flex" gap={2}>
@@ -349,6 +345,7 @@ const AmenitiesAdd: React.FC = () => {
                 error={!!validationErrors.price}
                 helperText={validationErrors.price}
                 inputProps={{ min: 0 }}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
               <TextField
                 label="Số lượng mặc định"
@@ -362,6 +359,7 @@ const AmenitiesAdd: React.FC = () => {
                 error={!!validationErrors.default_quantity}
                 helperText={validationErrors.default_quantity}
                 inputProps={{ min: 0 }}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
             </Box>
             <Box display="flex" gap={2}>
@@ -375,6 +373,7 @@ const AmenitiesAdd: React.FC = () => {
                 size="small"
                 error={!!validationErrors.status}
                 displayEmpty
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               >
                 <MenuItem value="active">Hoạt động</MenuItem>
                 <MenuItem value="inactive">Không hoạt động</MenuItem>
@@ -393,28 +392,12 @@ const AmenitiesAdd: React.FC = () => {
                 rows={3}
                 error={!!validationErrors.description}
                 helperText={validationErrors.description}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
             </Box>
           </Box>
         </div>
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   Table,
   TableBody,
@@ -11,14 +13,14 @@ import {
   CircularProgress,
   Typography,
   Box,
-  Snackbar,
-  Alert,
   Pagination,
   Collapse,
 } from "@mui/material";
 import RestoreIcon from "@mui/icons-material/Restore";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import api from "../../api/axios";
+import { AxiosError } from "axios";
 import "../../css/HiddenRoom.css";
 
 interface Amenity {
@@ -56,12 +58,11 @@ interface RoomResponse {
 }
 
 const HiddenRoom: React.FC = () => {
+  const navigate = useNavigate();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
@@ -70,6 +71,10 @@ const HiddenRoom: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+      }
       const response = await api.get<RoomResponse>("/rooms/trashed");
       if (response.status === 200) {
         setRooms(response.data.data);
@@ -78,20 +83,30 @@ const HiddenRoom: React.FC = () => {
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu";
+        err instanceof AxiosError
+          ? err.response?.status === 401
+            ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+            : err.response?.data?.message || `Không thể tải danh sách phòng bị ẩn: ${err.message}`
+          : err instanceof Error
+          ? `Không thể tải danh sách phòng bị ẩn: ${err.message}`
+          : "Lỗi không xác định";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem("auth_token");
+        navigate("/login");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    document.title = "Danh sách Phòng Bị Ẩn";
     fetchTrashedRooms();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     setFilteredRooms(rooms.slice((currentPage - 1) * 10, currentPage * 10));
@@ -100,27 +115,35 @@ const HiddenRoom: React.FC = () => {
 
   const handleRestore = async (roomId: number) => {
     try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+      }
       const response = await api.post(`/rooms/${roomId}/restore`);
       if (response.status === 200) {
-        setSnackbarMessage("Phòng đã được khôi phục thành công!");
-        setSnackbarOpen(true);
+        toast.success("Phòng đã được khôi phục thành công!");
         fetchTrashedRooms();
+        if (filteredRooms.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
       } else {
-        throw new Error("Không thể khôi phục phòng");
+        throw new Error(`Yêu cầu thất bại với mã: ${response.status}`);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Đã xảy ra lỗi khi khôi phục phòng";
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+        err instanceof AxiosError
+          ? err.response?.status === 401
+            ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+            : err.response?.data?.message || `Không thể khôi phục phòng: ${err.message}`
+          : err instanceof Error
+          ? `Không thể khôi phục phòng: ${err.message}`
+          : "Lỗi không xác định";
+      toast.error(errorMessage);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem("auth_token");
+        navigate("/login");
+      }
     }
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   const handlePageChange = (
@@ -238,7 +261,7 @@ const HiddenRoom: React.FC = () => {
                       <TableCell align="center">
                         <Box display="flex" justifyContent="center" gap={1}>
                           <IconButton
-                            title="Xem chi tiết"
+                            title={selectedRoomId === room.id ? "Ẩn chi tiết" : "Xem chi tiết"}
                             sx={{
                               color: "#1976d2",
                               bgcolor: "#e3f2fd",
@@ -250,7 +273,11 @@ const HiddenRoom: React.FC = () => {
                             }}
                             onClick={() => handleViewDetails(room.id)}
                           >
-                            <VisibilityIcon fontSize="small" />
+                            {selectedRoomId === room.id ? (
+                              <VisibilityOffIcon fontSize="small" />
+                            ) : (
+                              <VisibilityIcon fontSize="small" />
+                            )}
                           </IconButton>
                           <IconButton
                             title="Khôi phục"
@@ -277,15 +304,6 @@ const HiddenRoom: React.FC = () => {
                           timeout="auto"
                           unmountOnExit
                         >
-                          <Box
-                            sx={{
-                              width: "100%",
-                              bgcolor: "#f9f9f9",
-                              px: 3,
-                              py: 2,
-                              borderTop: "1px solid #ddd",
-                            }}
-                          ></Box>
                           <div className="hidden-room-detail-container">
                             <h3>Thông tin chi tiết phòng</h3>
                             <Table className="hidden-room-detail-table">
@@ -305,6 +323,7 @@ const HiddenRoom: React.FC = () => {
                                     <strong>Trạng Thái:</strong>{" "}
                                     {getStatusText(room.status)}
                                   </TableCell>
+                                  <TableCell></TableCell>
                                 </TableRow>
                               </TableBody>
                             </Table>
@@ -341,36 +360,21 @@ const HiddenRoom: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
-            <Pagination
-              count={lastPage}
-              page={currentPage}
-              onChange={handlePageChange}
-              color="primary"
-              shape="rounded"
-              showFirstButton
-              showLastButton
-            />
-          </Box>
+          {lastPage > 1 && (
+            <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+              <Pagination
+                count={lastPage}
+                page={currentPage}
+                onChange={handlePageChange}
+                color="primary"
+                shape="rounded"
+                showFirstButton
+                showLastButton
+              />
+            </Box>
+          )}
         </>
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

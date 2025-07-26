@@ -14,8 +14,6 @@ import {
   Box,
   TextField,
   Collapse,
-  Snackbar,
-  Alert,
   Pagination,
   Dialog,
   DialogTitle,
@@ -37,6 +35,7 @@ import { SearchIcon } from "lucide-react";
 import api from "../../api/axios";
 import "../../css/Promotion.css";
 import { Link } from "react-router-dom";
+import { toast } from 'react-toastify';
 
 interface Employee {
   id: number;
@@ -64,9 +63,7 @@ interface ValidationErrors {
 const Departments: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [allDepartments, setAllDepartments] = useState<Department[]>([]);
-  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>(
-    []
-  );
+  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,18 +71,11 @@ const Departments: React.FC = () => {
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Department>>({});
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
-
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [departmentToDelete, setDepartmentToDelete] = useState<number | null>(
-    null
-  );
+  const [departmentToDelete, setDepartmentToDelete] = useState<number | null>(null);
 
   const fetchAllDepartments = async () => {
     try {
@@ -110,10 +100,9 @@ const Departments: React.FC = () => {
       const errorMessage =
         err instanceof Error
           ? err.message
-          : "Đã xảy ra lỗi khi tải danh sách phòng ban";
+          : "Không thể tải danh sách phòng ban";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -122,26 +111,25 @@ const Departments: React.FC = () => {
   const fetchEmployees = async (departmentId: number) => {
     try {
       setLoading(true);
-      console.log("Fetching employees for department ID:", departmentId); // Debug log
+      console.log("Fetching employees for department ID:", departmentId);
       const response = await api.get<{ status: string; data: Employee[] }>(
         `/departments/${departmentId}/employees`
       );
-      console.log("API Response:", response); // Debug log
+      console.log("API Response:", response);
       if (response.status === 200) {
         setEmployees(response.data.data || []);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      console.error("Error fetching employees:", err); // Debug log
+      console.error("Error fetching employees:", err);
       const errorMessage =
         err.response?.data?.message ||
-        "Đã xảy ra lỗi khi tải danh sách nhân viên";
+        "Không thể tải danh sách nhân viên";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
-      setEmployees([]); // Đặt mảng rỗng khi có lỗi
+      toast.error(errorMessage);
+      setEmployees([]);
     } finally {
       setLoading(false);
     }
@@ -183,7 +171,7 @@ const Departments: React.FC = () => {
   };
 
   const handleEditDetail = (department: Department) => {
-    console.log("Editing department:", department); // Debug log
+    console.log("Editing department:", department);
     setViewDetailId(department.id);
     setEditingDetailId(department.id);
     setEditedDetail({
@@ -196,36 +184,33 @@ const Departments: React.FC = () => {
     fetchEmployees(department.id);
   };
 
-// TextField
-const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const { name, value } = e.target;
-  setEditedDetail((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
-  setValidationErrors((prev) => {
-    const newErrors = { ...prev };
-    delete newErrors[name as keyof typeof prev];
-    return newErrors;
-  });
-};
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditedDetail((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[name as keyof typeof prev];
+      return newErrors;
+    });
+  };
 
-// Select
-const handleSelectChange = (e: SelectChangeEvent) => {
-  const { name, value } = e.target;
-  const selectedEmployee = employees.find((emp) => emp.id === Number(value));
-  setEditedDetail((prev) => ({
-    ...prev,
-    manager_id: Number(value),
-    manager_name: selectedEmployee?.name ?? "",
-  }));
-  setValidationErrors((prev) => {
-    const newErrors = { ...prev };
-    delete newErrors[name as keyof typeof prev];
-    return newErrors;
-  });
-};
-
+  const handleSelectChange = (e: SelectChangeEvent) => {
+    const { name, value } = e.target;
+    const selectedEmployee = employees.find((emp) => emp.id === Number(value));
+    setEditedDetail((prev) => ({
+      ...prev,
+      manager_id: Number(value),
+      manager_name: selectedEmployee?.name ?? "",
+    }));
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[name as keyof typeof prev];
+      return newErrors;
+    });
+  };
 
   const handleSaveDetail = async () => {
     if (!editedDetail || !editedDetail.id) return;
@@ -233,6 +218,7 @@ const handleSelectChange = (e: SelectChangeEvent) => {
     const errors = validateForm(editedDetail);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu");
       return;
     }
 
@@ -252,18 +238,16 @@ const handleSelectChange = (e: SelectChangeEvent) => {
         setViewDetailId(null);
         setValidationErrors({});
         setEmployees([]);
-        setSnackbarMessage("Cập nhật phòng ban thành công!");
-        setSnackbarOpen(true);
+        toast.success("Cập nhật phòng ban thành công!");
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const errorMessage =
-        err.response?.data?.message || "Đã xảy ra lỗi khi cập nhật phòng ban";
+        err.response?.data?.message || "Không thể cập nhật phòng ban";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -290,28 +274,21 @@ const handleSelectChange = (e: SelectChangeEvent) => {
       const response = await api.delete(`/departments/${departmentToDelete}`);
       if (response.status === 204) {
         await fetchAllDepartments();
-        setSnackbarMessage("Xóa phòng ban thành công!");
-        setSnackbarOpen(true);
+        toast.success("Xóa phòng ban thành công!");
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const errorMessage =
-        err.response?.data?.message || "Đã xảy ra lỗi khi xóa phòng ban";
+        err.response?.data?.message || "Không thể xóa phòng ban";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
       setDeleteDialogOpen(false);
       setDepartmentToDelete(null);
     }
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   const handlePageChange = (
@@ -730,23 +707,6 @@ const handleSelectChange = (e: SelectChangeEvent) => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

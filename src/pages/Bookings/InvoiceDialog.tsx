@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
+import { toast } from "react-toastify";
 
 interface Invoice {
   invoice_code: string;
@@ -104,6 +105,12 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
   invoiceLoading,
   onPrintInvoice,
 }) => {
+  useEffect(() => {
+    if (open && !invoiceLoading && !invoiceInfo) {
+      toast.error("Không thể tải thông tin hóa đơn");
+    }
+  }, [open, invoiceLoading, invoiceInfo]);
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle

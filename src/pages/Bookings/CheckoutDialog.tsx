@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
+import { toast } from "react-toastify";
 
 interface CheckoutInfo {
   booking_id: number;
@@ -83,6 +84,12 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   onConfirmCheckout,
   onVNPayCheckout,
 }) => {
+  React.useEffect(() => {
+    if (!checkoutInfo && open) {
+      toast.info("Đang tải thông tin...");
+    }
+  }, [checkoutInfo, open]);
+
   return (
     <Dialog
       open={open}

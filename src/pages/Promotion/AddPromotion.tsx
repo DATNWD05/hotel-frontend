@@ -11,11 +11,10 @@ import {
   CircularProgress,
   Box,
   SelectChangeEvent,
-  Snackbar,
-  Alert,
 } from "@mui/material";
 import "../../css/Promotion.css";
 import api from "../../api/axios";
+import { toast } from 'react-toastify';
 
 type DiscountType = "percent" | "amount";
 
@@ -55,22 +54,18 @@ const AddPromotion: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   const validateForm = (data: PromotionFormData): ValidationErrors => {
     const errors: ValidationErrors = {};
-    if (!data.code.trim()) errors.code = "Mã CTKM không được để trống";
+    if (!data.code.trim()) errors.code = "Mã khuyến mãi không được để trống";
     else if (data.code.length > 20)
-      errors.code = "Mã CTKM không được vượt quá 20 ký tự";
+      errors.code = "Mã khuyến mãi không được vượt quá 20 ký tự";
     if (!data.description.trim())
       errors.description = "Mô tả không được để trống";
     else if (data.description.length > 200)
       errors.description = "Mô tả không được vượt quá 200 ký tự";
-    if (!data.discount_type) errors.discount_type = "Vui lòng chọn loại giảm";
+    if (!data.discount_type) errors.discount_type = "Vui lòng chọn loại giảm giá";
     if (data.discount_value <= 0)
       errors.discount_value = "Giá trị giảm phải lớn hơn 0";
     else if (data.discount_type === "percent" && data.discount_value > 100) {
@@ -122,6 +117,7 @@ const AddPromotion: React.FC = () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu");
       return;
     }
 
@@ -129,14 +125,13 @@ const AddPromotion: React.FC = () => {
     try {
       const response = await api.post("/promotions", formData);
       if (response.status === 201) {
-        setSnackbarMessage("Thêm khuyến mãi thành công!");
-        setSnackbarOpen(true);
+        toast.success("Thêm khuyến mãi thành công!");
         setTimeout(() => navigate("/promotions"), 2000);
       } else {
         throw new Error("Không thể thêm khuyến mãi mới");
       }
     } catch (err: unknown) {
-      let errorMessage = "Đã xảy ra lỗi khi thêm khuyến mãi";
+      let errorMessage = "Không thể thêm khuyến mãi";
       if (err instanceof Error) {
         errorMessage = err.message;
       }
@@ -152,8 +147,7 @@ const AddPromotion: React.FC = () => {
           errorMessage;
       }
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -163,17 +157,12 @@ const AddPromotion: React.FC = () => {
     navigate("/promotions");
   };
 
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
-  };
-
   return (
     <div className="promotion-wrapper">
       <div className="promotion-title">
         <div className="promotion-header-content">
           <h2>
-            Add New <b>Promotion</b>
+            Thêm <b>Khuyến mãi</b>
           </h2>
         </div>
       </div>
@@ -222,12 +211,12 @@ const AddPromotion: React.FC = () => {
                 size="small"
                 error={!!validationErrors.discount_type}
               >
-                <InputLabel>Loại giảm</InputLabel>
+                <InputLabel>Loại giảm giá</InputLabel>
                 <Select
                   name="discount_type"
                   value={formData.discount_type}
                   onChange={handleSelectChange}
-                  label="Loại giảm"
+                  label="Loại giảm giá"
                 >
                   <MenuItem value="percent">Phần trăm (%)</MenuItem>
                   <MenuItem value="amount">Số tiền (VNĐ)</MenuItem>
@@ -317,7 +306,7 @@ const AddPromotion: React.FC = () => {
               </Button>
               <Button
                 variant="outlined"
-                className="promotions-btn-cancel" // <-- Đúng class CSS đã định nghĩa
+                className="promotions-btn-cancel"
                 color="secondary"
                 onClick={handleCancel}
                 disabled={loading}
@@ -330,23 +319,6 @@ const AddPromotion: React.FC = () => {
           </Box>
         </div>
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

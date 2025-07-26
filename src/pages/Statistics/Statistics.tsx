@@ -23,6 +23,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import BedIcon from "@mui/icons-material/Bed";
 import BarChartRoundedIcon from "@mui/icons-material/BarChartRounded";
 import { Chart, registerables } from "chart.js";
+import { toast } from "react-toastify";
 import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -60,7 +61,6 @@ export default function Statistics() {
   const [topCustomers, setTopCustomers] = useState<TopCustomer[]>([]);
 
   useEffect(() => {
-    console.log('dateRange updated:', dateRange);
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -71,18 +71,21 @@ export default function Statistics() {
         const res = await api.get('/statistics/summary-dashboard', { params });
         const data = res.data.data;
 
-        setTotalRevenue(data.total_revenue.data);
-        setRevByDay(data.revenue_by_day.data.reverse());
-        setRevByCustomer(data.revenue_by_customer.data);
-        setRevByRoom(data.revenue_by_room.data);
-        setOccupancyRate(data.occupancy_rate.occupancy_rate);
-        setAvgStayDays(data.average_stay_duration.average_stay_days);
-        setCancellationRate(data.cancellation_rate.cancellation_rate);
-        setTopCustomers(data.top_customers.data);
-        setBookingsByMonth(data.bookings_by_month.data.reverse());
-        setTotalPerBooking(data.total_per_booking.data);
-      } catch (err) {
-        console.error('Lỗi lấy dữ liệu thống kê tổng hợp:', err);
+        // Kiểm tra dữ liệu trước khi gán để tránh lỗi undefined
+        setTotalRevenue(data.total_revenue?.data ?? 0);
+        setRevByDay(data.revenue_by_day?.data?.reverse() ?? []);
+        setRevByCustomer(data.revenue_by_customer?.data ?? []);
+        setRevByRoom(data.revenue_by_room?.data ?? []);
+        setOccupancyRate(data.occupancy_rate?.occupancy_rate ?? 0);
+        setAvgStayDays(data.average_stay_duration?.average_stay_days ?? 0);
+        setCancellationRate(data.cancellation_rate?.cancellation_rate ?? 0);
+        setTopCustomers(data.top_customers?.data ?? []);
+        setBookingsByMonth(data.bookings_by_month?.data?.reverse() ?? []);
+        setTotalPerBooking(data.total_per_booking?.data ?? []);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        const msg = err.response?.data?.message || "Lỗi khi lấy dữ liệu thống kê tổng hợp";
+        toast.error(msg);
       } finally {
         setLoading(false);
       }
@@ -95,7 +98,10 @@ export default function Statistics() {
     if (!lineRef.current || revByDay.length === 0) return;
     lineChartRef.current?.destroy();
     const ctx = lineRef.current.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) {
+      toast.error("Không thể khởi tạo biểu đồ doanh thu theo ngày");
+      return;
+    }
     const grad = ctx.createLinearGradient(0, 0, 0, 200);
     grad.addColorStop(0, "rgba(86,81,212,0.4)");
     grad.addColorStop(1, "rgba(86,81,212,0)");
@@ -141,7 +147,10 @@ export default function Statistics() {
     if (!barRef.current || bookingsByMonth.length === 0) return;
     barChartRef.current?.destroy();
     const ctx = barRef.current.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) {
+      toast.error("Không thể khởi tạo biểu đồ booking theo tháng");
+      return;
+    }
 
     barChartRef.current = new Chart(ctx, {
       type: "bar",
@@ -197,7 +206,7 @@ export default function Statistics() {
       title: "Doanh Thu Theo Khách Hàng",
       icon: <PersonIcon color="primary" fontSize="small" />,
       rows: revByCustomer.map((c) => [
-        c.name,
+        c.name || "Không xác định",
         `${Intl.NumberFormat("vi-VN").format(Math.round(c.total_spent))} VND`,
       ]),
     },
@@ -205,14 +214,14 @@ export default function Statistics() {
       title: "Doanh Thu Theo Phòng",
       icon: <BedIcon color="primary" fontSize="small" />,
       rows: revByRoom.map((r) => [
-        r.room_number,
+        r.room_number || "Không xác định",
         `${Intl.NumberFormat("vi-VN").format(Math.round(r.total_revenue))} VND`,
       ]),
     },
     {
       title: "Top Khách Hàng Đặt Nhiều Nhất",
       icon: <BarChartRoundedIcon color="primary" fontSize="small" />,
-      rows: topCustomers.map((t) => [t.name, `${t.total_bookings}`]),
+      rows: topCustomers.map((t) => [t.name || "Không xác định", `${t.total_bookings}`]),
     },
   ];
 
@@ -245,49 +254,47 @@ export default function Statistics() {
 
   return (
     <Box sx={{ p: 4, background: theme.palette.background.default, minHeight: "100vh" }}>
-<Box sx={{ display: 'flex', gap: 2, mb: 4, maxWidth: 400 }}>
-  <LocalizationProvider dateAdapter={AdapterDayjs}>
-    <DatePicker
-      label="Từ ngày"
-      value={dateRange[0]}
-      onChange={(newValue) => {
-        if (newValue && dateRange[1] && newValue.isAfter(dateRange[1])) {
-          // Nếu chọn "Từ ngày" lớn hơn "Đến ngày", reset "Đến ngày"
-          setDateRange([newValue, null]);
-        } else {
-          setDateRange([newValue, dateRange[1]]);
-        }
-      }}
-      format="DD/MM/YYYY"
-      maxDate={dateRange[1] ?? undefined}
-      slotProps={{
-        textField: {
-          size: 'small',
-          sx: { width: '45%', "& .MuiInputBase-root": { height: "40px" } }
-        }
-      }}
-    />
-    <DatePicker
-      label="Đến ngày"
-      value={dateRange[1]}
-      onChange={(newValue) => {
-        if (newValue && dateRange[0] && newValue.isBefore(dateRange[0])) {
-          // Nếu chọn "Đến ngày" nhỏ hơn "Từ ngày", không cho phép
-          return;
-        }
-        setDateRange([dateRange[0], newValue]);
-      }}
-      format="DD/MM/YYYY"
-      minDate={dateRange[0] ?? undefined}
-      slotProps={{
-        textField: {
-          size: 'small',
-          sx: { width: '45%', "& .MuiInputBase-root": { height: "40px" } }
-        }
-      }}
-    />
-  </LocalizationProvider>
-</Box>
+      <Box sx={{ display: 'flex', gap: 2, mb: 4, maxWidth: 400 }}>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <DatePicker
+            label="Từ ngày"
+            value={dateRange[0]}
+            onChange={(newValue) => {
+              if (newValue && dateRange[1] && newValue.isAfter(dateRange[1])) {
+                setDateRange([newValue, null]);
+              } else {
+                setDateRange([newValue, dateRange[1]]);
+              }
+            }}
+            format="DD/MM/YYYY"
+            maxDate={dateRange[1] ?? undefined}
+            slotProps={{
+              textField: {
+                size: 'small',
+                sx: { width: '45%', "& .MuiInputBase-root": { height: "40px" } }
+              }
+            }}
+          />
+          <DatePicker
+            label="Đến ngày"
+            value={dateRange[1]}
+            onChange={(newValue) => {
+              if (newValue && dateRange[0] && newValue.isBefore(dateRange[0])) {
+                return;
+              }
+              setDateRange([dateRange[0], newValue]);
+            }}
+            format="DD/MM/YYYY"
+            minDate={dateRange[0] ?? undefined}
+            slotProps={{
+              textField: {
+                size: 'small',
+                sx: { width: '45%', "& .MuiInputBase-root": { height: "40px" } }
+              }
+            }}
+          />
+        </LocalizationProvider>
+      </Box>
 
       <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, mb: 4 }}>
         {kpis.map((kpi, idx) => (
@@ -306,7 +313,7 @@ export default function Statistics() {
             <Box sx={{
               width: 48,
               height: 48,
-              bgcolor: `${kpi.color}65`,
+              bgcolor: "#ffffffcc",
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",

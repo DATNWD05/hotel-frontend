@@ -10,8 +10,6 @@ import {
   Collapse,
   TextField,
   Box,
-  Snackbar,
-  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -25,6 +23,7 @@ import {
 import { useNavigate, useParams } from "react-router-dom";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
+import { toast } from "react-toastify";
 import api from "../../api/axios";
 import "../../css/DetailBookings.css";
 import { TrashIcon, PlusIcon } from "lucide-react";
@@ -97,11 +96,13 @@ interface RoomType {
   updated_at: string | null;
   amenities: Amenity[];
 }
+
 interface ServiceDataResponse {
   services?: Service[];
   raw_total?: string;
   total_amount?: string;
 }
+
 interface Room {
   id: number;
   room_number: string;
@@ -171,8 +172,6 @@ const DetailBookings: React.FC = () => {
   const [showServices, setShowServices] = useState<{ [key: number]: boolean }>(
     {}
   );
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [openServiceDialog, setOpenServiceDialog] = useState<boolean>(false);
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<
@@ -187,6 +186,7 @@ const DetailBookings: React.FC = () => {
   const fetchBookingDetail = async () => {
     if (!bookingId) {
       setError("Không tìm thấy ID đặt phòng");
+      toast.error("Không tìm thấy ID đặt phòng");
       setLoading(false);
       return;
     }
@@ -194,53 +194,54 @@ const DetailBookings: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/bookings/${bookingId}`);
-      if (response.status === 200) {
-        const data = response.data.booking || response.data;
-        if (!data.customer || !data.rooms || !data.rooms.length) {
+      const { data, status } = await api.get(`/bookings/${bookingId}`);
+      if (status === 200) {
+        const bookingData = data.booking || data;
+        if (!bookingData.customer || !bookingData.rooms || !bookingData.rooms.length) {
           setError("Dữ liệu đặt phòng không đầy đủ");
+          toast.error("Dữ liệu đặt phòng không đầy đủ");
           setLoading(false);
           return;
         }
-        const bookingData: Booking = {
-          ...data,
+        const formattedBooking: Booking = {
+          ...bookingData,
           check_in_date:
-            data.check_in_date && isValid(parseISO(data.check_in_date))
-              ? data.check_in_date
+            bookingData.check_in_date && isValid(parseISO(bookingData.check_in_date))
+              ? bookingData.check_in_date
               : new Date().toISOString(),
           check_out_date:
-            data.check_out_date && isValid(parseISO(data.check_out_date))
-              ? data.check_out_date
+            bookingData.check_out_date && isValid(parseISO(bookingData.check_out_date))
+              ? bookingData.check_out_date
               : new Date().toISOString(),
-          deposit_amount: data.deposit_amount || "0.00",
-          raw_total: data.raw_total || "0.00",
-          discount_amount: data.discount_amount || "0.00",
-          total_amount: data.total_amount || "0.00",
+          deposit_amount: bookingData.deposit_amount || "0.00",
+          raw_total: bookingData.raw_total || "0.00",
+          discount_amount: bookingData.discount_amount || "0.00",
+          total_amount: bookingData.total_amount || "0.00",
           status: [
             "Pending",
             "Confirmed",
             "Checked-in",
             "Checked-out",
             "Cancelled",
-          ].includes(data.status)
-            ? data.status
+          ].includes(bookingData.status)
+            ? bookingData.status
             : "Cancelled",
-          customer: data.customer || null,
-          rooms: data.rooms.map((room: Room) => ({
+          customer: bookingData.customer || null,
+          rooms: bookingData.rooms.map((room: Room) => ({
             ...room,
             services: room.services || [],
           })),
-          services: data.services || [],
+          services: bookingData.services || [],
         };
-        setBooking(bookingData);
-        const initialShowAmenities = data.rooms.reduce(
+        setBooking(formattedBooking);
+        const initialShowAmenities = bookingData.rooms.reduce(
           (acc: { [key: number]: boolean }, room: Room) => ({
             ...acc,
             [room.id]: false,
           }),
           {}
         );
-        const initialShowServices = data.rooms.reduce(
+        const initialShowServices = bookingData.rooms.reduce(
           (acc: { [key: number]: boolean }, room: Room) => ({
             ...acc,
             [room.id]: false,
@@ -250,20 +251,15 @@ const DetailBookings: React.FC = () => {
         setShowAmenities(initialShowAmenities);
         setShowServices(initialShowServices);
       } else {
-        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${status}`);
       }
     } catch (error) {
-      setError(
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng"
-      );
-      setSnackbarMessage(
-        error instanceof Error
-          ? error.message
-          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng"
-      );
-      setSnackbarOpen(true);
+          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -271,16 +267,16 @@ const DetailBookings: React.FC = () => {
 
   const fetchAvailableServices = async () => {
     try {
-      const response = await api.get("/service", {
+      const { data, status } = await api.get("/service", {
         headers: {
           Accept: "application/json",
         },
       });
 
-      console.log("Dữ liệu thô từ API /service:", response.data);
+      console.log("Dữ liệu thô từ API /service:", data);
 
-      if (response.status === 200) {
-        const services: Service[] = response.data.data as Service[];
+      if (status === 200) {
+        const services: Service[] = data.data as Service[];
         if (!Array.isArray(services)) {
           throw new Error("Cấu trúc dữ liệu từ API không hợp lệ.");
         }
@@ -317,12 +313,11 @@ const DetailBookings: React.FC = () => {
 
         setAvailableServices(formattedServices);
       } else {
-        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${status}`);
       }
     } catch (error) {
       console.error("Lỗi khi lấy danh sách dịch vụ:", error);
-      setSnackbarMessage("Lỗi khi tải danh sách dịch vụ. Vui lòng thử lại.");
-      setSnackbarOpen(true);
+      toast.error("Lỗi khi tải danh sách dịch vụ. Vui lòng thử lại.");
     }
   };
 
@@ -389,6 +384,7 @@ const DetailBookings: React.FC = () => {
         return "Không xác định";
     }
   };
+
   const getStatusColor = (status: string): string => {
     switch (status) {
       case "available":
@@ -416,13 +412,12 @@ const DetailBookings: React.FC = () => {
 
   const handleAddServices = async () => {
     if (!currentRoomId || selectedServices.length === 0) {
-      setSnackbarMessage("Vui lòng chọn ít nhất một dịch vụ.");
-      setSnackbarOpen(true);
+      toast.error("Vui lòng chọn ít nhất một dịch vụ.");
       return;
     }
 
     try {
-      const response = await api.post(`/bookings/${bookingId}/add-services`, {
+      const { data, status } = await api.post(`/bookings/${bookingId}/add-services`, {
         services: selectedServices.map((service) => ({
           room_id: currentRoomId,
           service_id: service.service_id,
@@ -430,10 +425,10 @@ const DetailBookings: React.FC = () => {
         })),
       });
 
-      console.log("Dữ liệu trả về từ API /add-services:", response.data);
+      console.log("Dữ liệu trả về từ API /add-services:", data);
 
-      if (response.status === 200) {
-        const apiResponse: ApiResponse = response.data;
+      if (status === 200) {
+        const apiResponse: ApiResponse = data;
         setBooking((prev) => {
           if (!prev) return prev;
 
@@ -516,25 +511,23 @@ const DetailBookings: React.FC = () => {
               prev.total_amount,
           };
         });
-        setSnackbarMessage("Thêm dịch vụ thành công!");
-        setSnackbarOpen(true);
+        toast.success("Thêm dịch vụ thành công!");
         handleCloseServiceDialog();
       }
     } catch (error) {
       console.error("Lỗi khi thêm dịch vụ:", error);
-      setSnackbarMessage("Lỗi khi thêm dịch vụ. Vui lòng thử lại.");
-      setSnackbarOpen(true);
+      toast.error("Lỗi khi thêm dịch vụ. Vui lòng thử lại.");
     }
   };
 
   const handleDeleteService = async (roomId: number, serviceId: number) => {
     try {
-      const response = await api.post(`/bookings/${bookingId}/remove-service`, {
+      const { data, status } = await api.post(`/bookings/${bookingId}/remove-service`, {
         service_id: serviceId,
         room_id: roomId,
       });
 
-      if (response.status === 200) {
+      if (status === 200) {
         setBooking((prev) => {
           if (!prev) return prev;
           return {
@@ -550,23 +543,16 @@ const DetailBookings: React.FC = () => {
                 : room
             ),
             services: prev.services.filter((s) => s.id !== serviceId),
-            raw_total: response.data.data?.raw_total || prev.raw_total,
-            total_amount: response.data.data?.total_amount || prev.total_amount,
+            raw_total: data.data?.raw_total || prev.raw_total,
+            total_amount: data.data?.total_amount || prev.total_amount,
           };
         });
-        setSnackbarMessage("Xóa dịch vụ thành công!");
-        setSnackbarOpen(true);
+        toast.success("Xóa dịch vụ thành công!");
       }
     } catch (error) {
       console.error("Lỗi khi xóa dịch vụ:", error);
-      setSnackbarMessage("Lỗi khi xóa dịch vụ.");
-      setSnackbarOpen(true);
+      toast.error("Lỗi khi xóa dịch vụ.");
     }
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   // Lọc dịch vụ duy nhất và tính tổng số lượng
@@ -770,7 +756,6 @@ const DetailBookings: React.FC = () => {
                             >
                               {getRoomStatus(room.status)}
                             </td>
-
                             <td>
                               <div className="action-buttons">
                                 <Button
@@ -936,7 +921,7 @@ const DetailBookings: React.FC = () => {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={4}>
+                          <TableCell colSpan={3}>
                             Không có dịch vụ nào được thêm.
                           </TableCell>
                         </TableRow>
@@ -1016,23 +1001,6 @@ const DetailBookings: React.FC = () => {
               </Button>
             </DialogActions>
           </Dialog>
-
-          <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={3000}
-            onClose={handleSnackbarClose}
-            anchorOrigin={{ vertical: "top", horizontal: "center" }}
-          >
-            <Alert
-              onClose={handleSnackbarClose}
-              severity={
-                snackbarMessage.includes("thành công") ? "success" : "error"
-              }
-              sx={{ width: "100%" }}
-            >
-              {snackbarMessage}
-            </Alert>
-          </Snackbar>
         </>
       )}
     </div>

@@ -11,9 +11,8 @@ import {
   CircularProgress,
   Box,
   SelectChangeEvent,
-  Snackbar,
-  Alert,
 } from "@mui/material";
+import { toast } from "react-toastify";
 import "../../css/CraeteService.css";
 
 interface ServiceCategory {
@@ -29,7 +28,7 @@ interface ServiceFormData {
 }
 
 interface ValidationErrors {
-  [key: string]: string | undefined; // Added index signature
+  [key: string]: string | undefined;
   name?: string;
   category_id?: string;
   description?: string;
@@ -47,11 +46,7 @@ const CreateService: React.FC = () => {
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   const token = localStorage.getItem("auth_token");
 
@@ -101,8 +96,7 @@ const CreateService: React.FC = () => {
         const errorMessage =
           err instanceof Error ? err.message : "Lỗi không xác định";
         setError(`Không thể tải danh mục dịch vụ: ${errorMessage}`);
-        setSnackbarMessage(`Không thể tải danh mục dịch vụ: ${errorMessage}`);
-        setSnackbarOpen(true);
+        toast.error(`Không thể tải danh mục dịch vụ: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
@@ -181,15 +175,13 @@ const CreateService: React.FC = () => {
         return;
       }
 
-      setSnackbarMessage("Tạo dịch vụ thành công!");
-      setSnackbarOpen(true);
+      toast.success("Tạo dịch vụ thành công!");
       setTimeout(() => navigate("/service"), 2000);
     } catch (err: unknown) {
       const errorMessage =
         err instanceof Error ? err.message : "Lỗi không xác định";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -197,11 +189,6 @@ const CreateService: React.FC = () => {
 
   const handleCancel = () => {
     navigate("/service");
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   return (
@@ -317,23 +304,6 @@ const CreateService: React.FC = () => {
           </Box>
         </div>
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

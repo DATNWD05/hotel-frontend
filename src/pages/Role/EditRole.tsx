@@ -48,6 +48,7 @@ const EditRole: React.FC = () => {
     } else {
       setError('Bạn không có quyền chỉnh sửa vai trò');
       setLoading(false);
+      toast.error('Bạn không có quyền chỉnh sửa vai trò');
     }
   }, [hasPermission, id]);
 
@@ -125,10 +126,11 @@ const EditRole: React.FC = () => {
         }
       }
 
-      toast.success('Cập nhật vai trò và quyền thành công');
-      navigate('/role', { state: { refetch: true } });
+      await api.put(`/roles/${id}`, { name: role.name, description: role.description });
+      toast.success('Cập nhật vai trò thành công!');
+      setTimeout(() => navigate('/role'), 2000);
     } catch (err: unknown) {
-      const errorMessage = (err as ApiError).response?.data?.message || 'Không thể cập nhật vai trò hoặc quyền';
+      const errorMessage = (err as ApiError).response?.data?.message || 'Không thể cập nhật vai trò';
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -139,15 +141,20 @@ const EditRole: React.FC = () => {
       toast.error('Không thể xóa vai trò Owner');
       return;
     }
+    if (!hasPermission('delete_roles')) {
+      toast.error('Bạn không có quyền xóa vai trò');
+      return;
+    }
     if (!window.confirm('Bạn có chắc chắn muốn xóa vai trò này?')) {
       return;
     }
     try {
       await api.delete(`/roles/${id}`);
-      toast.success('Xóa vai trò thành công');
-      navigate('/role', { state: { refetch: true } });
+      toast.success('Xóa vai trò thành công!');
+      setTimeout(() => navigate('/role'), 2000);
     } catch (err: unknown) {
       const errorMessage = (err as ApiError).response?.data?.message || 'Không thể xóa vai trò';
+      setError(errorMessage);
       toast.error(errorMessage);
     }
   };
