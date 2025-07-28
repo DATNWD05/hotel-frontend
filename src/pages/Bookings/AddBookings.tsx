@@ -251,7 +251,7 @@ export default function HotelBooking() {
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email); // <-- đúng cú pháp
+    return emailRegex.test(email);
   };
 
   const validatePhone = (phone: string): boolean => {
@@ -406,7 +406,7 @@ export default function HotelBooking() {
         if (!value.trim()) {
           errors.customer.address = "Vui lòng nhập địa chỉ";
         } else if (value.trim().length < 10) {
-          errors.customer.address = "Địa chỉ phải có ít nhất 10 ký tự";
+          errors.customer.address = "Vui lòng nhập đầy đủ địa chỉ";
         } else {
           delete errors.customer.address;
         }
@@ -629,7 +629,7 @@ export default function HotelBooking() {
 
       if (conflict) {
         console.log(
-          `Phùng ${room.room_number} bị xung đột với booking từ ${
+          `Phòng ${room.room_number} bị xung đột với booking từ ${
             bookingCheckIn.toISOString().split("T")[0]
           } đến ${bookingCheckOut.toISOString().split("T")[0]}`
         );
@@ -937,7 +937,24 @@ export default function HotelBooking() {
         errorMsg = Object.values(error.response.data.errors).flat().join(", ");
       } else if (error.response?.data?.message) {
         errorMsg = error.response.data.message;
-        if (errorMsg.toLowerCase().includes("cccd")) {
+        // Xử lý lỗi phòng đã được đặt
+        if (errorMsg.includes("Phòng ID")) {
+          const roomIdMatch = errorMsg.match(/Phòng ID (\d+)/);
+          if (roomIdMatch && roomIdMatch[1]) {
+            const roomId = roomIdMatch[1];
+            // Tìm room_number từ roomNumbers
+            let roomNumber = "không xác định";
+            Object.values(roomNumbers).forEach((rooms) => {
+              const foundRoom = rooms.find(
+                (room) => room.id.toString() === roomId
+              );
+              if (foundRoom) {
+                roomNumber = foundRoom.room_number;
+              }
+            });
+            errorMsg = `Phòng ${roomNumber} đã được đặt trong thời gian này.`;
+          }
+        } else if (errorMsg.toLowerCase().includes("cccd")) {
           errorMsg = "Số CCCD/CMND đã tồn tại. Vui lòng kiểm tra lại.";
         } else if (errorMsg.includes("promotion")) {
           errorMsg =

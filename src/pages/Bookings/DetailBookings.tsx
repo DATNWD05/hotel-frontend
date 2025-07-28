@@ -97,11 +97,13 @@ interface RoomType {
   updated_at: string | null;
   amenities: Amenity[];
 }
+
 interface ServiceDataResponse {
   services?: Service[];
   raw_total?: string;
   total_amount?: string;
 }
+
 interface Room {
   id: number;
   room_number: string;
@@ -353,6 +355,14 @@ const DetailBookings: React.FC = () => {
   };
 
   const handleOpenServiceDialog = (roomId: number) => {
+    // Check booking status before opening the dialog
+    if (booking?.status === "Checked-out" || booking?.status === "Cancelled") {
+      setSnackbarMessage(
+        "Không thể thêm dịch vụ vì đơn đặt phòng đã được trả phòng hoặc đã hủy."
+      );
+      setSnackbarOpen(true);
+      return;
+    }
     setCurrentRoomId(roomId);
     setSelectedServices([]);
     fetchAvailableServices();
@@ -389,6 +399,7 @@ const DetailBookings: React.FC = () => {
         return "Không xác định";
     }
   };
+
   const getStatusColor = (status: string): string => {
     switch (status) {
       case "available":
@@ -417,6 +428,15 @@ const DetailBookings: React.FC = () => {
   const handleAddServices = async () => {
     if (!currentRoomId || selectedServices.length === 0) {
       setSnackbarMessage("Vui lòng chọn ít nhất một dịch vụ.");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    // Check booking status before making API call
+    if (booking?.status === "Checked-out" || booking?.status === "Cancelled") {
+      setSnackbarMessage(
+        "Không thể thêm dịch vụ vì đơn đặt phòng đã được trả phòng hoặc đã hủy."
+      );
       setSnackbarOpen(true);
       return;
     }
@@ -770,7 +790,6 @@ const DetailBookings: React.FC = () => {
                             >
                               {getRoomStatus(room.status)}
                             </td>
-
                             <td>
                               <div className="action-buttons">
                                 <Button
@@ -894,6 +913,10 @@ const DetailBookings: React.FC = () => {
                                         handleOpenServiceDialog(room.id)
                                       }
                                       className="action-add-service"
+                                      disabled={
+                                        booking.status === "Checked-out" ||
+                                        booking.status === "Cancelled"
+                                      }
                                     >
                                       Thêm dịch vụ
                                     </Button>
