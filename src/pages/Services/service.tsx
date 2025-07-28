@@ -25,8 +25,6 @@ import {
   DialogActions,
   Card,
   CardContent,
-  Snackbar,
-  Alert,
   Collapse,
 } from "@mui/material";
 import { Search as SearchIcon } from "lucide-react";
@@ -35,6 +33,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { toast } from "react-toastify";
 import axios from "axios";
 import "../../css/Service.css";
 
@@ -85,8 +84,6 @@ const Service: React.FC = () => {
   const [lastPage, setLastPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(
@@ -166,8 +163,7 @@ const Service: React.FC = () => {
           ? `Không thể tải danh sách dịch vụ: ${err.message}`
           : "Lỗi không xác định";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -177,9 +173,9 @@ const Service: React.FC = () => {
     document.title = "Danh sách Dịch vụ";
     const token = localStorage.getItem("auth_token");
     if (!token) {
-      setError("Không tìm thấy token xác thực");
-      setSnackbarMessage("Không tìm thấy token xác thực");
-      setSnackbarOpen(true);
+      const errorMessage = "Không tìm thấy token xác thực";
+      setError(errorMessage);
+      toast.error(errorMessage);
       setLoading(false);
       return;
     }
@@ -211,8 +207,7 @@ const Service: React.FC = () => {
             ? `Không thể tải danh mục dịch vụ: ${err.message}`
             : "Lỗi không xác định";
         setError(errorMessage);
-        setSnackbarMessage(errorMessage);
-        setSnackbarOpen(true);
+        toast.error(errorMessage);
       });
 
     fetchAllServices();
@@ -322,20 +317,18 @@ const Service: React.FC = () => {
         setEditServiceId(null);
         setEditFormData(null);
         setSelectedServiceId(null);
-        setSnackbarMessage("Cập nhật dịch vụ thành công!");
-        setSnackbarOpen(true);
+        toast.success("Cập nhật dịch vụ thành công!");
       } else {
         throw new Error("Không thể cập nhật dịch vụ");
       }
     } catch (err: unknown) {
       const errorMessage = axios.isAxiosError(err)
-        ? err.message
+        ? err.response?.data?.message || err.message
         : err instanceof Error
         ? err.message
         : "Đã xảy ra lỗi khi cập nhật dịch vụ";
       setEditError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setEditLoading(false);
     }
@@ -375,8 +368,7 @@ const Service: React.FC = () => {
 
       if (response.status === 204) {
         await fetchAllServices();
-        setSnackbarMessage("Xóa dịch vụ thành công!");
-        setSnackbarOpen(true);
+        toast.success("Xóa dịch vụ thành công!");
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
@@ -386,8 +378,7 @@ const Service: React.FC = () => {
           ? `Không thể xóa dịch vụ: ${err.message}`
           : "Lỗi không xác định";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
       setDeleteDialogOpen(false);
@@ -413,11 +404,6 @@ const Service: React.FC = () => {
   ) => {
     setCurrentPage(newPage);
     setServices(filteredServices.slice((newPage - 1) * 10, newPage * 10));
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -901,8 +887,8 @@ const Service: React.FC = () => {
                     shape="rounded"
                     showFirstButton
                     showLastButton
-                    siblingCount={0} // 👉 chỉ hiện 0 số xung quanh
-                    boundaryCount={1} // 👉 chỉ hiện 1 số đầu/cuối nếu cần
+                    siblingCount={0}
+                    boundaryCount={1}
                     sx={{
                       "& .MuiPaginationItem-root": {
                         color: "#666",
@@ -978,23 +964,6 @@ const Service: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

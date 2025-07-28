@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
+import { toast } from "react-toastify";
 
 interface CheckinInfo {
   booking_id: number;
@@ -73,6 +74,12 @@ const CheckinDialog: React.FC<CheckinDialogProps> = ({
   checkinInfo,
   onConfirm,
 }) => {
+  React.useEffect(() => {
+    if (!checkinInfo && open) {
+      toast.info("Đang tải thông tin...");
+    }
+  }, [checkinInfo, open]);
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle
@@ -150,7 +157,7 @@ const CheckinDialog: React.FC<CheckinDialogProps> = ({
                   {numeral(checkinInfo.total_amount).format("0,0")} VNĐ
                 </Typography>
                 <Typography variant="body2">
-                  <b>Người tạo:</b> {checkinInfo.created_by}
+                  <b>Người tạo:</b> {checkinInfo.created_by || "N/A"}
                 </Typography>
               </Paper>
             </Box>

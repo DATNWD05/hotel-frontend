@@ -19,8 +19,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
   Card,
   CardContent,
   Menu,
@@ -35,6 +33,7 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import axios, { AxiosError } from "axios";
 import "../../css/Amenities.css";
 
@@ -91,8 +90,6 @@ const ServiceCategoryList: React.FC = () => {
   );
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -161,8 +158,7 @@ const ServiceCategoryList: React.FC = () => {
         localStorage.removeItem("auth_token");
         navigate("/login");
       }
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -261,8 +257,7 @@ const ServiceCategoryList: React.FC = () => {
         setEditCategoryId(null);
         setEditFormData(null);
         setSelectedCategoryId(null);
-        setSnackbarMessage("Cập nhật danh mục thành công!");
-        setSnackbarOpen(true);
+        toast.success("Cập nhật danh mục thành công!");
       } else {
         throw new Error("Không thể cập nhật danh mục");
       }
@@ -277,8 +272,7 @@ const ServiceCategoryList: React.FC = () => {
           ? err.message
           : "Đã xảy ra lỗi khi cập nhật danh mục";
       setEditError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
       if (err instanceof AxiosError && err.response?.status === 401) {
         localStorage.removeItem("auth_token");
         navigate("/login");
@@ -364,12 +358,11 @@ const ServiceCategoryList: React.FC = () => {
             "Cảnh báo: API trả về dịch vụ không thuộc category_id yêu cầu:",
             invalidServices
           );
-          setSnackbarMessage(
+          toast.error(
             `API trả về dữ liệu sai: Một số dịch vụ không thuộc danh mục "${
               category?.name || "Không xác định"
             }". Vui lòng kiểm tra backend.`
           );
-          setSnackbarOpen(true);
           return;
         }
 
@@ -377,12 +370,11 @@ const ServiceCategoryList: React.FC = () => {
           const serviceNames = validServices
             .map((service) => service.name)
             .join(", ");
-          setSnackbarMessage(
+          toast.error(
             `Không thể xóa danh mục "${
               category?.name || "Không xác định"
             }" vì vẫn còn dịch vụ liên kết: ${serviceNames}. Vui lòng xóa hoặc chuyển các dịch vụ này trước.`
           );
-          setSnackbarOpen(true);
           return;
         }
       }
@@ -401,8 +393,7 @@ const ServiceCategoryList: React.FC = () => {
           : "Lỗi không xác định";
       console.error("Lỗi trong handleDelete:", errorMessage, err);
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
       if (err instanceof AxiosError && err.response?.status === 401) {
         localStorage.removeItem("auth_token");
         navigate("/login");
@@ -443,10 +434,9 @@ const ServiceCategoryList: React.FC = () => {
         setCategories((prev) =>
           prev.filter((cat) => cat.id !== categoryToDelete)
         );
-        setSnackbarMessage(
+        toast.success(
           `Xóa danh mục "${category?.name || "Không xác định"}" thành công!`
         );
-        setSnackbarOpen(true);
         if (categories.length === 1 && page > 1) {
           setPage(page - 1);
         } else {
@@ -467,22 +457,16 @@ const ServiceCategoryList: React.FC = () => {
           : "Lỗi không xác định";
       console.error("Lỗi trong confirmDelete:", errorMessage, err);
       setError(errorMessage);
+      toast.error(errorMessage);
       if (err instanceof AxiosError && err.response?.status === 401) {
         localStorage.removeItem("auth_token");
         navigate("/login");
       }
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
     } finally {
       setLoading(false);
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
     }
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   const handlePageChange = (
@@ -930,8 +914,8 @@ const ServiceCategoryList: React.FC = () => {
                     shape="rounded"
                     showFirstButton
                     showLastButton
-                    siblingCount={0} // 👉 không hiển thị số kề bên
-                    boundaryCount={1} // 👉 chỉ hiển thị 1 đầu/cuối
+                    siblingCount={0}
+                    boundaryCount={1}
                     sx={{
                       "& .MuiPaginationItem-root": {
                         fontSize: "14px",
@@ -1029,23 +1013,6 @@ const ServiceCategoryList: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

@@ -14,8 +14,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Snackbar,
-  Alert,
   Box,
   Paper,
   SelectChangeEvent,
@@ -35,7 +33,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import "../../css/OrderRoom.css";
 import api from "../../api/axios";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
+import { useAuth } from '../../contexts/AuthContext';
+import { toast } from 'react-toastify';
 
 interface RoomType {
   id: number;
@@ -158,8 +157,8 @@ interface ValidationErrors {
 }
 
 const OrderRoom: React.FC = () => {
-  const { hasPermission } = useAuth(); // Sử dụng useAuth để kiểm tra quyền
-  const navigate = useNavigate(); // Thêm useNavigate để chuyển hướng
+  const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [allRooms, setAllRooms] = useState<Room[]>([]);
   const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
@@ -171,8 +170,6 @@ const OrderRoom: React.FC = () => {
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
   const [editRoom, setEditRoom] = useState<Partial<Room>>({});
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [roomTypes, setRoomTypes] = useState<SimpleRoomType[]>([]);
   const [roomTypesLoading, setRoomTypesLoading] = useState<boolean>(true);
   const [roomTypesError, setRoomTypesError] = useState<string | null>(null);
@@ -182,8 +179,6 @@ const OrderRoom: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await api.get("/rooms");
-      // console.log(response.data);
-
       if (response.status === 200) {
         const data: Room[] = Array.isArray(response.data.data)
           ? response.data.data
@@ -269,11 +264,9 @@ const OrderRoom: React.FC = () => {
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu";
+        err instanceof Error ? err.message : "Không thể tải danh sách phòng";
       setError(errorMessage);
-      setSnackbarOpen(true);
-      setSnackbarMessage(errorMessage);
-      console.error("Lỗi khi tải danh sách phòng:", errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -302,11 +295,9 @@ const OrderRoom: React.FC = () => {
       const errorMessage =
         err instanceof Error
           ? err.message
-          : "Đã xảy ra lỗi khi tải danh sách loại phòng";
+          : "Không thể tải danh sách loại phòng";
       setRoomTypesError(errorMessage);
-      setSnackbarOpen(true);
-      setSnackbarMessage(errorMessage);
-      console.error("Lỗi khi tải danh sách loại phòng:", errorMessage);
+      toast.error(errorMessage);
     } finally {
       setRoomTypesLoading(false);
     }
@@ -429,6 +420,7 @@ const OrderRoom: React.FC = () => {
     const errors = validateEditForm(editRoom);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu");
       return;
     }
 
@@ -458,17 +450,14 @@ const OrderRoom: React.FC = () => {
         setOpenEditDialog(false);
         setEditRoom({});
         setValidationErrors({});
-        setSnackbarMessage("Thông tin phòng đã được cập nhật thành công!");
-        setSnackbarOpen(true);
+        toast.success("Cập nhật phòng thành công!");
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi cập nhật phòng";
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
-      console.error("Lỗi khi cập nhật phòng:", errorMessage);
+        err instanceof Error ? err.message : "Không thể cập nhật phòng";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -483,26 +472,18 @@ const OrderRoom: React.FC = () => {
       if (response.status === 200) {
         await fetchRooms();
         setOpenDialog(false);
-        setSnackbarMessage("Phòng đã được ẩn thành công!");
-        setSnackbarOpen(true);
-        navigate('/hiddenrooms'); // Chuyển hướng tới HiddenRoom
+        toast.success("Ẩn phòng thành công!");
+        setTimeout(() => navigate('/hiddenrooms'), 2000);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi ẩn phòng";
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
-      console.error("Lỗi khi ẩn phòng:", errorMessage);
+        err instanceof Error ? err.message : "Không thể ẩn phòng";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   const getStatusText = (status?: string) => {
@@ -1006,7 +987,7 @@ const OrderRoom: React.FC = () => {
           {selectedRoom &&
             (selectedRoom.status === "available" ||
               selectedRoom.status === "maintenance") &&
-            hasPermission('hide_rooms') && ( // Kiểm tra quyền hide_rooms
+            hasPermission('hide_rooms') && (
               <button onClick={handleSoftDeleteRoom} className="delete-button">
                 <DeleteIcon /> Ẩn phòng
               </button>
@@ -1149,23 +1130,6 @@ const OrderRoom: React.FC = () => {
           </button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

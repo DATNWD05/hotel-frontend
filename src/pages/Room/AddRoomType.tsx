@@ -1,16 +1,16 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   TextField,
   Button,
   Typography,
   CircularProgress,
   Box,
-  Snackbar,
-  Alert,
 } from "@mui/material";
 import "../../css/AddRoomType.css";
 import api from "../../api/axios";
+import { AxiosError } from "axios";
 
 interface RoomTypeFormData {
   code: string;
@@ -39,11 +39,7 @@ const AddRoomType: React.FC = () => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
   const validateForm = (data: RoomTypeFormData): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -65,14 +61,15 @@ const AddRoomType: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
+    const updatedData = {
+      ...formData,
       [name]:
         name === "max_occupancy" || name === "base_rate"
           ? Number(value)
           : value,
-    }));
-    const errors = validateForm({ ...formData, [name]: value });
+    };
+    setFormData(updatedData);
+    const errors = validateForm(updatedData);
     setValidationErrors(errors);
   };
 
@@ -80,38 +77,39 @@ const AddRoomType: React.FC = () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error("Vui lòng sửa các lỗi trong biểu mẫu trước khi lưu.");
       return;
     }
 
     setLoading(true);
     try {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+      }
+
       const response = await api.post("/room-types", formData);
       if (response.status === 201) {
-        setSnackbarMessage("Thêm loại phòng thành công!");
-        setSnackbarOpen(true);
+        toast.success("Thêm loại phòng thành công!");
         setTimeout(() => navigate("/room-types"), 2000);
       } else {
-        throw new Error("Không thể thêm loại phòng mới");
+        throw new Error(`Yêu cầu thất bại với mã: ${response.status}`);
       }
     } catch (err: unknown) {
-      let errorMessage = "Đã xảy ra lỗi khi thêm loại phòng";
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-      if (typeof err === "object" && err !== null && "response" in err) {
-        const axiosError = err as {
-          response?: {
-            data?: { message?: string; errors?: { [key: string]: string[] } };
-          };
-        };
-        errorMessage =
-          axiosError.response?.data?.message ||
-          JSON.stringify(axiosError.response?.data?.errors) ||
-          errorMessage;
-      }
+      const errorMessage =
+        err instanceof AxiosError
+          ? err.response?.status === 401
+            ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+            : err.response?.data?.message || `Không thể thêm loại phòng: ${err.message}`
+          : err instanceof Error
+          ? `Không thể thêm loại phòng: ${err.message}`
+          : "Lỗi không xác định";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem("auth_token");
+        navigate("/login");
+      }
     } finally {
       setLoading(false);
     }
@@ -119,11 +117,6 @@ const AddRoomType: React.FC = () => {
 
   const handleCancel = () => {
     navigate("/room-types");
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   return (
@@ -139,6 +132,17 @@ const AddRoomType: React.FC = () => {
               className="room-type-btn-save"
               onClick={handleSave}
               disabled={loading}
+              sx={{
+                backgroundColor: "#4318FF",
+                color: "#fff",
+                textTransform: "none",
+                fontWeight: 600,
+                borderRadius: "8px",
+                px: 2.5,
+                py: 0.7,
+                "&:hover": { backgroundColor: "#7B1FA2" },
+                "&:disabled": { backgroundColor: "#a9a9a9" },
+              }}
             >
               {loading ? <CircularProgress size={24} /> : "Lưu"}
             </Button>
@@ -149,6 +153,17 @@ const AddRoomType: React.FC = () => {
               disabled={loading}
               component={Link}
               to="/room-types"
+              sx={{
+                color: "#f44336",
+                borderColor: "#f44336",
+                textTransform: "none",
+                fontWeight: 600,
+                borderRadius: "8px",
+                px: 2.5,
+                py: 0.7,
+                "&:hover": { borderColor: "#d32f2f", backgroundColor: "#ffebee" },
+                "&:disabled": { color: "#a9a9a9", borderColor: "#a9a9a9" },
+              }}
             >
               Hủy
             </Button>
@@ -180,6 +195,7 @@ const AddRoomType: React.FC = () => {
                 size="small"
                 error={!!validationErrors.code}
                 helperText={validationErrors.code}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
               <TextField
                 label="Tên"
@@ -191,6 +207,7 @@ const AddRoomType: React.FC = () => {
                 size="small"
                 error={!!validationErrors.name}
                 helperText={validationErrors.name}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
             </Box>
             <Box display="flex" gap={2}>
@@ -206,6 +223,7 @@ const AddRoomType: React.FC = () => {
                 error={!!validationErrors.max_occupancy}
                 helperText={validationErrors.max_occupancy}
                 inputProps={{ min: 0 }}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
               <TextField
                 label="Giá cơ bản"
@@ -219,6 +237,7 @@ const AddRoomType: React.FC = () => {
                 error={!!validationErrors.base_rate}
                 helperText={validationErrors.base_rate}
                 inputProps={{ min: 0 }}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
             </Box>
             <Box display="flex" gap={2}>
@@ -234,28 +253,12 @@ const AddRoomType: React.FC = () => {
                 rows={3}
                 error={!!validationErrors.description}
                 helperText={validationErrors.description}
+                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
               />
             </Box>
           </Box>
         </div>
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

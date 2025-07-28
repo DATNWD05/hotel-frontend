@@ -1,4 +1,3 @@
-"use client";
 import type React from "react";
 import { useState, useEffect } from "react";
 import {
@@ -18,6 +17,7 @@ import {
 } from "@mui/material";
 import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import { format, parseISO, isValid } from "date-fns";
+import { toast } from "react-toastify";
 import api from "../../api/axios";
 
 interface Room {
@@ -110,13 +110,13 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const fetchAvailableRooms = async () => {
     try {
       setRoomsLoading(true);
-      const response = await api.get("/rooms");
+      const { data } = await api.get("/rooms");
       let roomsData = [];
 
-      if (response.data.data) {
-        roomsData = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        roomsData = response.data;
+      if (data.data) {
+        roomsData = data.data;
+      } else if (Array.isArray(data)) {
+        roomsData = data;
       }
 
       const availableRoomsFiltered = roomsData.filter(
@@ -146,6 +146,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     } catch (err) {
       console.error("Error fetching rooms:", err);
       setError("Không thể tải danh sách phòng. Vui lòng thử lại.");
+      toast.error("Không thể tải danh sách phòng. Vui lòng thử lại.");
     } finally {
       setRoomsLoading(false);
     }
@@ -154,13 +155,13 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const fetchPromotions = async () => {
     try {
       setPromotionsLoading(true);
-      const response = await api.get("/promotions");
+      const { data } = await api.get("/promotions");
       let promotionsData = [];
 
-      if (response.data.data) {
-        promotionsData = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        promotionsData = response.data;
+      if (data.data) {
+        promotionsData = data.data;
+      } else if (Array.isArray(data)) {
+        promotionsData = data;
       }
 
       const activePromotions = promotionsData.filter(
@@ -171,6 +172,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     } catch (err) {
       console.error("Error fetching promotions:", err);
       setError("Không thể tải danh sách khuyến mãi. Vui lòng thử lại.");
+      toast.error("Không thể tải danh sách khuyến mãi. Vui lòng thử lại.");
     } finally {
       setPromotionsLoading(false);
     }
@@ -239,21 +241,25 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
 
     if (selectedRoomIds.length === 0) {
       setError("Vui lòng chọn ít nhất một phòng hợp lệ");
+      toast.error("Vui lòng chọn ít nhất một phòng hợp lệ");
       return;
     }
 
     if (!checkInDate || !checkOutDate) {
       setError("Vui lòng nhập đầy đủ ngày nhận và trả phòng");
+      toast.error("Vui lòng nhập đầy đủ ngày nhận và trả phòng");
       return;
     }
 
     if (!isValidDate(checkInDate) || !isValidDate(checkOutDate)) {
       setError("Ngày nhận hoặc trả phòng không hợp lệ");
+      toast.error("Ngày nhận hoặc trả phòng không hợp lệ");
       return;
     }
 
     if (!isValidDeposit(depositAmount)) {
       setError("Số tiền đặt cọc không hợp lệ");
+      toast.error("Số tiền đặt cọc không hợp lệ");
       return;
     }
 
@@ -264,11 +270,13 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
 
     if (checkIn < today) {
       setError("Ngày nhận phòng phải sau hoặc bằng hôm nay");
+      toast.error("Ngày nhận phòng phải sau hoặc bằng hôm nay");
       return;
     }
 
     if (checkOut <= checkIn) {
       setError("Ngày trả phòng phải sau ngày nhận phòng");
+      toast.error("Ngày trả phòng phải sau ngày nhận phòng");
       return;
     }
 
@@ -286,7 +294,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
 
       console.log("Payload gửi đi:", updateData);
 
-      const response = await api.put(
+      const { data } = await api.put(
         `/bookings/${bookingInfo.id}`,
         updateData,
         {
@@ -296,10 +304,13 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         }
       );
 
-      onConfirm(response.data.data);
+      onConfirm(data.data);
+      toast.success("Cập nhật đặt phòng thành công");
       onClose();
     } catch (err) {
       console.error("Error updating booking:", err);
+      setError("Cập nhật đặt phòng thất bại");
+      toast.error("Cập nhật đặt phòng thất bại");
     } finally {
       setLoading(false);
     }

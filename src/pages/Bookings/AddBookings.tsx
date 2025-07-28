@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import {
   User,
@@ -14,6 +13,7 @@ import {
   ChevronDown,
   AlertTriangle,
 } from "lucide-react";
+import { toast } from "react-toastify";
 import "../../css/AddBookings.css";
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
@@ -223,17 +223,26 @@ export default function HotelBooking() {
         } else {
           throw new Error("Dữ liệu từ /bookings không hợp lệ");
         }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
-        setErrorMessage(
+        const errorMsg =
           "Lỗi khi tải dữ liệu: " +
-            (error.response?.data?.message || error.message)
-        );
+          (error.response?.data?.message || error.message);
+        setErrorMessage(errorMsg);
+        toast.error(errorMsg, { toastId: "fetch-error" });
       } finally {
         setLoadingData(false);
       }
     };
     fetchData();
   }, []);
+
+  // Handle loading toast
+  useEffect(() => {
+    if (loadingData) {
+      toast.info("Đang tải dữ liệu...", { toastId: "loading-data" });
+    }
+  }, [loadingData]);
 
   // Tự động tính tiền cọc dựa trên 10% tổng giá phòng
   useEffect(() => {
@@ -251,7 +260,7 @@ export default function HotelBooking() {
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email); // <-- đúng cú pháp
+    return emailRegex.test(email);
   };
 
   const validatePhone = (phone: string): boolean => {
@@ -629,7 +638,7 @@ export default function HotelBooking() {
 
       if (conflict) {
         console.log(
-          `Phùng ${room.room_number} bị xung đột với booking từ ${
+          `Phòng ${room.room_number} bị xung đột với booking từ ${
             bookingCheckIn.toISOString().split("T")[0]
           } đến ${bookingCheckOut.toISOString().split("T")[0]}`
         );
@@ -799,32 +808,34 @@ export default function HotelBooking() {
 
   const checkExistingCustomer = async (cccd: string) => {
     try {
-      const response = await api.get(`/customers/check-cccd/${cccd}`);
-      const { status, data } = response.data;
+      const { data } = await api.get(`/customers/check-cccd/${cccd}`);
+      const { status, data: customerData } = data;
 
-      if (status === "exists" && data && data.id) {
+      if (status === "exists" && customerData && customerData.id) {
         setBookingData((prev) => ({
           ...prev,
           customer: {
             ...prev.customer,
-            cccd: data.cccd || "",
-            name: data.name || "",
-            gender: data.gender || "",
-            email: data.email || "",
-            phone: data.phone || "",
-            dateOfBirth: data.date_of_birth || "",
-            nationality: data.nationality || "Vietnamese",
-            address: data.address || "",
-            note: data.note || "",
+            cccd: customerData.cccd || "",
+            name: customerData.name || "",
+            gender: customerData.gender || "",
+            email: customerData.email || "",
+            phone: customerData.phone || "",
+            dateOfBirth: customerData.date_of_birth || "",
+            nationality: customerData.nationality || "Vietnamese",
+            address: customerData.address || "",
+            note: customerData.note || "",
           },
         }));
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.response?.status !== 404) {
-        setErrorMessage(
+        const errorMsg =
           "Lỗi khi kiểm tra CCCD: " +
-            (error.response?.data?.message || error.message)
-        );
+          (error.response?.data?.message || error.message);
+        setErrorMessage(errorMsg);
+        toast.error(errorMsg, { toastId: "check-cccd-error" });
       }
     }
   };
@@ -870,7 +881,9 @@ export default function HotelBooking() {
 
   const handleSubmit = async () => {
     if (!validateAllFields()) {
-      setErrorMessage("Vui lòng kiểm tra và điền đầy đủ thông tin hợp lệ!");
+      const errorMsg = "Vui lòng kiểm tra và điền đầy đủ thông tin hợp lệ!";
+      setErrorMessage(errorMsg);
+      toast.error(errorMsg, { toastId: "validation-error" });
       setSubmitStatus("error");
       return;
     }
@@ -930,7 +943,9 @@ export default function HotelBooking() {
       }
 
       setSubmitStatus("success");
+      toast.success("Đặt phòng thành công!", { toastId: "booking-success" });
       setTimeout(() => navigate("/"), 2000);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       let errorMsg = "Có lỗi xảy ra khi đặt phòng";
       if (error.response?.data?.errors) {
@@ -948,6 +963,7 @@ export default function HotelBooking() {
       }
       setSubmitStatus("error");
       setErrorMessage(errorMsg);
+      toast.error(errorMsg, { toastId: "booking-error" });
     } finally {
       setIsSubmitting(false);
     }

@@ -36,13 +36,14 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "react-toastify";
 import api from "../../api/axios";
 import CheckinDialog from "./CheckinDialog";
 import CheckoutDialog from "./CheckoutDialog";
 import InvoiceDialog from "./InvoiceDialog";
 import EditBookingDialog from "./EditBookingDialog";
 
-// Interfaces
+// Interfaces (giữ nguyên như code gốc)
 interface Invoice {
   invoice_code: string;
   booking_id: number;
@@ -270,15 +271,9 @@ const ListBookings: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(
-    null
-  );
-  const [actionAnchorEl, setActionAnchorEl] = useState<null | HTMLElement>(
-    null
-  );
-  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(
-    null
-  );
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [actionAnchorEl, setActionAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
   const [openCheckinDialog, setOpenCheckinDialog] = useState(false);
   const [checkinInfo, setCheckinInfo] = useState<CheckinInfo | null>(null);
   const [checkoutInfo, setCheckoutInfo] = useState<CheckoutInfo | null>(null);
@@ -289,22 +284,21 @@ const ListBookings: React.FC = () => {
   const [bookingToCancel, setBookingToCancel] = useState<number | null>(null);
   const [invoiceInfo, setInvoiceInfo] = useState<Invoice | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState<boolean>(false);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "vnpay" | null>(
-    null
-  );
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "vnpay" | null>(null);
   const [isPaying, setWorking] = useState<boolean>(false);
   const callbackProcessed = useRef(false);
   const navigate = useNavigate();
 
   const handleOpenCheckoutDialog = async (bookingId: number) => {
     try {
-      const res = await api.get(`/check-out/${bookingId}`);
-      setCheckoutInfo(res.data);
+      const { data } = await api.get(`/check-out/${bookingId}`);
+      setCheckoutInfo(data);
       setOpenCheckoutDialog(true);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin check-out:", error);
       setError("Không thể tải thông tin check-out");
       setSnackbarOpen(true);
+      toast.error("Không thể tải thông tin check-out");
     }
   };
 
@@ -312,27 +306,28 @@ const ListBookings: React.FC = () => {
     if (!checkoutInfo) {
       setError("Không có thông tin check-out để xác nhận.");
       setSnackbarOpen(true);
+      toast.error("Không có thông tin check-out để xác nhận.");
       return;
     }
 
     try {
       setWorking(true);
-      const res = await api.post(`/pay-cash/${checkoutInfo.booking_id}`);
+      const { data } = await api.post(`/pay-cash/${checkoutInfo.booking_id}`);
       setCheckoutInfo({
         ...checkoutInfo,
-        status: res.data.status || "Checked-out",
-        check_out_at: res.data.check_out_at || new Date().toISOString(),
+        status: data.status || "Checked-out",
+        check_out_at: data.check_out_at || new Date().toISOString(),
       });
-      setSuccessMessage(
-        res.data.message || "Thanh toán tiền mặt và trả phòng thành công!"
-      );
+      setSuccessMessage(data.message || "Thanh toán tiền mặt và trả phòng thành công!");
       setSnackbarOpen(true);
+      toast.success("Thanh toán tiền mặt và trả phòng thành công!");
       setOpenCheckoutDialog(false);
       fetchAllBookings();
     } catch (err) {
       console.error("Lỗi khi thanh toán tiền mặt:", err);
       setError("Thanh toán tiền mặt thất bại");
       setSnackbarOpen(true);
+      toast.error("Thanh toán tiền mặt thất bại");
     } finally {
       setWorking(false);
     }
@@ -341,12 +336,12 @@ const ListBookings: React.FC = () => {
   const handleVNPayCheckout = async (bookingId: number) => {
     try {
       setWorking(true);
-      const res = await api.post("/vnpay/create-payment", {
+      const { data } = await api.post("/vnpay/create-payment", {
         booking_id: bookingId,
       });
-      if (res.data && res.data.payment_url) {
+      if (data && data.payment_url) {
         setOpenCheckoutDialog(false);
-        window.location.href = res.data.payment_url;
+        window.location.href = data.payment_url;
       } else {
         throw new Error("Không nhận được URL thanh toán.");
       }
@@ -354,6 +349,7 @@ const ListBookings: React.FC = () => {
       console.error("Lỗi khi khởi tạo thanh toán VNPay:", error);
       setError("Không thể khởi tạo thanh toán VNPay");
       setSnackbarOpen(true);
+      toast.error("Không thể khởi tạo thanh toán VNPay");
     } finally {
       setWorking(false);
     }
@@ -365,33 +361,26 @@ const ListBookings: React.FC = () => {
     const txnRef = urlParams.get("vnp_TxnRef");
     const responseCode = urlParams.get("vnp_ResponseCode");
 
-    if (
-      transactionStatus &&
-      txnRef &&
-      responseCode &&
-      !callbackProcessed.current
-    ) {
+    if (transactionStatus && txnRef && responseCode && !callbackProcessed.current) {
       callbackProcessed.current = true;
       (async () => {
         try {
-          const res = await api.get("/vnpay/return", { params: urlParams });
+          const { data } = await api.get("/vnpay/return", { params: urlParams });
           if (responseCode === "00") {
-            setSuccessMessage(
-              res.data.message || "Thanh toán VNPay thành công!"
-            );
+            setSuccessMessage(data.message || "Thanh toán VNPay thành công!");
             setSnackbarOpen(true);
+            toast.success("Thanh toán VNPay thành công!");
             fetchAllBookings();
           } else {
-            setError(
-              res.data.message ||
-                "Thanh toán VNPay không thành công. Vui lòng thử lại."
-            );
+            setError(data.message || "Thanh toán VNPay không thành công. Vui lòng thử lại.");
             setSnackbarOpen(true);
+            toast.error("Thanh toán VNPay không thành công. Vui lòng thử lại.");
           }
         } catch (err) {
           console.error("Lỗi khi xử lý callback VNPay:", err);
           setError("Không thể xử lý thanh toán VNPay.");
           setSnackbarOpen(true);
+          toast.error("Không thể xử lý thanh toán VNPay.");
         } finally {
           navigate("/listbookings", { replace: true });
         }
@@ -412,10 +401,12 @@ const ListBookings: React.FC = () => {
       await fetchAllBookings();
       setSuccessMessage("Hủy đặt phòng thành công");
       setSnackbarOpen(true);
+      toast.success("Hủy đặt phòng thành công");
     } catch (error) {
       console.error("Lỗi khi hủy đặt phòng:", error);
       setError("Hủy đặt phòng thất bại");
       setSnackbarOpen(true);
+      toast.error("Hủy đặt phòng thất bại");
     } finally {
       setOpenCancelDialog(false);
       setBookingToCancel(null);
@@ -424,14 +415,15 @@ const ListBookings: React.FC = () => {
 
   const handleCheckinDialog = async (bookingId: number) => {
     try {
-      const res = await api.get(`/check-in/${bookingId}`);
-      setCheckinInfo(res.data);
+      const { data } = await api.get(`/check-in/${bookingId}`);
+      setCheckinInfo(data);
       setOpenCheckinDialog(true);
       setSelectedBookingId(bookingId);
     } catch (err) {
       console.error("Lỗi lấy thông tin check-in", err);
       setError("Không thể tải thông tin check-in");
       setSnackbarOpen(true);
+      toast.error("Không thể tải thông tin check-in");
     }
   };
 
@@ -468,10 +460,12 @@ const ListBookings: React.FC = () => {
       );
       setSuccessMessage("Cập nhật đặt phòng thành công");
       setSnackbarOpen(true);
+      toast.success("Cập nhật đặt phòng thành công");
     } catch (error) {
       console.error("Lỗi khi cập nhật đặt phòng:", error);
       setError("Cập nhật đặt phòng thất bại");
       setSnackbarOpen(true);
+      toast.error("Cập nhật đặt phòng thất bại");
     }
   };
 
@@ -492,10 +486,12 @@ const ListBookings: React.FC = () => {
       await fetchAllBookings();
       setSuccessMessage("Check-in thành công");
       setSnackbarOpen(true);
+      toast.success("Check-in thành công");
     } catch (error) {
       console.log(error);
       setError("Check-in thất bại");
       setSnackbarOpen(true);
+      toast.error("Check-in thất bại");
     } finally {
       handleCloseCheckinDialog();
     }
@@ -506,13 +502,13 @@ const ListBookings: React.FC = () => {
       setInvoiceLoading(true);
       setSelectedBookingId(bookingId);
       setOpenInvoiceDialog(true);
-
-      const response = await api.get(`/invoices/${bookingId}`);
-      setInvoiceInfo(response.data);
+      const { data } = await api.get(`/invoices/${bookingId}`);
+      setInvoiceInfo(data);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin hóa đơn:", error);
       setError("Không thể tải thông tin hóa đơn");
       setSnackbarOpen(true);
+      toast.error("Không thể tải thông tin hóa đơn");
       setOpenInvoiceDialog(false);
     } finally {
       setInvoiceLoading(false);
@@ -531,18 +527,16 @@ const ListBookings: React.FC = () => {
     try {
       setInvoiceLoading(true);
       console.log("Calling print API for bookingId:", selectedBookingId);
-      const response = await api.get(
-        `/invoices/booking/${selectedBookingId}/print`
-      );
-      setSuccessMessage(
-        response.data.message || "Đã gửi yêu cầu in hóa đơn và email!"
-      );
+      const { data } = await api.get(`/invoices/booking/${selectedBookingId}/print`);
+      setSuccessMessage(data.message || "Đã gửi yêu cầu in hóa đơn và email!");
       setSnackbarOpen(true);
+      toast.success("Đã gửi yêu cầu in hóa đơn và email!");
       setOpenInvoiceDialog(false);
     } catch (error) {
       console.error("Lỗi khi gửi yêu cầu in hóa đơn:", error);
       setError("Không thể in hóa đơn");
       setSnackbarOpen(true);
+      toast.error("Không thể in hóa đơn");
     } finally {
       setInvoiceLoading(false);
     }
@@ -552,9 +546,8 @@ const ListBookings: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get("/bookings");
-      if (response.status === 200) {
-        const data = response.data;
+      const { data, status } = await api.get("/bookings");
+      if (status === 200) {
         let bookingsData: Booking[] = [];
         if (Array.isArray(data)) {
           bookingsData = data;
@@ -563,9 +556,7 @@ const ListBookings: React.FC = () => {
         } else if (Array.isArray(data.bookings)) {
           bookingsData = data.bookings;
         } else {
-          console.warn(
-            "Dữ liệu không phải mảng, đặt bookingsData thành mảng rỗng"
-          );
+          console.warn("Dữ liệu không phải mảng, đặt bookingsData thành mảng rỗng");
           bookingsData = [];
         }
 
@@ -579,10 +570,7 @@ const ListBookings: React.FC = () => {
               api
                 .post(`/bookings/${item.id}/cancel`)
                 .catch((err) =>
-                  console.error(
-                    `Lỗi khi cập nhật trạng thái booking ${item.id}:`,
-                    err
-                  )
+                  console.error(`Lỗi khi cập nhật trạng thái booking ${item.id}:`, err)
                 );
             }
           }
@@ -642,7 +630,7 @@ const ListBookings: React.FC = () => {
         setAllBookings(sanitizedData);
         setBookings(sanitizedData);
       } else {
-        throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
+        throw new Error(`Lỗi HTTP! Mã trạng thái: ${status}`);
       }
     } catch (err) {
       const errorMessage =
@@ -651,6 +639,7 @@ const ListBookings: React.FC = () => {
           : "Đã xảy ra lỗi khi tải danh sách đặt phòng";
       setError(errorMessage);
       setSnackbarOpen(true);
+      toast.error(errorMessage);
       console.error("Lỗi khi tải danh sách đặt phòng:", errorMessage, err);
     } finally {
       setLoading(false);
@@ -666,12 +655,8 @@ const ListBookings: React.FC = () => {
     if (searchQuery.trim() !== "") {
       filtered = filtered.filter(
         (booking) =>
-          booking.customer.name
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          booking.room.room_number
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+          booking.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          booking.room.room_number.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     if (statusFilters.length > 0) {
@@ -867,10 +852,7 @@ const ListBookings: React.FC = () => {
                 : "Không tìm thấy đặt phòng nào."}
             </Typography>
           ) : (
-            <TableContainer
-              component={Paper}
-              className="booking-table-container"
-            >
+            <TableContainer component={Paper} className="booking-table-container">
               <Table className="booking-table" sx={{ width: "100%" }}>
                 <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
                   <TableRow>
@@ -917,19 +899,11 @@ const ListBookings: React.FC = () => {
                                   .join(", ")
                             : booking.room.room_number || "N/A"}
                         </TableCell>
+                        <TableCell>{formatDate(booking.check_in_date)}</TableCell>
+                        <TableCell>{formatDate(booking.check_out_date)}</TableCell>
+                        <TableCell>{formatCurrency(booking.total_amount)}</TableCell>
                         <TableCell>
-                          {formatDate(booking.check_in_date)}
-                        </TableCell>
-                        <TableCell>
-                          {formatDate(booking.check_out_date)}
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(booking.total_amount)}
-                        </TableCell>
-                        <TableCell>
-                          <span style={{ color, fontWeight: "bold" }}>
-                            {status}
-                          </span>
+                          <span style={{ color, fontWeight: "bold" }}>{status}</span>
                         </TableCell>
                         <TableCell align="center">
                           <IconButton
@@ -988,9 +962,7 @@ const ListBookings: React.FC = () => {
                           {status === "Đã nhận phòng" && (
                             <IconButton
                               title="Thanh toán và trả phòng"
-                              onClick={() =>
-                                handleOpenCheckoutDialog(booking.id)
-                              }
+                              onClick={() => handleOpenCheckoutDialog(booking.id)}
                               sx={{
                                 ml: 1,
                                 color: "#ff9800",
@@ -1004,9 +976,7 @@ const ListBookings: React.FC = () => {
                           {status === "Đã trả phòng" && (
                             <IconButton
                               title="In hóa đơn"
-                              onClick={() =>
-                                handleOpenInvoiceDialog(booking.id)
-                              }
+                              onClick={() => handleOpenInvoiceDialog(booking.id)}
                               sx={{
                                 ml: 1,
                                 color: "#0288d1",
@@ -1053,13 +1023,10 @@ const ListBookings: React.FC = () => {
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 600 }}>
-          Xác nhận hủy đặt phòng
-        </DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Xác nhận hủy đặt phòng</DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn hủy đặt phòng này không? Hành động này không
-            thể hoàn tác.
+            Bạn có chắc chắn muốn hủy đặt phòng này không? Hành động này không thể hoàn tác.
           </Typography>
         </DialogContent>
         <DialogActions>

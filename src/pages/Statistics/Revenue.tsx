@@ -15,6 +15,7 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search } from "lucide-react";
+import { toast } from "react-toastify";
 import api from "../../api/axios";
 import { DatePicker, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -64,8 +65,10 @@ export default function Revenue() {
       setFiltered(res.data.data);
       setTotalPage(res.data.pagination.last_page);
       setSummary(res.data.summary);
-    } catch (error) {
-      console.error("Lỗi khi tải dữ liệu doanh thu:", error);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "Lỗi khi tải dữ liệu doanh thu";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -155,38 +158,37 @@ export default function Revenue() {
           </LocalizationProvider>
 
           <TextField
-  placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng)"
-  value={search}
-  onChange={(e) => setSearch(e.target.value)}
-  size="small"
-  sx={{
-    width: 400,
-    height: 40,
-    backgroundColor: "white",
-    borderRadius: "7px",
-    "& .MuiOutlinedInput-root": {
-      height: "40px",
-      borderRadius: "10px",
-      paddingRight: "8px",
-    },
-    "& input": {
-      padding: "12px 10px",
-      fontSize: "14px", // ✅ Tăng cỡ chữ tại đây
-      fontWeight: 500,   // ✅ (tuỳ chọn) làm đậm hơn một chút
-    },
-    "& .MuiInputAdornment-root svg": {
-      fontSize: "20px", // icon kính lúp cũng to ra nếu muốn
-    },
-  }}
-  InputProps={{
-    startAdornment: (
-      <InputAdornment position="start">
-        <Search size={22} /> {/* hoặc dùng icon lớn hơn chút */}
-      </InputAdornment>
-    ),
-  }}
-/>
-
+            placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng)"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            size="small"
+            sx={{
+              width: 400,
+              height: 40,
+              backgroundColor: "white",
+              borderRadius: "7px",
+              "& .MuiOutlinedInput-root": {
+                height: "40px",
+                borderRadius: "10px",
+                paddingRight: "8px",
+              },
+              "& input": {
+                padding: "12px 10px",
+                fontSize: "14px",
+                fontWeight: 500,
+              },
+              "& .MuiInputAdornment-root svg": {
+                fontSize: "20px",
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={22} />
+                </InputAdornment>
+              ),
+            }}
+          />
         </Box>
       </Box>
 

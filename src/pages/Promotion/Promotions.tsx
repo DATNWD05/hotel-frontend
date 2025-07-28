@@ -18,8 +18,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Snackbar,
-  Alert,
   Pagination,
   Dialog,
   DialogTitle,
@@ -45,6 +43,7 @@ import api from "../../api/axios";
 import "../../css/Promotion.css";
 import { JSX } from "react/jsx-runtime";
 import { Link } from "react-router-dom";
+import { toast } from 'react-toastify';
 
 type DiscountType = "percent" | "amount";
 type StatusType = "scheduled" | "active" | "expired" | "cancelled" | "depleted";
@@ -175,20 +174,12 @@ const Promotions: React.FC = () => {
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Promotion>>({});
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [promotionToDelete, setPromotionToDelete] = useState<number | null>(
-    null
-  );
-  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(
-    null
-  );
+  const [promotionToDelete, setPromotionToDelete] = useState<number | null>(null);
+  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
 
   const fetchAllPromotions = async () => {
     try {
@@ -250,10 +241,9 @@ const Promotions: React.FC = () => {
       setPromotions(allData.slice(0, 10));
       setLastPage(Math.ceil(allData.length / 10));
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi tải dữ liệu";
+      const errorMessage = err instanceof Error ? err.message : "Không thể tải danh sách khuyến mãi";
       setError(errorMessage);
-      console.error("Lỗi khi tải danh sách khuyến mãi:", errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -286,14 +276,14 @@ const Promotions: React.FC = () => {
 
   const validateForm = (data: Partial<Promotion>): ValidationErrors => {
     const errors: ValidationErrors = {};
-    if (!data.code?.trim()) errors.code = "Mã CTKM không được để trống";
+    if (!data.code?.trim()) errors.code = "Mã khuyến mãi không được để trống";
     else if (data.code && data.code.length > 20)
-      errors.code = "Mã CTKM không được vượt quá 20 ký tự";
+      errors.code = "Mã khuyến mãi không được vượt quá 20 ký tự";
     if (!data.description?.trim())
       errors.description = "Mô tả không được để trống";
     else if (data.description && data.description.length > 200)
       errors.description = "Mô tả không được vượt quá 200 ký tự";
-    if (!data.discount_type) errors.discount_type = "Vui lòng chọn loại giảm";
+    if (!data.discount_type) errors.discount_type = "Vui lòng chọn loại giảm giá";
     if (data.discount_value === undefined || data.discount_value <= 0)
       errors.discount_value = "Giá trị giảm phải lớn hơn 0";
     else if (data.discount_type === "percent" && data.discount_value > 100) {
@@ -382,6 +372,7 @@ const Promotions: React.FC = () => {
     const errors = validateForm(editedDetail);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu");
       return;
     }
 
@@ -412,20 +403,14 @@ const Promotions: React.FC = () => {
         setEditingDetailId(null);
         setViewDetailId(null);
         setValidationErrors({});
-        setSnackbarMessage("Mã khuyến mãi đã được cập nhật thành công!");
-        setSnackbarOpen(true);
+        toast.success("Cập nhật khuyến mãi thành công!");
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Đã xảy ra lỗi khi cập nhật khuyến mãi";
+      const errorMessage = err instanceof Error ? err.message : "Không thể cập nhật khuyến mãi";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
-      console.error("Lỗi khi cập nhật khuyến mãi:", errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -461,42 +446,29 @@ const Promotions: React.FC = () => {
           updatedPromotion
         );
         if (updateResponse.status !== 200) {
-          throw new Error("Không thể hủy mã giảm giá do lỗi từ phía server");
+          throw new Error("Không thể hủy khuyến mãi do lỗi từ phía server");
         }
-        setSnackbarMessage(
-          "Mã giảm giá đã được hủy vì đã được sử dụng ít nhất 1 lần!"
-        );
+        toast.success("Hủy khuyến mãi thành công!");
       } else {
         const deleteResponse = await api.delete(
           `/promotions/${promotionToDelete}`
         );
         if (deleteResponse.status !== 200 && deleteResponse.status !== 204) {
-          throw new Error("Không thể xóa mã giảm giá do lỗi từ phía server");
+          throw new Error("Không thể xóa khuyến mãi do lỗi từ phía server");
         }
-        setSnackbarMessage(
-          "Mã giảm giá đã được xóa thành công vì chưa được sử dụng!"
-        );
+        toast.success("Xóa khuyến mãi thành công!");
       }
 
       await fetchAllPromotions();
-      setSnackbarOpen(true);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Đã xảy ra lỗi khi xóa khuyến mãi";
+      const errorMessage = err instanceof Error ? err.message : "Không thể xóa hoặc hủy khuyến mãi";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
-      console.error("Lỗi khi xóa khuyến mãi:", errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
       setDeleteDialogOpen(false);
       setPromotionToDelete(null);
     }
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   const handlePageChange = (
@@ -944,7 +916,7 @@ const Promotions: React.FC = () => {
                                                 !!validationErrors.discount_type
                                               }
                                             >
-                                              <InputLabel>Loại giảm</InputLabel>
+                                              <InputLabel>Loại giảm giá</InputLabel>
                                               <Select
                                                 name="discount_type"
                                                 value={
@@ -952,7 +924,7 @@ const Promotions: React.FC = () => {
                                                   "amount"
                                                 }
                                                 onChange={handleSelectChange}
-                                                label="Loại giảm"
+                                                label="Loại giảm giá"
                                               >
                                                 <MenuItem value="percent">
                                                   Phần trăm (%)
@@ -1209,7 +1181,7 @@ const Promotions: React.FC = () => {
                                           <TableBody>
                                             <TableRow>
                                               <TableCell>
-                                                <strong>Mã CTKM:</strong>{" "}
+                                                <strong>Mã khuyến mãi:</strong>{" "}
                                                 {promotion.code}
                                               </TableCell>
                                               <TableCell>
@@ -1219,7 +1191,7 @@ const Promotions: React.FC = () => {
                                             </TableRow>
                                             <TableRow>
                                               <TableCell>
-                                                <strong>Loại giảm:</strong>{" "}
+                                                <strong>Loại giảm giá:</strong>{" "}
                                                 {promotion.discount_type ===
                                                 "percent"
                                                   ? "Phần trăm"
@@ -1345,23 +1317,6 @@ const Promotions: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

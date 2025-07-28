@@ -6,11 +6,10 @@ import {
   Typography,
   CircularProgress,
   Box,
-  Snackbar,
-  Alert,
 } from '@mui/material';
 import '../../css/AddDepartment.css';
 import api from '../../api/axios';
+import { toast } from 'react-toastify';
 
 interface DepartmentFormData {
   name: string;
@@ -28,8 +27,6 @@ const AddDepartment: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>('');
 
   const validateForm = (data: DepartmentFormData): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -49,6 +46,7 @@ const AddDepartment: React.FC = () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu");
       return;
     }
 
@@ -56,14 +54,13 @@ const AddDepartment: React.FC = () => {
     try {
       const response = await api.post('/departments', formData);
       if (response.status === 201) {
-        setSnackbarMessage('Thêm phòng ban thành công!');
-        setSnackbarOpen(true);
+        toast.success('Thêm phòng ban thành công!');
         setTimeout(() => navigate('/departments'), 2000);
       } else {
         throw new Error('Không thể thêm phòng ban mới');
       }
     } catch (err: unknown) {
-      let errorMessage = 'Đã xảy ra lỗi khi thêm phòng ban';
+      let errorMessage = 'Không thể thêm phòng ban';
       if (err instanceof Error) {
         errorMessage = err.message;
       }
@@ -75,8 +72,7 @@ const AddDepartment: React.FC = () => {
           errorMessage;
       }
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -84,11 +80,6 @@ const AddDepartment: React.FC = () => {
 
   const handleCancel = () => {
     navigate('/departments');
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage('');
   };
 
   return (
@@ -135,44 +126,49 @@ const AddDepartment: React.FC = () => {
               }}
             />
             <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
-              <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
-  <Button
-    className="add-department-btn-save"
-    onClick={handleSave}
-    disabled={loading}
-  >
-    {loading ? <CircularProgress size={24} /> : "Lưu"}
-  </Button>
-
-  <Button
-    className="add-department-btn-cancel"
-    onClick={handleCancel}
-    disabled={loading}
-    component={Link}
-    to="/departments"
-  >
-    Hủy
-  </Button>
-</Box>
+              <Button
+                className="add-department-btn-save"
+                onClick={handleSave}
+                disabled={loading}
+                variant="contained"
+                sx={{
+                  textTransform: "none",
+                  borderRadius: 2,
+                  px: 3,
+                  bgcolor: "#4318F5",
+                  "&:hover": {
+                    bgcolor: "#7B1FA2",
+                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
+                  },
+                }}
+              >
+                {loading ? <CircularProgress size={24} color="inherit" /> : "Lưu"}
+              </Button>
+              <Button
+                className="add-department-btn-cancel"
+                onClick={handleCancel}
+                disabled={loading}
+                component={Link}
+                to="/departments"
+                variant="outlined"
+                sx={{
+                  textTransform: "none",
+                  borderRadius: 2,
+                  px: 3,
+                  borderColor: "#e0e0e0",
+                  color: "#424242",
+                  "&:hover": {
+                    borderColor: "#888",
+                    bgcolor: "#f5f5f5",
+                  },
+                }}
+              >
+                Hủy
+              </Button>
             </Box>
           </Box>
         </div>
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={snackbarMessage.includes('thành công') ? 'success' : 'error'}
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

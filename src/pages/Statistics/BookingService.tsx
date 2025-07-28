@@ -15,6 +15,7 @@ import {
   InputAdornment,
 } from "@mui/material";
 import { Search } from "lucide-react";
+import { toast } from "react-toastify";
 import api from "../../api/axios";
 import { DatePicker } from "@mui/x-date-pickers";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -56,17 +57,14 @@ export default function BookingService() {
       const res = await api.get(`/statistics/total-service-revenue`, {
         params,
       });
-      console.log("Toonrg doanh thu:", res.data);
+      console.log("Tổng doanh thu:", res.data);
       setServiceTotal(res.data.total_service_revenue ?? 0);
-    } catch (err) {
-      console.error("Lỗi khi lấy tổng tiền dịch vụ:", err);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      const msg = err.response?.data?.message || "Lỗi khi lấy tổng tiền dịch vụ";
+      toast.error(msg);
     }
   };
-
-  useEffect(() => {
-    fetchData();
-    fetchServiceTotal();
-  }, [page, fromDate, toDate]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -83,8 +81,10 @@ export default function BookingService() {
       setFiltered(res.data.data);
       setTotalPage(res.data.pagination.last_page);
       setSummary(res.data.summary);
-    } catch (error) {
-      console.error("Lỗi khi tải dữ liệu dịch vụ:", error);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      const msg = error.response?.data?.message || "Lỗi khi tải dữ liệu dịch vụ";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -92,6 +92,7 @@ export default function BookingService() {
 
   useEffect(() => {
     fetchData();
+    fetchServiceTotal();
   }, [page, fromDate, toDate]);
 
   useEffect(() => {
@@ -190,17 +191,17 @@ export default function BookingService() {
               },
               "& input": {
                 padding: "12px 10px",
-                fontSize: "16px", // ✅ Tăng cỡ chữ tại đây
-                fontWeight: 500, // ✅ (tuỳ chọn) làm đậm hơn một chút
+                fontSize: "16px",
+                fontWeight: 500,
               },
               "& .MuiInputAdornment-root svg": {
-                fontSize: "20px", // icon kính lúp cũng to ra nếu muốn
+                fontSize: "20px",
               },
             }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search size={22} /> {/* hoặc dùng icon lớn hơn chút */}
+                  <Search size={22} />
                 </InputAdornment>
               ),
             }}
@@ -316,7 +317,7 @@ export default function BookingService() {
                     fontWeight="bold"
                     sx={{ color: "#3f51b5" }}
                   >
-                    {Number(serviceTotal).toLocaleString("vi-VN", {
+ incroy                    {Number(serviceTotal).toLocaleString("vi-VN", {
                       minimumFractionDigits: 2,
                     })}{" "}
                     ₫

@@ -32,7 +32,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import axios, { AxiosError } from 'axios';
-import '../../css/Service.css';
+import '../../css/service.css';
 
 interface Amenity {
   id: number;
@@ -93,8 +93,10 @@ const RoomTypesList: React.FC = () => {
     document.title = 'Danh sách Loại Phòng';
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      setError('Không tìm thấy token xác thực');
+      setError('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      toast.error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
       setLoading(false);
+      setTimeout(() => navigate('/login'), 2000);
       return;
     }
 
@@ -111,8 +113,7 @@ const RoomTypesList: React.FC = () => {
         ]);
 
         if (!roomTypesResponse.data.data || !Array.isArray(roomTypesResponse.data.data)) {
-          setError('Dữ liệu loại phòng không đúng định dạng');
-          return;
+          throw new Error('Dữ liệu loại phòng không đúng định dạng');
         }
 
         const mappedRoomTypes: RoomType[] = roomTypesResponse.data.data.map((item: RoomType) => ({
@@ -128,17 +129,28 @@ const RoomTypesList: React.FC = () => {
         setRoomTypes(mappedRoomTypes);
         setLastPage(roomTypesResponse.data.meta?.last_page || 1);
         setAllAmenities(amenitiesResponse.data.data || []);
-      } catch (err) {
-        const errorMessage = (err as AxiosError)?.message || 'Lỗi không xác định';
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof AxiosError
+            ? err.response?.status === 401
+              ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+              : err.response?.data?.message || `Không thể tải dữ liệu: ${err.message}`
+            : err instanceof Error
+            ? err.message
+            : 'Lỗi không xác định';
         setError(errorMessage);
         toast.error(errorMessage);
+        if (err instanceof AxiosError && err.response?.status === 401) {
+          localStorage.removeItem('auth_token');
+          navigate('/login');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, [currentPage]);
+  }, [currentPage, navigate]);
 
   const validateForm = (data: RoomType): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -178,13 +190,16 @@ const RoomTypesList: React.FC = () => {
     const errors = validateForm(editFormData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error('Vui lòng sửa các lỗi trong biểu mẫu trước khi lưu.');
       return;
     }
 
     setEditLoading(true);
     try {
       const token = localStorage.getItem('auth_token');
-      if (!token) throw new Error('Không tìm thấy token xác thực');
+      if (!token) {
+        throw new Error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      }
 
       const response = await axios.put(
         `http://127.0.0.1:8000/api/room-types/${editFormData.id}`,
@@ -209,12 +224,23 @@ const RoomTypesList: React.FC = () => {
         setSelectedAmenities([]);
         toast.success('Cập nhật loại phòng thành công!');
       } else {
-        throw new Error('Không thể cập nhật loại phòng');
+        throw new Error(`Yêu cầu thất bại với mã: ${response.status}`);
       }
-    } catch (err) {
-      const errorMessage = (err as AxiosError)?.message || 'Đã xảy ra lỗi khi cập nhật loại phòng';
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof AxiosError
+          ? err.response?.status === 401
+            ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+            : err.response?.data?.message || `Không thể cập nhật loại phòng: ${err.message}`
+          : err instanceof Error
+          ? `Không thể cập nhật loại phòng: ${err.message}`
+          : 'Lỗi không xác định';
       setEditError(errorMessage);
       toast.error(errorMessage);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
     } finally {
       setEditLoading(false);
     }
@@ -243,6 +269,13 @@ const RoomTypesList: React.FC = () => {
   };
 
   const handleDelete = (id: number) => {
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      setError('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      toast.error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      setTimeout(() => navigate('/login'), 2000);
+      return;
+    }
     setRoomTypeToDelete(id);
     setDeleteDialogOpen(true);
   };
@@ -252,8 +285,9 @@ const RoomTypesList: React.FC = () => {
 
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      setError('Không tìm thấy token xác thực');
-      toast.error('Không tìm thấy token xác thực');
+      setError('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      toast.error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      setTimeout(() => navigate('/login'), 2000);
       return;
     }
 
@@ -265,13 +299,27 @@ const RoomTypesList: React.FC = () => {
       if (response.status === 200) {
         setRoomTypes((prev) => prev.filter((rt) => rt.id !== roomTypeToDelete));
         toast.success('Xóa loại phòng thành công!');
+        if (roomTypes.length === 1 && currentPage > 1) {
+          setCurrentPage(currentPage - 1);
+        }
       } else {
-        throw new Error('Không thể xóa loại phòng');
+        throw new Error(`Yêu cầu thất bại với mã: ${response.status}`);
       }
-    } catch (err) {
-      const errorMessage = (err as AxiosError)?.message || 'Lỗi không xác định';
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof AxiosError
+          ? err.response?.status === 401
+            ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+            : err.response?.data?.message || `Không thể xóa loại phòng: ${err.message}`
+          : err instanceof Error
+          ? `Không thể xóa loại phòng: ${err.message}`
+          : 'Lỗi không xác định';
       setError(errorMessage);
       toast.error(errorMessage);
+      if (err instanceof AxiosError && err.response?.status === 401) {
+        localStorage.removeItem('auth_token');
+        navigate('/login');
+      }
     } finally {
       setDeleteDialogOpen(false);
       setRoomTypeToDelete(null);
@@ -294,8 +342,9 @@ const RoomTypesList: React.FC = () => {
     if (selectedAmenitiesToAdd.length > 0 && editFormData) {
       const token = localStorage.getItem('auth_token');
       if (!token) {
-        setError('Không tìm thấy token xác thực');
-        toast.error('Không tìm thấy token xác thực');
+        setError('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+        toast.error('Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+        setTimeout(() => navigate('/login'), 2000);
         return;
       }
 
@@ -326,13 +375,21 @@ const RoomTypesList: React.FC = () => {
         } else {
           throw new Error(`Yêu cầu thất bại với mã: ${response.status}`);
         }
-      } catch (err) {
-        const error = err as AxiosError;
-        const errorMessage = error.response
-          ? `Không thể cập nhật tiện nghi: ${JSON.stringify(error.response.data) || error.response.statusText} (Mã: ${error.response.status})`
-          : `Không thể cập nhật tiện nghi: ${error.message || 'Lỗi không xác định'}`;
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof AxiosError
+            ? err.response?.status === 401
+              ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+              : err.response?.data?.message || `Không thể cập nhật tiện nghi: ${err.message}`
+            : err instanceof Error
+            ? `Không thể cập nhật tiện nghi: ${err.message}`
+            : 'Lỗi không xác định';
         setError(errorMessage);
         toast.error(errorMessage);
+        if (err instanceof AxiosError && err.response?.status === 401) {
+          localStorage.removeItem('auth_token');
+          navigate('/login');
+        }
       }
     }
   };
@@ -345,7 +402,8 @@ const RoomTypesList: React.FC = () => {
   const handleAddNew = () => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
-      toast.error('Bạn cần đăng nhập để thêm loại phòng mới');
+      toast.error('Bạn cần đăng nhập để thêm loại phòng mới. Vui lòng đăng nhập lại.');
+      setTimeout(() => navigate('/login'), 2000);
       return;
     }
     navigate('/room-types/add');
@@ -725,7 +783,15 @@ const RoomTypesList: React.FC = () => {
           <Button
             onClick={confirmDelete}
             variant="contained"
-            sx={{ bgcolor: '#d32f2f', '&:hover': { bgcolor: '#b71c1c' } }}
+            sx={{
+              bgcolor: '#d32f2f',
+              '&:hover': { bgcolor: '#b71c1c' },
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.7,
+            }}
           >
             Xác nhận
           </Button>
@@ -784,7 +850,16 @@ const RoomTypesList: React.FC = () => {
           <Button
             onClick={handleAddAmenityConfirm}
             variant="contained"
-            sx={{ bgcolor: '#4318FF', '&:hover': { bgcolor: '#7B1FA2' }, '&:disabled': { bgcolor: '#a9a9a9' } }}
+            sx={{
+              bgcolor: '#4318FF',
+              '&:hover': { bgcolor: '#7B1FA2' },
+              textTransform: 'none',
+              fontWeight: 600,
+              borderRadius: '8px',
+              px: 2.5,
+              py: 0.7,
+              '&:disabled': { bgcolor: '#a9a9a9' },
+            }}
             disabled={selectedAmenitiesToAdd.length === 0}
           >
             Thêm

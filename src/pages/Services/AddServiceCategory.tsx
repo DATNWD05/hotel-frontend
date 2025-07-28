@@ -6,9 +6,8 @@ import {
   Typography,
   CircularProgress,
   Box,
-  Snackbar,
-  Alert,
 } from "@mui/material";
+import { toast } from "react-toastify";
 import "../../css/CraeteService.css";
 
 interface ServiceCategoryInput {
@@ -33,8 +32,6 @@ const AddServiceCategory: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
     {}
   );
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
 
   const validateForm = (data: ServiceCategoryInput): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -68,10 +65,7 @@ const AddServiceCategory: React.FC = () => {
     const token = localStorage.getItem("auth_token");
     if (!token) {
       setError("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
-      setSnackbarMessage(
-        "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
-      );
-      setSnackbarOpen(true);
+      toast.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
       setLoading(false);
       setTimeout(() => navigate("/login"), 2000);
       return;
@@ -111,8 +105,7 @@ const AddServiceCategory: React.FC = () => {
         return;
       }
 
-      setSnackbarMessage("Tạo danh mục thành công!");
-      setSnackbarOpen(true);
+      toast.success("Tạo danh mục thành công!");
       setLoading(false);
       setTimeout(() => navigate("/service-categories"), 2000);
     } catch (err: unknown) {
@@ -121,19 +114,13 @@ const AddServiceCategory: React.FC = () => {
           ? `Không thể tạo danh mục: ${err.message}`
           : "Lỗi không xác định";
       setError(errorMessage);
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      toast.error(errorMessage);
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
     navigate("/service-categories");
-  };
-
-  const handleSnackbarClose = () => {
-    setSnackbarOpen(false);
-    setSnackbarMessage("");
   };
 
   return (
@@ -207,23 +194,6 @@ const AddServiceCategory: React.FC = () => {
           </Box>
         </div>
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={
-            snackbarMessage.includes("thành công") ? "success" : "error"
-          }
-          sx={{ width: "100%" }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </div>
   );
 };

@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import "../../css/Customer.css";
 import api from "../../api/axios";
+import { toast } from 'react-toastify';
 
 interface CustomerFormData {
   name: string;
@@ -113,6 +114,7 @@ const AddCustomer: React.FC = () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
+      toast.error("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu");
       return;
     }
 
@@ -124,7 +126,8 @@ const AddCustomer: React.FC = () => {
       };
       const response = await api.post("/customers", dataToSend);
       if (response.status === 201) {
-        navigate("/customer");
+        toast.success("Thêm khách hàng thành công!");
+        setTimeout(() => navigate("/customer"), 2000);
       } else {
         throw new Error("Không thể thêm khách hàng mới");
       }
@@ -141,6 +144,7 @@ const AddCustomer: React.FC = () => {
           errorMessage;
       }
       setError(errorMessage);
+      toast.error(errorMessage);
       console.error("Lỗi khi thêm khách hàng:", err);
     } finally {
       setLoading(false);
@@ -156,7 +160,7 @@ const AddCustomer: React.FC = () => {
       <div className="customer-title">
         <div className="customer-header-content">
           <h2>
-            Add New <b>Customer</b>
+            Thêm mới <b>Khách hàng</b>
           </h2>
         </div>
       </div>
