@@ -1,15 +1,8 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-  TextField,
-  Button,
-  Typography,
-  CircularProgress,
-  Box,
-} from '@mui/material';
-import '../../css/AddDepartment.css';
-import api from '../../api/axios';
-import { toast } from 'react-toastify';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Save, X, AlertTriangle } from "lucide-react";
+import api from "../../api/axios";
 
 interface DepartmentFormData {
   name: string;
@@ -21,154 +14,191 @@ interface ValidationErrors {
 
 const AddDepartment: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<DepartmentFormData>({
-    name: '',
-  });
+  const [formData, setFormData] = useState<DepartmentFormData>({ name: "" });
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
+  const [touchedFields, setTouchedFields] = useState<
+    Partial<Record<keyof DepartmentFormData, boolean>>
+  >({});
+  const [submitStatus, setSubmitStatus] = useState<"success" | "error" | null>(
+    null
+  );
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const validateForm = (data: DepartmentFormData): ValidationErrors => {
     const errors: ValidationErrors = {};
-    if (!data.name.trim()) errors.name = 'Tên phòng ban không được để trống';
-    else if (data.name.length > 100) errors.name = 'Tên phòng ban không được vượt quá 100 ký tự';
+    if (!data.name.trim()) errors.name = "Tên phòng ban không được để trống";
+    else if (data.name.length > 100)
+      errors.name = "Tên phòng ban không được vượt quá 100 ký tự";
     return errors;
+  };
+
+  const markFieldAsTouched = (field: keyof DepartmentFormData) => {
+    setTouchedFields((prev) => ({ ...prev, [field]: true }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    markFieldAsTouched(name as keyof DepartmentFormData);
     const errors = validateForm({ ...formData, [name]: value });
-    setValidationErrors(errors);
+    setValidationErrors((prev) => ({
+      ...prev,
+      [name as keyof ValidationErrors]:
+        errors[name as keyof ValidationErrors] || "",
+    }));
   };
 
   const handleSave = async () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      toast.error("Vui lòng kiểm tra và sửa các lỗi trong biểu mẫu");
+      setTouchedFields({ name: true });
+      setSubmitStatus("error");
+      setErrorMessage("Vui lòng kiểm tra và điền đầy đủ thông tin hợp lệ!");
       return;
     }
 
     setLoading(true);
+    setErrorMessage("");
     try {
-      const response = await api.post('/departments', formData);
+      const response = await api.post("/departments", formData);
       if (response.status === 201) {
-        toast.success('Thêm phòng ban thành công!');
-        setTimeout(() => navigate('/departments'), 2000);
+        setSubmitStatus("success");
+        setTimeout(() => navigate("/departments"), 2000);
       } else {
-        throw new Error('Không thể thêm phòng ban mới');
+        throw new Error("Không thể thêm phòng ban mới");
       }
-    } catch (err: unknown) {
-      let errorMessage = 'Không thể thêm phòng ban';
-      if (err instanceof Error) {
+    } catch (err: any) {
+      let errorMessage = "Đã xảy ra lỗi khi thêm phòng ban";
+      if (err.response?.data?.errors) {
+        errorMessage = Object.values(err.response.data.errors)
+          .flat()
+          .join(", ");
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
         errorMessage = err.message;
       }
-      if (typeof err === 'object' && err !== null && 'response' in err) {
-        const axiosError = err as { response?: { data?: { message?: string; errors?: { [key: string]: string[] } } } };
-        errorMessage =
-          axiosError.response?.data?.message ||
-          JSON.stringify(axiosError.response?.data?.errors) ||
-          errorMessage;
-      }
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setSubmitStatus("error");
+      setErrorMessage(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleCancel = () => {
-    navigate('/departments');
+    navigate("/departments");
   };
 
-  return (
-    <div className="promotion-wrapper">
-      <div className="promotion-title">
-        <div className="promotion-header-content">
-          <h2>
-            Thêm mới <b>Phòng ban</b>
-          </h2>
-        </div>
-      </div>
+  const ErrorMessage = ({ message }: { message: string }) => (
+    <div className="error-message">
+      <AlertTriangle className="error-icon" />
+      <span>{message}</span>
+    </div>
+  );
 
-      {loading ? (
-        <div className="promotion-loading-container">
-          <CircularProgress />
-          <Typography>Đang xử lý...</Typography>
-        </div>
-      ) : error ? (
-        <Typography color="error" className="promotion-error-message">
-          {error}
-        </Typography>
-      ) : (
-        <div className="promotion-detail-container">
-          <h3>Thông tin phòng ban</h3>
-          <Box display="flex" flexDirection="column" gap={2}>
-            <TextField
-              label="Tên phòng ban"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              fullWidth
-              variant="outlined"
-              size="small"
-              error={!!validationErrors.name}
-              helperText={validationErrors.name}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": { borderColor: "#ccc" },
-                  "&:hover fieldset": { borderColor: "#888" },
-                  "&.Mui-focused fieldset": { borderColor: "#1976d2", borderWidth: "2px" },
-                },
-                "& label": { backgroundColor: "#fff", padding: "0 4px" },
-                "& label.Mui-focused": { color: "#1976d2" },
+  if (loading) {
+    return <div className="loading">Đang xử lý...</div>;
+  }
+
+  return (
+    <div className="booking-container">
+      <div className="booking-wrapper">
+        {submitStatus && (
+          <div
+            className={`alert ${
+              submitStatus === "success" ? "alert-success" : "alert-error"
+            }`}
+          >
+            {submitStatus === "success" ? (
+              <Save className="w-5 h-5" />
+            ) : (
+              <AlertTriangle className="w-5 h-5" />
+            )}
+            <span>
+              {submitStatus === "success"
+                ? "Thêm phòng ban thành công!"
+                : errorMessage}
+            </span>
+          </div>
+        )}
+        <h3 className="text-3xl font-bold text-gray-800 mb-4 border-b-4 border-blue-500 inline-block pb-1">
+          Thêm Phòng Ban
+        </h3>
+        <div className="card">
+          <div className="tab-content">
+            <div className="form-group">
+              <label htmlFor="name" className="form-label required">
+                Tên phòng ban
+              </label>
+              <input
+                id="name"
+                type="text"
+                placeholder="Nhập tên phòng ban"
+                className={`form-input ${
+                  touchedFields["name"] && validationErrors.name ? "error" : ""
+                }`}
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                onBlur={() => markFieldAsTouched("name")}
+              />
+              {touchedFields["name"] && validationErrors.name && (
+                <ErrorMessage message={validationErrors.name} />
+              )}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                justifyContent: "flex-end",
+                marginTop: "1rem",
               }}
-            />
-            <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
-              <Button
-                className="add-department-btn-save"
+            >
+              <button
                 onClick={handleSave}
                 disabled={loading}
-                variant="contained"
-                sx={{
-                  textTransform: "none",
-                  borderRadius: 2,
-                  px: 3,
-                  bgcolor: "#4318F5",
-                  "&:hover": {
-                    bgcolor: "#7B1FA2",
-                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.2)",
-                  },
+                className="btn btn-primary"
+                style={{
+                  padding: "0.25rem 0.75rem",
+                  fontSize: "0.875rem",
+                  width: "80px",
                 }}
+                aria-label="Lưu phòng ban"
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : "Lưu"}
-              </Button>
-              <Button
-                className="add-department-btn-cancel"
+                {loading ? (
+                  <>
+                    <div className="spinner"></div>
+                    Đang xử lý...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-1" />
+                    Lưu
+                  </>
+                )}
+              </button>
+              <button
                 onClick={handleCancel}
                 disabled={loading}
-                component={Link}
-                to="/departments"
-                variant="outlined"
-                sx={{
-                  textTransform: "none",
-                  borderRadius: 2,
-                  px: 3,
-                  borderColor: "#e0e0e0",
-                  color: "#424242",
-                  "&:hover": {
-                    borderColor: "#888",
-                    bgcolor: "#f5f5f5",
-                  },
+                className="btn btn-outline"
+                style={{
+                  padding: "0.25rem 0.75rem",
+                  fontSize: "0.875rem",
+                  width: "80px",
                 }}
+                aria-label="Hủy bỏ"
               >
+                <X className="w-4 h-4 mr-1" />
                 Hủy
-              </Button>
-            </Box>
-          </Box>
+              </button>
+            </div>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

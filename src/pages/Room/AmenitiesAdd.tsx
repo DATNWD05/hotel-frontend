@@ -1,19 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { toast } from "react-toastify";
-import {
-  TextField,
-  Button,
-  Typography,
-  CircularProgress,
-  Box,
-  MenuItem,
-  Select,
-  SelectChangeEvent,
-} from "@mui/material";
-import api from "../../api/axios";
-import { AxiosError } from "axios";
-import "../../css/AddAmenities.css";
+import { useNavigate } from "react-router-dom";
+import { Save, X, AlertTriangle, ChevronDown } from "lucide-react";
 
 interface AmenityCategory {
   id: string;
@@ -48,6 +36,7 @@ interface ValidationErrors {
 }
 
 const AmenitiesAdd: React.FC = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>({
     category_id: "",
     code: "",
@@ -58,52 +47,74 @@ const AmenitiesAdd: React.FC = () => {
     default_quantity: 1,
     status: "active",
   });
-  const [amenityCategories, setAmenityCategories] = useState<AmenityCategory[]>([]);
+  const [amenityCategories, setAmenityCategories] = useState<AmenityCategory[]>(
+    []
+  );
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
-  const navigate = useNavigate();
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
+  const [touchedFields, setTouchedFields] = useState<{
+    [key in keyof FormData]?: boolean;
+  }>({});
+  const [submitStatus, setSubmitStatus] = useState<"success" | "error" | null>(
+    null
+  );
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [openDropdowns, setOpenDropdowns] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   useEffect(() => {
     document.title = "Thêm Tiện ích";
     const token = localStorage.getItem("auth_token");
     if (!token) {
-      setError("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
-      toast.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
-      setTimeout(() => navigate("/login"), 2000);
+      setErrorMessage("Không tìm thấy token xác thực");
+      setSubmitStatus("error");
       return;
     }
 
-    const fetchCategories = async () => {
-      try {
-        const response = await api.get<{ data: RawAmenityCategory[] }>("/amenity-categories");
-        const categories: AmenityCategory[] = response.data.data.map(
+    fetch("http://127.0.0.1:8000/api/amenity-categories", {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          return res.text().then((text) => {
+            throw new Error(
+              `Lỗi tải danh mục: ${res.status} ${res.statusText}. Chi tiết: ${text}`
+            );
+          });
+        }
+        return res.json();
+      })
+      .then((response) => {
+        const data = response.data || response;
+        if (!Array.isArray(data)) {
+          setErrorMessage("Dữ liệu danh mục không đúng định dạng");
+          setSubmitStatus("error");
+          return;
+        }
+        const categories: AmenityCategory[] = data.map(
           (cat: RawAmenityCategory) => ({
             id: cat.id.toString(),
             name: cat.name,
           })
         );
         setAmenityCategories(categories);
-      } catch (err: unknown) {
+      })
+      .catch((err: unknown) => {
         const errorMessage =
-          err instanceof AxiosError
-            ? err.response?.status === 401
-              ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
-              : err.response?.data?.message || `Không thể tải danh mục tiện ích: ${err.message}`
-            : err instanceof Error
+          err instanceof Error
             ? `Không thể tải danh mục tiện ích: ${err.message}`
             : "Lỗi không xác định";
-        setError(errorMessage);
-        toast.error(errorMessage);
-        if (err instanceof AxiosError && err.response?.status === 401) {
-          localStorage.removeItem("auth_token");
-          navigate("/login");
-        }
-      }
-    };
-
-    fetchCategories();
-  }, [navigate]);
+        setErrorMessage(errorMessage);
+        setSubmitStatus("error");
+      });
+  }, []);
 
   const validateForm = (data: FormData): ValidationErrors => {
     const errors: ValidationErrors = {};
@@ -134,69 +145,86 @@ const AmenitiesAdd: React.FC = () => {
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]:
-        name === "price" || name === "default_quantity" ? Number(value) : value,
-    }));
-    const errors = validateForm({ ...formData, [name]: value });
-    setValidationErrors(errors);
+  const markFieldAsTouched = (fieldPath: keyof FormData) => {
+    setTouchedFields((prev) => ({ ...prev, [fieldPath]: true }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    const newValue =
+      name === "price" || name === "default_quantity"
+        ? Number(value) || 0
+        : value;
+    setFormData((prev) => ({
+      ...prev,
+      [name as keyof FormData]: newValue,
+    }));
+    markFieldAsTouched(name as keyof FormData);
+    const errors = validateForm({ ...formData, [name]: newValue });
+    setValidationErrors((prev) => ({
+      ...prev,
+      [name]: errors[name as keyof ValidationErrors] || "",
+    }));
+  };
+
+  const handleSelectChange = (name: keyof FormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    markFieldAsTouched(name);
+    const errors = validateForm({ ...formData, [name]: value });
+    setValidationErrors((prev) => ({ ...prev, [name]: errors[name] || "" }));
+  };
+
+  const handleSubmit = async () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      toast.error("Vui lòng sửa các lỗi trong biểu mẫu trước khi lưu.");
+      Object.keys(formData).forEach((key) =>
+        markFieldAsTouched(key as keyof FormData)
+      );
+      setSubmitStatus("error");
+      setErrorMessage("Vui lòng kiểm tra và điền đầy đủ thông tin hợp lệ!");
       return;
     }
 
     setLoading(true);
+    setErrorMessage("");
     try {
       const token = localStorage.getItem("auth_token");
-      if (!token) {
-        throw new Error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
-      }
-      const response = await api.post("/amenities", formData);
-      if (response.status === 201 || response.status === 200) {
-        toast.success("Thêm tiện ích thành công!");
-        setFormData({
-          category_id: "",
-          code: "",
-          name: "",
-          description: "",
-          icon: "",
-          price: 0,
-          default_quantity: 1,
-          status: "active",
+      const response = await fetch("http://127.0.0.1:8000/api/amenities", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        return response.text().then((text) => {
+          throw new Error(
+            `Lỗi thêm tiện ích: ${response.status} ${response.statusText}. Chi tiết: ${text}`
+          );
         });
-        setTimeout(() => navigate("/amenities"), 2000);
-      } else {
-        throw new Error(`Yêu cầu thất bại với mã: ${response.status}`);
       }
-    } catch (err: unknown) {
-      const errorMessage =
-        err instanceof AxiosError
-          ? err.response?.status === 401
-            ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
-            : err.response?.data?.message ||
-              err.response?.data?.errors
-              ? JSON.stringify(err.response.data.errors)
-              : `Không thể thêm tiện ích: ${err.message}`
-          : err instanceof Error
-          ? `Không thể thêm tiện ích: ${err.message}`
-          : "Lỗi không xác định";
-      setError(errorMessage);
-      toast.error(errorMessage);
-      if (err instanceof AxiosError && err.response?.status === 401) {
-        localStorage.removeItem("auth_token");
-        navigate("/login");
+
+      setSubmitStatus("success");
+      setTimeout(() => navigate("/amenities"), 2000);
+    } catch (err: any) {
+      let errorMessage = "Đã xảy ra lỗi khi thêm tiện ích";
+      if (err.response?.data?.errors) {
+        errorMessage = Object.values(err.response.data.errors)
+          .flat()
+          .join(", ");
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
+      setSubmitStatus("error");
+      setErrorMessage(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -206,198 +234,341 @@ const AmenitiesAdd: React.FC = () => {
     navigate("/amenities");
   };
 
+  const toggleDropdown = (key: string) => {
+    setOpenDropdowns((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const CustomSelect = ({
+    value,
+    onChange,
+    options,
+    placeholder,
+    disabled = false,
+    id,
+  }: {
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: string }[];
+    placeholder: string;
+    disabled?: boolean;
+    id: string;
+  }) => {
+    const isOpen = openDropdowns[id] || false;
+
+    return (
+      <div className="custom-select">
+        <button
+          type="button"
+          className={`select-trigger ${disabled ? "disabled" : ""}`}
+          onClick={() => !disabled && toggleDropdown(id)}
+          disabled={disabled}
+          aria-label={
+            value
+              ? options.find((opt) => opt.value === value)?.label
+              : placeholder
+          }
+        >
+          <span className={value ? "" : "select-placeholder"}>
+            {value
+              ? options.find((opt) => opt.value === value)?.label
+              : placeholder}
+          </span>
+          <ChevronDown className={`select-chevron ${isOpen ? "open" : ""}`} />
+        </button>
+        {isOpen && !disabled && (
+          <div className="select-dropdown">
+            {options.map((option) => (
+              <div
+                key={option.value}
+                className="select-option"
+                onClick={() => {
+                  onChange(option.value);
+                  toggleDropdown(id);
+                }}
+              >
+                {option.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ErrorMessage = ({ message }: { message: string }) => (
+    <div className="error-message">
+      <AlertTriangle className="error-icon" />
+      <span>{message}</span>
+    </div>
+  );
+
+  if (loading) {
+    return <div className="loading">Đang xử lý...</div>;
+  }
+
   return (
-    <div className="promotion-wrapper">
-      <div className="promotion-title">
-        <div className="promotion-header-content">
-          <h2>
-            Thêm mới <b>Tiện ích</b>
-          </h2>
-          <Box display="flex" gap={2} justifyContent="flex-end" mt={2}>
-            <Button
-              variant="contained"
-              className="amenities-btn-save"
-              onClick={handleSubmit}
-              disabled={loading}
-              sx={{
-                backgroundColor: "#4318FF",
-                color: "#fff",
-                textTransform: "none",
-                fontWeight: 600,
-                borderRadius: "8px",
-                px: 2.5,
-                py: 0.7,
-                "&:hover": { backgroundColor: "#7B1FA2" },
-                "&:disabled": { backgroundColor: "#a9a9a9" },
-              }}
-            >
-              {loading ? <CircularProgress size={24} /> : "Lưu"}
-            </Button>
-            <Button
-              variant="outlined"
-              className="amenities-btn-cancel"
-              onClick={handleCancel}
-              disabled={loading}
-              component={Link}
-              to="/amenities"
-              sx={{
-                color: "#f44336",
-                borderColor: "#f44336",
-                textTransform: "none",
-                fontWeight: 600,
-                borderRadius: "8px",
-                px: 2.5,
-                py: 0.7,
-                "&:hover": { borderColor: "#d32f2f", backgroundColor: "#ffebee" },
-                "&:disabled": { color: "#a9a9a9", borderColor: "#a9a9a9" },
-              }}
-            >
-              Hủy
-            </Button>
-          </Box>
+    <div className="booking-container">
+      <div className="booking-wrapper">
+        {submitStatus && (
+          <div
+            className={`alert ${
+              submitStatus === "success" ? "alert-success" : "alert-error"
+            }`}
+          >
+            {submitStatus === "success" ? (
+              <Save className="w-5 h-5" />
+            ) : (
+              <AlertTriangle className="w-5 h-5" />
+            )}
+            <span>
+              {submitStatus === "success"
+                ? "Thêm tiện ích thành công!"
+                : errorMessage}
+            </span>
+          </div>
+        )}
+        <h3 className="text-3xl font-bold text-gray-800 mb-4 border-b-4 border-blue-500 inline-block pb-1">
+          Thêm Tiện Ích
+        </h3>
+        <div className="card">
+          <div className="tab-content">
+            <div className="form-grid form-grid-2 mb-4">
+              <div className="form-group">
+                <label htmlFor="category_id" className="form-label required">
+                  Nhóm tiện ích
+                </label>
+                <CustomSelect
+                  id="category_id"
+                  value={formData.category_id}
+                  onChange={(value) => handleSelectChange("category_id", value)}
+                  options={amenityCategories.map((cat) => ({
+                    value: cat.id,
+                    label: cat.name,
+                  }))}
+                  placeholder="Chọn nhóm tiện ích"
+                  disabled={amenityCategories.length === 0}
+                />
+                {touchedFields["category_id"] &&
+                  validationErrors.category_id && (
+                    <ErrorMessage message={validationErrors.category_id} />
+                  )}
+              </div>
+              <div className="form-group">
+                <label htmlFor="code" className="form-label required">
+                  Mã tiện ích
+                </label>
+                <input
+                  id="code"
+                  type="text"
+                  placeholder="Nhập mã tiện ích"
+                  className={`form-input ${
+                    touchedFields["code"] && validationErrors.code
+                      ? "error"
+                      : ""
+                  }`}
+                  name="code"
+                  value={formData.code}
+                  onChange={handleChange}
+                  onBlur={() => markFieldAsTouched("code")}
+                />
+                {touchedFields["code"] && validationErrors.code && (
+                  <ErrorMessage message={validationErrors.code} />
+                )}
+              </div>
+            </div>
+            <div className="form-grid form-grid-2 mb-4">
+              <div className="form-group">
+                <label htmlFor="name" className="form-label required">
+                  Tên tiện ích
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  placeholder="Nhập tên tiện ích"
+                  className={`form-input ${
+                    touchedFields["name"] && validationErrors.name
+                      ? "error"
+                      : ""
+                  }`}
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  onBlur={() => markFieldAsTouched("name")}
+                />
+                {touchedFields["name"] && validationErrors.name && (
+                  <ErrorMessage message={validationErrors.name} />
+                )}
+              </div>
+              <div className="form-group">
+                <label htmlFor="icon" className="form-label">
+                  URL biểu tượng
+                </label>
+                <input
+                  id="icon"
+                  type="text"
+                  placeholder="Nhập URL biểu tượng"
+                  className={`form-input ${
+                    touchedFields["icon"] && validationErrors.icon
+                      ? "error"
+                      : ""
+                  }`}
+                  name="icon"
+                  value={formData.icon}
+                  onChange={handleChange}
+                  onBlur={() => markFieldAsTouched("icon")}
+                />
+                {touchedFields["icon"] && validationErrors.icon && (
+                  <ErrorMessage message={validationErrors.icon} />
+                )}
+              </div>
+            </div>
+            <div className="form-grid form-grid-2 mb-4">
+              <div className="form-group">
+                <label htmlFor="price" className="form-label">
+                  Giá (VNĐ)
+                </label>
+                <input
+                  id="price"
+                  type="number"
+                  placeholder="Nhập giá"
+                  className={`form-input ${
+                    touchedFields["price"] && validationErrors.price
+                      ? "error"
+                      : ""
+                  }`}
+                  name="price"
+                  value={formData.price}
+                  onChange={handleChange}
+                  onBlur={() => markFieldAsTouched("price")}
+                  min="0"
+                />
+                {touchedFields["price"] && validationErrors.price && (
+                  <ErrorMessage message={validationErrors.price} />
+                )}
+              </div>
+              <div className="form-group">
+                <label htmlFor="default_quantity" className="form-label">
+                  Số lượng mặc định
+                </label>
+                <input
+                  id="default_quantity"
+                  type="number"
+                  placeholder="Nhập số lượng mặc định"
+                  className={`form-input ${
+                    touchedFields["default_quantity"] &&
+                    validationErrors.default_quantity
+                      ? "error"
+                      : ""
+                  }`}
+                  name="default_quantity"
+                  value={formData.default_quantity}
+                  onChange={handleChange}
+                  onBlur={() => markFieldAsTouched("default_quantity")}
+                  min="0"
+                />
+                {touchedFields["default_quantity"] &&
+                  validationErrors.default_quantity && (
+                    <ErrorMessage message={validationErrors.default_quantity} />
+                  )}
+              </div>
+            </div>
+            <div className="form-grid form-grid-2 mb-4">
+              <div className="form-group">
+                <label htmlFor="status" className="form-label required">
+                  Trạng thái
+                </label>
+                <CustomSelect
+                  id="status"
+                  value={formData.status}
+                  onChange={(value) => handleSelectChange("status", value)}
+                  options={[
+                    { value: "active", label: "Hoạt động" },
+                    { value: "inactive", label: "Không hoạt động" },
+                  ]}
+                  placeholder="Chọn trạng thái"
+                />
+                {touchedFields["status"] && validationErrors.status && (
+                  <ErrorMessage message={validationErrors.status} />
+                )}
+              </div>
+              <div className="form-group">
+                <label htmlFor="description" className="form-label">
+                  Mô tả
+                </label>
+                <textarea
+                  id="description"
+                  placeholder="Nhập mô tả tiện ích"
+                  className={`form-input ${
+                    touchedFields["description"] && validationErrors.description
+                      ? "error"
+                      : ""
+                  }`}
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  onBlur={() => markFieldAsTouched("description")}
+                  rows={3}
+                />
+                {touchedFields["description"] &&
+                  validationErrors.description && (
+                    <ErrorMessage message={validationErrors.description} />
+                  )}
+              </div>
+            </div>
+            <div className="form-group">
+              <div
+                style={{
+                  display: "flex",
+                  gap: "0.5rem",
+                  justifyContent: "flex-end",
+                  marginTop: "1rem",
+                }}
+              >
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="btn btn-primary"
+                  style={{
+                    padding: "0.25rem 0.75rem",
+                    fontSize: "0.875rem",
+                    width: "80px",
+                  }}
+                  aria-label="Lưu tiện ích"
+                >
+                  {loading ? (
+                    <>
+                      <div className="spinner"></div>
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-1" />
+                      Lưu
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleCancel}
+                  disabled={loading}
+                  className="btn btn-outline"
+                  style={{
+                    padding: "0.25rem 0.75rem",
+                    fontSize: "0.875rem",
+                    width: "80px",
+                  }}
+                  aria-label="Hủy bỏ"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Hủy
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      {loading ? (
-        <div className="promotion-loading-container">
-          <CircularProgress />
-          <Typography>Đang xử lý...</Typography>
-        </div>
-      ) : error ? (
-        <Typography color="error" className="promotion-error-message">
-          {error}
-        </Typography>
-      ) : (
-        <div className="promotion-detail-container">
-          <h3>Thông tin tiện ích</h3>
-          <Box component="form" display="flex" flexDirection="column" gap={2}>
-            <Box display="flex" gap={2}>
-              <Select
-                label="Nhóm tiện ích"
-                name="category_id"
-                value={formData.category_id}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.category_id}
-                displayEmpty
-                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
-              >
-                <MenuItem value="" disabled>
-                  Chọn nhóm tiện ích
-                </MenuItem>
-                {amenityCategories.map((cat) => (
-                  <MenuItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </MenuItem>
-                ))}
-              </Select>
-              <TextField
-                label="Mã tiện ích"
-                name="code"
-                value={formData.code}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.code}
-                helperText={validationErrors.code}
-                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
-              />
-            </Box>
-            <Box display="flex" gap={2}>
-              <TextField
-                label="Tên tiện ích"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.name}
-                helperText={validationErrors.name}
-                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
-              />
-              <TextField
-                label="URL biểu tượng"
-                name="icon"
-                value={formData.icon}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.icon}
-                helperText={validationErrors.icon}
-                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
-              />
-            </Box>
-            <Box display="flex" gap={2}>
-              <TextField
-                label="Giá (VND)"
-                name="price"
-                type="number"
-                value={formData.price}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.price}
-                helperText={validationErrors.price}
-                inputProps={{ min: 0 }}
-                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
-              />
-              <TextField
-                label="Số lượng mặc định"
-                name="default_quantity"
-                type="number"
-                value={formData.default_quantity}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.default_quantity}
-                helperText={validationErrors.default_quantity}
-                inputProps={{ min: 0 }}
-                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
-              />
-            </Box>
-            <Box display="flex" gap={2}>
-              <Select
-                label="Trạng thái"
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                error={!!validationErrors.status}
-                displayEmpty
-                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
-              >
-                <MenuItem value="active">Hoạt động</MenuItem>
-                <MenuItem value="inactive">Không hoạt động</MenuItem>
-              </Select>
-            </Box>
-            <Box display="flex" gap={2}>
-              <TextField
-                label="Mô tả"
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                fullWidth
-                variant="outlined"
-                size="small"
-                multiline
-                rows={3}
-                error={!!validationErrors.description}
-                helperText={validationErrors.description}
-                sx={{ bgcolor: "#fff", borderRadius: "4px" }}
-              />
-            </Box>
-          </Box>
-        </div>
-      )}
     </div>
   );
 };

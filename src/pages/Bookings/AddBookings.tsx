@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from "react";
 import {
   User,
@@ -13,7 +14,6 @@ import {
   ChevronDown,
   AlertTriangle,
 } from "lucide-react";
-import { toast } from "react-toastify";
 import "../../css/AddBookings.css";
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
@@ -223,26 +223,17 @@ export default function HotelBooking() {
         } else {
           throw new Error("Dữ liệu từ /bookings không hợp lệ");
         }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (error: any) {
-        const errorMsg =
+        setErrorMessage(
           "Lỗi khi tải dữ liệu: " +
-          (error.response?.data?.message || error.message);
-        setErrorMessage(errorMsg);
-        toast.error(errorMsg, { toastId: "fetch-error" });
+            (error.response?.data?.message || error.message)
+        );
       } finally {
         setLoadingData(false);
       }
     };
     fetchData();
   }, []);
-
-  // Handle loading toast
-  useEffect(() => {
-    if (loadingData) {
-      toast.info("Đang tải dữ liệu...", { toastId: "loading-data" });
-    }
-  }, [loadingData]);
 
   // Tự động tính tiền cọc dựa trên 10% tổng giá phòng
   useEffect(() => {
@@ -808,34 +799,32 @@ export default function HotelBooking() {
 
   const checkExistingCustomer = async (cccd: string) => {
     try {
-      const { data } = await api.get(`/customers/check-cccd/${cccd}`);
-      const { status, data: customerData } = data;
+      const response = await api.get(`/customers/check-cccd/${cccd}`);
+      const { status, data } = response.data;
 
-      if (status === "exists" && customerData && customerData.id) {
+      if (status === "exists" && data && data.id) {
         setBookingData((prev) => ({
           ...prev,
           customer: {
             ...prev.customer,
-            cccd: customerData.cccd || "",
-            name: customerData.name || "",
-            gender: customerData.gender || "",
-            email: customerData.email || "",
-            phone: customerData.phone || "",
-            dateOfBirth: customerData.date_of_birth || "",
-            nationality: customerData.nationality || "Vietnamese",
-            address: customerData.address || "",
-            note: customerData.note || "",
+            cccd: data.cccd || "",
+            name: data.name || "",
+            gender: data.gender || "",
+            email: data.email || "",
+            phone: data.phone || "",
+            dateOfBirth: data.date_of_birth || "",
+            nationality: data.nationality || "Vietnamese",
+            address: data.address || "",
+            note: data.note || "",
           },
         }));
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       if (error.response?.status !== 404) {
-        const errorMsg =
+        setErrorMessage(
           "Lỗi khi kiểm tra CCCD: " +
-          (error.response?.data?.message || error.message);
-        setErrorMessage(errorMsg);
-        toast.error(errorMsg, { toastId: "check-cccd-error" });
+            (error.response?.data?.message || error.message)
+        );
       }
     }
   };
@@ -881,9 +870,7 @@ export default function HotelBooking() {
 
   const handleSubmit = async () => {
     if (!validateAllFields()) {
-      const errorMsg = "Vui lòng kiểm tra và điền đầy đủ thông tin hợp lệ!";
-      setErrorMessage(errorMsg);
-      toast.error(errorMsg, { toastId: "validation-error" });
+      setErrorMessage("Vui lòng kiểm tra và điền đầy đủ thông tin hợp lệ!");
       setSubmitStatus("error");
       return;
     }
@@ -943,16 +930,31 @@ export default function HotelBooking() {
       }
 
       setSubmitStatus("success");
-      toast.success("Đặt phòng thành công!", { toastId: "booking-success" });
       setTimeout(() => navigate("/"), 2000);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       let errorMsg = "Có lỗi xảy ra khi đặt phòng";
       if (error.response?.data?.errors) {
         errorMsg = Object.values(error.response.data.errors).flat().join(", ");
       } else if (error.response?.data?.message) {
         errorMsg = error.response.data.message;
-        if (errorMsg.toLowerCase().includes("cccd")) {
+        // Xử lý lỗi phòng đã được đặt
+        if (errorMsg.includes("Phòng ID")) {
+          const roomIdMatch = errorMsg.match(/Phòng ID (\d+)/);
+          if (roomIdMatch && roomIdMatch[1]) {
+            const roomId = roomIdMatch[1];
+            // Tìm room_number từ roomNumbers
+            let roomNumber = "không xác định";
+            Object.values(roomNumbers).forEach((rooms) => {
+              const foundRoom = rooms.find(
+                (room) => room.id.toString() === roomId
+              );
+              if (foundRoom) {
+                roomNumber = foundRoom.room_number;
+              }
+            });
+            errorMsg = `Phòng ${roomNumber} đã được đặt trong thời gian này.`;
+          }
+        } else if (errorMsg.toLowerCase().includes("cccd")) {
           errorMsg = "Số CCCD/CMND đã tồn tại. Vui lòng kiểm tra lại.";
         } else if (errorMsg.includes("promotion")) {
           errorMsg =
@@ -963,7 +965,6 @@ export default function HotelBooking() {
       }
       setSubmitStatus("error");
       setErrorMessage(errorMsg);
-      toast.error(errorMsg, { toastId: "booking-error" });
     } finally {
       setIsSubmitting(false);
     }
