@@ -102,9 +102,20 @@ const sitemap: MenuItem[] = [
   {
     id: 'work-assignment',
     subheader: 'Phân công',
-    path: '/work-assignment',
     icon: 'material-symbols:calendar-month',
     hidden: !token,
+    items: [
+      {
+        name: 'Ca làm',
+        pathName: 'work',
+        path: '/work-assignment',
+      },
+      {
+        name: 'Đăng ký thêm giờ',
+        pathName: 'overtimeform',
+        path: '/overtimeform',
+      },
+    ],
   },
   {
     id: 'service',

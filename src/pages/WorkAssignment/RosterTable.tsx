@@ -17,13 +17,13 @@ interface Employee {
 
 interface ShiftOption {
   label: string;
-  value: number;
+  value: number | null;
 }
 
 interface AssignmentCell {
   employeeId: number;
   date: string;
-  shiftId: number | null;
+  shiftIds: (number | null)[];
 }
 
 const RosterTable: React.FC = () => {
@@ -53,7 +53,6 @@ const RosterTable: React.FC = () => {
     api
       .get("/shifts")
       .then((res) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const options = res.data.map((shift: any) => ({
           label: shift.name,
           value: shift.id,
@@ -72,41 +71,88 @@ const RosterTable: React.FC = () => {
         params: {
           from_date: fromDate,
           to_date: toDate,
-          per_page: 1000, // nếu backend vẫn paginate
+          per_page: 1000,
         },
       })
       .then((res) => {
-        const data = res.data.data?.data || res.data.data || []; // fallback nếu paginate hoặc get
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mapped = data.map((a: any) => ({
-          employeeId: a.employee_id,
-          date: a.work_date,
-          shiftId: a.shift_id,
+        const data = res.data.data?.data || res.data.data || [];
+        const mapped = data.reduce((acc: AssignmentCell[], a: any) => {
+          const existing = acc.find(
+            (item) => item.employeeId === a.employee_id && item.date === a.work_date
+          );
+          if (existing) {
+            existing.shiftIds.push(a.shift_id);
+          } else {
+            acc.push({
+              employeeId: a.employee_id,
+              date: a.work_date,
+              shiftIds: a.shift_id ? [a.shift_id] : [],
+            });
+          }
+          return acc;
+        }, []);
+        // Sắp xếp lại sau khi tải dữ liệu
+        const sortedAssignments = mapped.map(assignment => ({
+          ...assignment,
+          shiftIds: sortShifts(assignment.shiftIds)
         }));
-        setAssignments(mapped);
+        setAssignments(sortedAssignments);
       })
       .catch((err) => console.error("Lỗi lấy danh sách phân công:", err));
   }, [currentWeekStart]);
 
+  const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
+    if (shiftIds.length <= 1 || shiftIds.some(id => id === null)) return shiftIds;
+    const labels = shiftIds.map(id => shiftOptions.find(opt => opt.value === id)?.label || "");
+    const sangIndex = labels.indexOf("Ca Sáng");
+    const chieuIndex = labels.indexOf("Ca Chiều");
+    const toiIndex = labels.indexOf("Ca Tối");
+    const sortedIds = [...shiftIds];
+    if (sangIndex !== -1 && chieuIndex !== -1 && toiIndex !== -1) {
+      const order = [sangIndex, chieuIndex, toiIndex].sort((a, b) => a - b);
+      sortedIds[0] = shiftIds[order[0]];
+      sortedIds[1] = shiftIds[order[1]];
+    } else if (sangIndex !== -1 && chieuIndex !== -1) {
+      sortedIds[0] = shiftIds[sangIndex < chieuIndex ? sangIndex : chieuIndex];
+      sortedIds[1] = shiftIds[sangIndex < chieuIndex ? chieuIndex : sangIndex];
+    } else if (chieuIndex !== -1 && toiIndex !== -1) {
+      sortedIds[0] = shiftIds[chieuIndex < toiIndex ? chieuIndex : toiIndex];
+      sortedIds[1] = shiftIds[chieuIndex < toiIndex ? toiIndex : chieuIndex];
+    }
+    return sortedIds.slice(0, 2);
+  };
+
   const handleSelectChange = (
     employeeId: number,
     date: string,
-    shiftId: number
+    index: number,
+    value: number | null
   ) => {
     const isPast = dayjs(date).isBefore(today, "day");
     if (isPast) return;
 
     setAssignments((prev) => {
-      // Xoá nếu chọn dòng trống (shiftId === 0)
+      const existing = prev.find(
+        (item) => item.employeeId === employeeId && item.date === date
+      );
+      let newShiftIds = existing ? [...existing.shiftIds] : [];
+
+      if (index === 0) {
+        newShiftIds[0] = value;
+        if (value === null && newShiftIds[1]) newShiftIds[1] = null; // Nếu ca 1 là "Trống", xóa ca 2
+      } else if (index === 1) {
+        newShiftIds[1] = value;
+      }
+
+      // Sắp xếp lại để "Ca Sáng" > "Ca Chiều" > "Ca Tối"
+      newShiftIds = sortShifts(newShiftIds);
+
       const updated = prev.filter(
         (item) => !(item.employeeId === employeeId && item.date === date)
       );
-
-      // Nếu có chọn ca (shiftId khác 0) thì thêm mới
-      if (shiftId !== 0) {
-        updated.push({ employeeId, date, shiftId });
+      if (newShiftIds.length > 0 || newShiftIds[0] !== null) {
+        updated.push({ employeeId, date, shiftIds: newShiftIds });
       }
-
       return updated;
     });
   };
@@ -114,50 +160,55 @@ const RosterTable: React.FC = () => {
   const handleSubmit = async () => {
     const today = dayjs().startOf("day");
 
-    const groupedByShift: { [key: number]: { [date: string]: number[] } } = {};
-
-    assignments.forEach(({ employeeId, date, shiftId }) => {
-      if (dayjs(date).isBefore(today, "day")) return; // vẫn bỏ quá khứ
-
-      const shiftKey = shiftId ?? 0; // shiftId null thì về 0
-
-      if (!groupedByShift[shiftKey]) groupedByShift[shiftKey] = {};
-      if (!groupedByShift[shiftKey][date]) groupedByShift[shiftKey][date] = [];
-
-      groupedByShift[shiftKey][date].push(employeeId);
-    });
-
-    const payloads = Object.entries(groupedByShift).flatMap(
-      ([shiftId, dateGroup]) =>
-        Object.entries(dateGroup).map(([date, employeeIds]) => ({
-          shift_id: Number(shiftId) === 0 ? null : Number(shiftId),
-          work_dates: [date],
-          employee_ids: employeeIds,
-        }))
-    );
+    const payloads = assignments
+      .filter((a) => !dayjs(a.date).isBefore(today, "day"))
+      .map((assignment) => ({
+        employee_id: assignment.employeeId,
+        work_date: assignment.date,
+        shift_ids: sortShifts(assignment.shiftIds).filter((id) => id !== null), // Sắp xếp trước khi gửi
+      }))
+      .filter((payload) => payload.shift_ids.length > 0); // Chỉ gửi nếu có ca
 
     if (payloads.length === 0) {
       alert("Không có dữ liệu mới để phân công.");
       return;
     }
 
-    let successCount = 0;
-    let failCount = 0;
-
-    for (const body of payloads) {
-      try {
-        await api.post("/work-assignments", body, { timeout: 30000 });
-        successCount++;
-      } catch (error) {
-        console.error("Lỗi khi gửi payload:", body, error);
-        failCount++;
-      }
-    }
-
-    if (failCount === 0) {
-      alert(`Phân công thành công!`);
-    } else {
-      alert(`Phân công xong. ${successCount} thành công, ${failCount} lỗi.`);
+    try {
+      const response = await api.post("/work-assignments", { assignments: payloads }, { timeout: 30000 });
+      alert(`Phân công thành công! Đã tạo: ${response.data.created_count}, Xóa: ${response.data.deleted_count}, Bỏ qua: ${response.data.skipped_count}`);
+      // Tải lại dữ liệu sau khi lưu
+      const fromDate = currentWeekStart.format("YYYY-MM-DD");
+      const toDate = currentWeekStart.add(6, "day").format("YYYY-MM-DD");
+      const refreshResponse = await api.get("/work-assignments", {
+        params: { from_date: fromDate, to_date: toDate, per_page: 1000 },
+      });
+      const data = refreshResponse.data.data?.data || refreshResponse.data.data || [];
+      const mapped = data.reduce((acc: AssignmentCell[], a: any) => {
+        const existing = acc.find(
+          (item) => item.employeeId === a.employee_id && item.date === a.work_date
+        );
+        if (existing) {
+          existing.shiftIds.push(a.shift_id);
+        } else {
+          acc.push({
+            employeeId: a.employee_id,
+            date: a.work_date,
+            shiftIds: a.shift_id ? [a.shift_id] : [],
+          });
+        }
+        return acc;
+      }, []);
+      // Sắp xếp lại sau khi tải dữ liệu
+      const sortedAssignments = mapped.map(assignment => ({
+        ...assignment,
+        shiftIds: sortShifts(assignment.shiftIds)
+      }));
+      setAssignments(sortedAssignments);
+    } catch (error: any) {
+      console.error("Lỗi khi gửi phân công:", error);
+      const errorMessage = error.response?.data?.message || "Có lỗi xảy ra khi lưu phân công. Vui lòng thử lại.";
+      alert(errorMessage);
     }
   };
 
@@ -208,28 +259,48 @@ const RosterTable: React.FC = () => {
               <td>{emp.user?.role?.name || emp.position || "---"}</td>
               {dates.map((date) => {
                 const isPast = dayjs(date).isBefore(today, "day");
+                const assignment = assignments.find(
+                  (a) => a.employeeId === emp.id && a.date === date
+                );
+                const selectedShiftIds = assignment?.shiftIds || [null, null];
+
                 return (
                   <td
                     key={`${emp.id}-${date}`}
                     className={isPast ? "disabled-cell" : ""}
                   >
-                    <select
-                      disabled={isPast}
-                      value={
-                        assignments.find(
-                          (a) => a.employeeId === emp.id && a.date === date
-                        )?.shiftId || 0
-                      }
-                      onChange={(e) =>
-                        handleSelectChange(emp.id, date, Number(e.target.value))
-                      }
-                    >
-                      {shiftOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="shift-select-container">
+                      <select
+                        disabled={isPast}
+                        value={selectedShiftIds[0] === null ? "0" : selectedShiftIds[0]?.toString() || "0"}
+                        onChange={(e) =>
+                          handleSelectChange(emp.id, date, 0, e.target.value === "0" ? null : Number(e.target.value))
+                        }
+                      >
+                        {shiftOptions.map((opt) => (
+                          <option key={opt.value ?? "0"} value={opt.value ?? "0"}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedShiftIds[0] !== null && (
+                        <select
+                          disabled={isPast}
+                          value={selectedShiftIds[1] === null ? "0" : selectedShiftIds[1]?.toString() || "0"}
+                          onChange={(e) =>
+                            handleSelectChange(emp.id, date, 1, e.target.value === "0" ? null : Number(e.target.value))
+                          }
+                        >
+                          {shiftOptions
+                            .filter((opt) => opt.value !== selectedShiftIds[0])
+                            .map((opt) => (
+                              <option key={opt.value ?? "0"} value={opt.value ?? "0"}>
+                                {opt.label}
+                              </option>
+                            ))}
+                        </select>
+                      )}
+                    </div>
                   </td>
                 );
               })}
