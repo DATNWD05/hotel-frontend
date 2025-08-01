@@ -18,6 +18,7 @@ import "../../css/AddBookings.css";
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 
+// Các interface giữ nguyên
 interface Customer {
   cccd: string;
   name: string;
@@ -75,6 +76,7 @@ interface ValidationErrors {
     checkOutDate?: string;
     depositAmount?: string;
     dateRange?: string;
+    promotion?: string; // Thêm lỗi cho khuyến mãi
   };
   rooms: { [key: string]: { guests?: string; type?: string; number?: string } };
 }
@@ -146,6 +148,19 @@ export default function HotelBooking() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
+  // Hàm kiểm tra khuyến mãi hợp lệ
+  const isPromotionValid = (promo: Promotion): boolean => {
+    const now = new Date();
+    const startDate = new Date(promo.start_date);
+    const endDate = new Date(promo.end_date);
+    return (
+      promo.is_active &&
+      promo.status === "active" &&
+      startDate <= now &&
+      endDate >= now
+    );
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoadingData(true);
@@ -202,10 +217,11 @@ export default function HotelBooking() {
           promotionsData = promotionsData.data;
         }
         if (Array.isArray(promotionsData)) {
-          const activePromotions = promotionsData.filter(
-            (promo: Promotion) => promo.is_active && promo.status === "active"
+          // Lọc khuyến mãi hợp lệ
+          const validPromotions = promotionsData.filter((promo: Promotion) =>
+            isPromotionValid(promo)
           );
-          setPromotions(activePromotions);
+          setPromotions(validPromotions);
         } else {
           throw new Error("Dữ liệu từ /promotions không hợp lệ");
         }
@@ -465,6 +481,17 @@ export default function HotelBooking() {
           delete errors.booking.depositAmount;
         }
         break;
+      case "promotion":
+        if (
+          value &&
+          !isPromotionValid(promotions.find((promo) => promo.code === value)!)
+        ) {
+          errors.booking.promotion =
+            "Mã khuyến mãi không hợp lệ hoặc đã hết hạn";
+        } else {
+          delete errors.booking.promotion;
+        }
+        break;
     }
 
     if (bookingData.checkInDate && bookingData.checkOutDate) {
@@ -563,7 +590,7 @@ export default function HotelBooking() {
     const selectedPromotion = promotions.find(
       (promo) => promo.code === bookingData.promotion_code
     );
-    if (!selectedPromotion) return 0;
+    if (!selectedPromotion || !isPromotionValid(selectedPromotion)) return 0;
 
     const subtotal = calculateSubtotal();
     if (selectedPromotion.discount_type === "percent") {
@@ -716,10 +743,15 @@ export default function HotelBooking() {
     const selectedPromotion = promotions.find(
       (promo) => promo.id.toString() === value
     );
+    const promotionCode = selectedPromotion ? selectedPromotion.code : null;
+
     setBookingData((prev) => ({
       ...prev,
-      promotion_code: selectedPromotion ? selectedPromotion.code : null,
+      promotion_code: promotionCode,
     }));
+
+    markFieldAsTouched("booking.promotion");
+    validateBookingField("promotion", promotionCode || "");
   };
 
   const handleRoomChange = (
@@ -843,9 +875,11 @@ export default function HotelBooking() {
     validateBookingField("checkInDate", bookingData.checkInDate);
     validateBookingField("checkOutDate", bookingData.checkOutDate);
     validateBookingField("depositAmount", bookingData.depositAmount);
+    validateBookingField("promotion", bookingData.promotion_code || "");
     markFieldAsTouched("booking.checkInDate");
     markFieldAsTouched("booking.checkOutDate");
     markFieldAsTouched("booking.depositAmount");
+    markFieldAsTouched("booking.promotion");
 
     bookingData.rooms.forEach((room) => {
       validateRoomField(room.id, "guests", room.guests?.toString() || "");
@@ -937,12 +971,10 @@ export default function HotelBooking() {
         errorMsg = Object.values(error.response.data.errors).flat().join(", ");
       } else if (error.response?.data?.message) {
         errorMsg = error.response.data.message;
-        // Xử lý lỗi phòng đã được đặt
         if (errorMsg.includes("Phòng ID")) {
           const roomIdMatch = errorMsg.match(/Phòng ID (\d+)/);
           if (roomIdMatch && roomIdMatch[1]) {
             const roomId = roomIdMatch[1];
-            // Tìm room_number từ roomNumbers
             let roomNumber = "không xác định";
             Object.values(roomNumbers).forEach((rooms) => {
               const foundRoom = rooms.find(
@@ -958,7 +990,7 @@ export default function HotelBooking() {
           errorMsg = "Số CCCD/CMND đã tồn tại. Vui lòng kiểm tra lại.";
         } else if (errorMsg.includes("promotion")) {
           errorMsg =
-            "Lỗi áp dụng khuyến mãi. Vui lòng kiểm tra mã khuyến mãi hoặc liên hệ admin.";
+            "Mã khuyến mãi không hợp lệ hoặc đã hết hạn. Vui lòng chọn mã khác.";
         }
       } else if (error.message) {
         errorMsg = error.message;
@@ -1066,7 +1098,7 @@ export default function HotelBooking() {
             </span>
           </div>
         )}
-        <h3 className="text-3xl font-bold text-gray-800 mb-4 border-b-4 border-blue-500 inline-block pb-1">
+        <h3 className="inline-block pb-1 mb-4 text-3xl font-bold text-gray-800 border-b-4 border-blue-500">
           Đặt Phòng Khách Sạn Hobilo
         </h3>
 
@@ -1098,7 +1130,7 @@ export default function HotelBooking() {
               <div className="tab-content">
                 {activeTab === "customer" && (
                   <div>
-                    <div className="form-grid form-grid-2 mb-4">
+                    <div className="mb-4 form-grid form-grid-2">
                       <div className="form-group">
                         <label htmlFor="cccd" className="form-label required">
                           Số CCCD/CMND
@@ -1153,7 +1185,7 @@ export default function HotelBooking() {
                       </div>
                     </div>
 
-                    <div className="form-grid form-grid-2 mb-4">
+                    <div className="mb-4 form-grid form-grid-2">
                       <div className="form-group">
                         <label className="form-label required">Giới tính</label>
                         <CustomSelect
@@ -1206,7 +1238,7 @@ export default function HotelBooking() {
                       </div>
                     </div>
 
-                    <div className="form-grid form-grid-2 mb-4">
+                    <div className="mb-4 form-grid form-grid-2">
                       <div className="form-group">
                         <label htmlFor="email" className="form-label required">
                           Email
@@ -1263,7 +1295,7 @@ export default function HotelBooking() {
                       </div>
                     </div>
 
-                    <div className="form-group mb-4">
+                    <div className="mb-4 form-group">
                       <label htmlFor="address" className="form-label required">
                         Địa chỉ
                       </label>
@@ -1310,7 +1342,7 @@ export default function HotelBooking() {
 
                 {activeTab === "booking" && (
                   <div>
-                    <div className="form-grid form-grid-3 mb-6">
+                    <div className="mb-6 form-grid form-grid-3">
                       <div className="form-group">
                         <label
                           htmlFor="checkIn"
@@ -1419,7 +1451,7 @@ export default function HotelBooking() {
                     )}
 
                     {calculateNights() > 0 && (
-                      <div className="price-info price-info-blue mb-4">
+                      <div className="mb-4 price-info price-info-blue">
                         <p>
                           <strong>Số đêm lưu trú:</strong> {calculateNights()}{" "}
                           đêm
@@ -1428,7 +1460,7 @@ export default function HotelBooking() {
                     )}
 
                     {bookingData.rooms.map((room, index) => (
-                      <div key={room.id} className="item-card mb-4">
+                      <div key={room.id} className="mb-4 item-card">
                         <div className="item-header">
                           <span className="badge badge-secondary">
                             Phòng #{index + 1}
@@ -1567,7 +1599,7 @@ export default function HotelBooking() {
 
                     <button
                       onClick={addRoom}
-                      className="btn btn-outline-primary btn-full mb-4"
+                      className="mb-4 btn btn-outline-primary btn-full"
                       aria-label="Thêm phòng mới"
                     >
                       <Plus className="w-4 h-4" />
@@ -1580,7 +1612,7 @@ export default function HotelBooking() {
           </div>
 
           <div>
-            <div className="card sticky">
+            <div className="sticky card">
               <div className="card-header">
                 <h3 className="card-title">
                   <CreditCard className="w-5 h-5" />
@@ -1651,11 +1683,19 @@ export default function HotelBooking() {
                             promo.discount_type === "percent"
                               ? `${promo.discount_value}%`
                               : `${promo.discount_value.toLocaleString()} VNĐ`
-                          })`,
+                          }, Hết hạn: ${new Date(
+                            promo.end_date
+                          ).toLocaleDateString("vi-VN")})`,
                         })),
                       ].sort((a, b) => a.label.localeCompare(b.label))}
                       placeholder="Chọn khuyến mãi"
                     />
+                    {touchedFields["booking.promotion"] &&
+                      validationErrors.booking.promotion && (
+                        <ErrorMessage
+                          message={validationErrors.booking.promotion}
+                        />
+                      )}
                   </div>
                   {bookingData.promotion_code && (
                     <div className="summary-row">
@@ -1729,7 +1769,7 @@ export default function HotelBooking() {
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting || loadingData}
-                    className="btn btn-primary btn-full mb-2"
+                    className=""
                   >
                     {isSubmitting ? (
                       <>
@@ -1743,7 +1783,7 @@ export default function HotelBooking() {
                       </>
                     )}
                   </button>
-                  <button
+                  <button 
                     onClick={() => navigate("/")}
                     className="btn btn-outline btn-full"
                     aria-label="Hủy bỏ đặt phòng"
