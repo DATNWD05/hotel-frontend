@@ -115,6 +115,11 @@ const sitemap: MenuItem[] = [
         pathName: 'overtimeform',
         path: '/overtimeform',
       },
+      {
+        name: 'Bảng lương',
+        pathName: 'payroll',
+        path: '/payroll',
+      },
     ],
   },
   {
