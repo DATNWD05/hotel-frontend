@@ -52,6 +52,7 @@ import AddDepartment from './pages/Departments/DepartmentAdd';
 
 import RosterTable from './pages/WorkAssignment/RosterTable';
 import OvertimeForm from './pages/WorkAssignment/OvertimeForm';
+import Payroll from './pages/WorkAssignment/Payroll';
 
 const App: React.FC = () => {
   return (
@@ -116,6 +117,7 @@ const App: React.FC = () => {
           {/* Work Assignment */}
           <Route path="work-assignment" element={<ProtectedRoute permission="view_work_assignments"><RosterTable /></ProtectedRoute>} />
           <Route path="overtimeform" element={<ProtectedRoute permission=""><OvertimeForm /></ProtectedRoute>} />
+          <Route path="payroll" element={<ProtectedRoute permission=""><Payroll /></ProtectedRoute>} />
         </Route>
       </Routes>
       <ToastContainer />
