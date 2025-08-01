@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type React from "react";
 import { useState, useEffect } from "react";
 import {
@@ -43,22 +44,6 @@ interface Customer {
   note: string | null;
 }
 
-interface Promotion {
-  id: number;
-  code: string;
-  description: string;
-  discount_type: string;
-  discount_value: string;
-  start_date: string;
-  end_date: string;
-  usage_limit: number;
-  used_count: number;
-  status: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 interface Booking {
   id: number;
   customer_id: number;
@@ -77,14 +62,12 @@ interface Booking {
     };
   };
   rooms?: Room[];
-  promotions: Promotion[];
 }
 
 interface EditBookingDialogProps {
   open: boolean;
   onClose: () => void;
   bookingInfo: Booking | null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onConfirm: (updatedBooking: any) => void;
 }
 
@@ -97,13 +80,10 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const [checkInDate, setCheckInDate] = useState<string>("");
   const [checkOutDate, setCheckOutDate] = useState<string>("");
   const [depositAmount, setDepositAmount] = useState<string>("");
-  const [promotionCode, setPromotionCode] = useState<string>("");
   const [selectedRoomIds, setSelectedRoomIds] = useState<number[]>([]);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
-  const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [roomsLoading, setRoomsLoading] = useState<boolean>(false);
-  const [promotionsLoading, setPromotionsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [roomDropdownOpen, setRoomDropdownOpen] = useState<boolean>(false);
 
@@ -152,54 +132,9 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     }
   };
 
-  const fetchPromotions = async () => {
-    try {
-      setPromotionsLoading(true);
-      // Modify API request to fetch only active promotions
-      const { data } = await api.get("/promotions", {
-        params: {
-          status: "active",
-          is_active: true,
-        },
-      });
-
-      let promotionsData = [];
-
-      if (data.data) {
-        promotionsData = data.data;
-      } else if (Array.isArray(data)) {
-        promotionsData = data;
-      }
-
-      // Filter promotions to ensure only active ones within valid date range
-      const activePromotions = promotionsData.filter((promo: Promotion) => {
-        const today = new Date();
-        const startDate = parseISO(promo.start_date);
-        const endDate = parseISO(promo.end_date);
-        return (
-          promo.is_active === true &&
-          promo.status === "active" &&
-          isValid(startDate) &&
-          isValid(endDate) &&
-          startDate <= today &&
-          today <= endDate
-        );
-      });
-
-      setPromotions(activePromotions);
-    } catch (err) {
-      console.error("Error fetching promotions:", err);
-      setError("Không thể tải danh sách khuyến mãi. Vui lòng thử lại.");
-      toast.error("Không thể tải danh sách khuyến mãi. Vui lòng thử lại.");
-    } finally {
-      setPromotionsLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (open) {
       fetchAvailableRooms();
-      fetchPromotions();
     }
   }, [open]);
 
@@ -210,11 +145,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         format(parseISO(bookingInfo.check_out_date), "yyyy-MM-dd")
       );
       setDepositAmount(bookingInfo.deposit_amount);
-      setPromotionCode(
-        bookingInfo.promotions && bookingInfo.promotions.length > 0
-          ? bookingInfo.promotions[0].code
-          : ""
-      );
 
       const currentRoomIds = bookingInfo.rooms
         ? bookingInfo.rooms.map((room) => room.id)
@@ -233,12 +163,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         return [...prev, roomId];
       }
     });
-  };
-
-  const handlePromotionChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    setPromotionCode(event.target.value);
   };
 
   const removeRoom = (roomIdToRemove: number) => {
@@ -302,12 +226,11 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     setError(null);
 
     try {
-      const updateData = {
+      const updateData: any = {
         room_ids: selectedRoomIds,
         check_in_date: checkInDate,
         check_out_date: checkOutDate,
         deposit_amount: depositAmount,
-        promotion_code: promotionCode || null,
       };
 
       console.log("Payload gửi đi:", updateData);
@@ -336,12 +259,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
 
   const getRoomDisplayName = (room: Room) => {
     return `Phòng ${room.room_number}`;
-  };
-
-  const getPromotionDisplayName = (promo: Promotion) => {
-    return `${promo.code} - ${promo.description} (${promo.discount_value}${
-      promo.discount_type === "percent" ? "%" : " VNĐ"
-    })`;
   };
 
   const getSelectedRoomsDisplay = () => {
@@ -619,44 +536,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               error={!!error && error.includes("đặt cọc")}
               helperText={error && error.includes("đặt cọc") ? error : null}
             />
-          </Paper>
-
-          {/* Promotion Selection */}
-          <Paper
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              border: "1px solid #ccc",
-              backgroundColor: "#fdfdfd",
-            }}
-          >
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              🎁 Chọn khuyến mãi
-            </Typography>
-            <select
-              value={promotionCode}
-              onChange={handlePromotionChange}
-              title="Khuyến mãi"
-              style={{
-                width: "100%",
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                marginTop: "8px",
-              }}
-              disabled={promotionsLoading}
-            >
-              <option value="">
-                {promotionsLoading ? "Đang tải..." : "Không áp dụng"}
-              </option>
-              {promotions.map((promo) => (
-                <option key={promo.id} value={promo.code}>
-                  {getPromotionDisplayName(promo)} - Hiệu lực:{" "}
-                  {format(parseISO(promo.start_date), "dd/MM/yyyy")} -{" "}
-                  {format(parseISO(promo.end_date), "dd/MM/yyyy")}
-                </option>
-              ))}
-            </select>
           </Paper>
         </Box>
       </DialogContent>

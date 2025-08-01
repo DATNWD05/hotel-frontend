@@ -18,7 +18,6 @@ import "../../css/AddBookings.css";
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 
-// Các interface giữ nguyên
 interface Customer {
   cccd: string;
   name: string;
@@ -48,6 +47,8 @@ interface Promotion {
   discount_value: number;
   start_date: string;
   end_date: string;
+  usage_limit: number;
+  used_count: number;
   status: string;
   is_active: boolean;
 }
@@ -76,7 +77,7 @@ interface ValidationErrors {
     checkOutDate?: string;
     depositAmount?: string;
     dateRange?: string;
-    promotion?: string; // Thêm lỗi cho khuyến mãi
+    promotion?: string;
   };
   rooms: { [key: string]: { guests?: string; type?: string; number?: string } };
 }
@@ -148,7 +149,6 @@ export default function HotelBooking() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
-  // Hàm kiểm tra khuyến mãi hợp lệ
   const isPromotionValid = (promo: Promotion): boolean => {
     const now = new Date();
     const startDate = new Date(promo.start_date);
@@ -157,7 +157,8 @@ export default function HotelBooking() {
       promo.is_active &&
       promo.status === "active" &&
       startDate <= now &&
-      endDate >= now
+      endDate >= now &&
+      promo.used_count < promo.usage_limit
     );
   };
 
@@ -172,11 +173,6 @@ export default function HotelBooking() {
             api.get("/promotions"),
             api.get("/bookings"),
           ]);
-
-        console.log("Dữ liệu từ /room-types:", roomTypesRes.data);
-        console.log("Dữ liệu từ /rooms:", roomsRes.data);
-        console.log("Dữ liệu từ /promotions:", promotionsRes.data);
-        console.log("Dữ liệu từ /bookings:", bookingsRes.data);
 
         let typesData = roomTypesRes.data;
         if (typesData && typeof typesData === "object" && "data" in typesData) {
@@ -217,7 +213,6 @@ export default function HotelBooking() {
           promotionsData = promotionsData.data;
         }
         if (Array.isArray(promotionsData)) {
-          // Lọc khuyến mãi hợp lệ
           const validPromotions = promotionsData.filter((promo: Promotion) =>
             isPromotionValid(promo)
           );
@@ -251,7 +246,6 @@ export default function HotelBooking() {
     fetchData();
   }, []);
 
-  // Tự động tính tiền cọc dựa trên 10% tổng giá phòng
   useEffect(() => {
     const totalRoomPrice = bookingData.rooms.reduce((sum, room) => {
       return room.price && room.number
@@ -482,12 +476,16 @@ export default function HotelBooking() {
         }
         break;
       case "promotion":
-        if (
-          value &&
-          !isPromotionValid(promotions.find((promo) => promo.code === value)!)
-        ) {
-          errors.booking.promotion =
-            "Mã khuyến mãi không hợp lệ hoặc đã hết hạn";
+        if (value) {
+          const selectedPromotion = promotions.find(
+            (promo) => promo.code === value
+          );
+          if (!selectedPromotion || !isPromotionValid(selectedPromotion)) {
+            errors.booking.promotion =
+              "Mã khuyến mãi không hợp lệ, đã hết hạn hoặc đã hết lượt sử dụng";
+          } else {
+            delete errors.booking.promotion;
+          }
         } else {
           delete errors.booking.promotion;
         }
@@ -629,7 +627,6 @@ export default function HotelBooking() {
     checkOut: string
   ) => {
     if (!checkIn || !checkOut) {
-      console.log(`Phòng ${room.room_number}: Không có ngày nhận/trả phòng`);
       return false;
     }
 
@@ -638,34 +635,18 @@ export default function HotelBooking() {
     const checkOutDate = new Date(checkOut);
     checkOutDate.setHours(0, 0, 0, 0);
 
-    console.log(
-      `Kiểm tra phòng ${room.room_number} (ID: ${room.id}) từ ${
-        checkInDate.toISOString().split("T")[0]
-      } đến ${checkOutDate.toISOString().split("T")[0]}`
-    );
-
     const isBooked = bookings.some((booking) => {
       const bookingCheckIn = new Date(booking.check_in_date);
       bookingCheckIn.setHours(0, 0, 0, 0);
       const bookingCheckOut = new Date(booking.check_out_date);
       bookingCheckOut.setHours(0, 0, 0, 0);
 
-      const conflict =
+      return (
         booking.room_id === room.id &&
-        !(checkOutDate <= bookingCheckIn || checkInDate >= bookingCheckOut);
-
-      if (conflict) {
-        console.log(
-          `Phòng ${room.room_number} bị xung đột với booking từ ${
-            bookingCheckIn.toISOString().split("T")[0]
-          } đến ${bookingCheckOut.toISOString().split("T")[0]}`
-        );
-      }
-
-      return conflict;
+        !(checkOutDate <= bookingCheckIn || checkInDate >= bookingCheckOut)
+      );
     });
 
-    console.log(`Phòng ${room.room_number} ${isBooked ? "bị đặt" : "trống"}`);
     return !isBooked;
   };
 
@@ -676,13 +657,8 @@ export default function HotelBooking() {
       !bookingData.checkInDate ||
       !bookingData.checkOutDate
     ) {
-      console.log(
-        `Không lấy được số phòng cho loại ${roomType}: Thiếu dữ liệu`
-      );
       return [];
     }
-
-    console.log(`Danh sách phòng cho loại ${roomType}:`, roomNumbers[roomType]);
 
     const availableRooms = roomNumbers[roomType]
       .filter(
@@ -699,21 +675,13 @@ export default function HotelBooking() {
         label: `Phòng ${room.room_number}`,
       }));
 
-    console.log(`Phòng khả dụng cho loại ${roomType}:`, availableRooms);
-
     const selectedRoomNumbers = bookingData.rooms
       .filter((r) => r.id !== currentRoomId && r.type === roomType && r.number)
       .map((r) => r.number);
 
-    const finalAvailableRooms = availableRooms.filter(
+    return availableRooms.filter(
       (option) => !selectedRoomNumbers.includes(option.value)
     );
-
-    console.log(
-      `Phòng khả dụng cuối cùng cho loại ${roomType}:`,
-      finalAvailableRooms
-    );
-    return finalAvailableRooms;
   };
 
   const handleBookingChange = (field: string, value: string | number | "") => {
@@ -931,7 +899,7 @@ export default function HotelBooking() {
       }
 
       const totalAmount = calculateTotal();
-      const apiData = {
+      const apiData: any = {
         customer: {
           cccd: bookingData.customer.cccd.trim(),
           name: bookingData.customer.name.trim(),
@@ -948,8 +916,21 @@ export default function HotelBooking() {
         check_out_date: bookingData.checkOutDate,
         deposit_amount: bookingData.depositAmount || 0,
         total_amount: totalAmount > 0 ? totalAmount : 100000,
-        promotion_code: bookingData.promotion_code,
       };
+
+      // Only include promotion_code if a valid promotion is selected
+      if (bookingData.promotion_code) {
+        const selectedPromotion = promotions.find(
+          (promo) => promo.code === bookingData.promotion_code
+        );
+        if (selectedPromotion && isPromotionValid(selectedPromotion)) {
+          apiData.promotion_code = bookingData.promotion_code;
+        } else {
+          throw new Error(
+            "Mã khuyến mãi không hợp lệ hoặc đã hết lượt sử dụng"
+          );
+        }
+      }
 
       console.log("Dữ liệu gửi đến API /bookings:", apiData);
 
@@ -990,7 +971,7 @@ export default function HotelBooking() {
           errorMsg = "Số CCCD/CMND đã tồn tại. Vui lòng kiểm tra lại.";
         } else if (errorMsg.includes("promotion")) {
           errorMsg =
-            "Mã khuyến mãi không hợp lệ hoặc đã hết hạn. Vui lòng chọn mã khác.";
+            "Mã khuyến mãi không hợp lệ hoặc đã hết lượt sử dụng. Vui lòng chọn mã khác.";
         }
       } else if (error.message) {
         errorMsg = error.message;
@@ -1685,7 +1666,9 @@ export default function HotelBooking() {
                               : `${promo.discount_value.toLocaleString()} VNĐ`
                           }, Hết hạn: ${new Date(
                             promo.end_date
-                          ).toLocaleDateString("vi-VN")})`,
+                          ).toLocaleDateString("vi-VN")}, Còn ${
+                            promo.usage_limit - promo.used_count
+                          } lượt)`,
                         })),
                       ].sort((a, b) => a.label.localeCompare(b.label))}
                       placeholder="Chọn khuyến mãi"
@@ -1769,7 +1752,7 @@ export default function HotelBooking() {
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting || loadingData}
-                    className=""
+                    className="btn btn-primary btn-full"
                   >
                     {isSubmitting ? (
                       <>
@@ -1783,7 +1766,7 @@ export default function HotelBooking() {
                       </>
                     )}
                   </button>
-                  <button 
+                  <button
                     onClick={() => navigate("/")}
                     className="btn btn-outline btn-full"
                     aria-label="Hủy bỏ đặt phòng"
