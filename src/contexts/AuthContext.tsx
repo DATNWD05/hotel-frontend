@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 /** ================== CONFIG SHARE ================== */
 const DEFAULT_AVATAR = '/default-avatar.png';
@@ -21,12 +21,13 @@ export interface User {
   role_id: number;
   permissions: string[];
   avatarUrl?: string;
-  avatarVer?: number; // dùng để ép Topbar re-render
+  avatarVer?: number;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  loading: boolean;
   hasPermission: (p: string) => boolean;
   login: (token: string, user: User) => Promise<void>;
   logout: () => void;
@@ -38,9 +39,10 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // ===== Helper: fetch avatar of current user if missing =====
   const fetchAvatarForCurrentUser = async (uid: number) => {
     try {
       const res = await api.get('/employees', { params: { page: 1 } });
@@ -62,38 +64,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    const userData = localStorage.getItem('auth_user');
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('auth_token');
+      const userData = localStorage.getItem('auth_user');
 
-    if (token && userData) {
-      try {
-        const parsed: User = JSON.parse(userData);
-        setUser(parsed);
-        setIsAuthenticated(true);
+      if (token && userData) {
+        try {
+          const parsed: User = JSON.parse(userData);
+          setUser(parsed);
+          setIsAuthenticated(true);
 
-        if (parsed.role_id === 1) {
-          const superUser: User = { ...parsed, permissions: ['*'] };
-          setUser(superUser);
-          localStorage.setItem('auth_user', JSON.stringify(superUser));
-          localStorage.setItem('auth_user_id', String(parsed.id));
-        } else {
-          if (!parsed.permissions?.length) {
-            fetchPermissions(parsed.role_id, parsed);
+          if (parsed.role_id === 1) {
+            const superUser: User = { ...parsed, permissions: ['*'] };
+            setUser(superUser);
+            localStorage.setItem('auth_user', JSON.stringify(superUser));
+            localStorage.setItem('auth_user_id', String(parsed.id));
+          } else {
+            if (!parsed.permissions?.length) {
+              await fetchPermissions(parsed.role_id, parsed);
+            }
+            localStorage.setItem('auth_user_id', String(parsed.id));
           }
-          localStorage.setItem('auth_user_id', String(parsed.id));
-        }
 
-        // Nếu chưa có avatarUrl => gọi fetch avatar
-        if (!parsed.avatarUrl) {
-          fetchAvatarForCurrentUser(parsed.id);
+          if (!parsed.avatarUrl) {
+            await fetchAvatarForCurrentUser(parsed.id);
+          }
+        } catch (err) {
+          console.error('Parse user error:', err);
+          toast.error('Dữ liệu người dùng không hợp lệ, vui lòng đăng nhập lại');
+          logout();
         }
-      } catch (err) {
-        console.error('Parse user error:', err);
-        toast.error('Dữ liệu người dùng không hợp lệ, vui lòng đăng nhập lại');
-        logout();
       }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const fetchPermissions = async (roleId: number, currentUser: User | null = user) => {
@@ -130,10 +135,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchPermissions(userData.role_id, initial);
       }
 
-      // Lấy avatar ngay khi login nếu chưa có
       await fetchAvatarForCurrentUser(userData.id);
-
-      navigate('/dashboard');
+      const from = location.state?.from?.pathname || '/';
+      navigate(from, { replace: true });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('Login error:', err);
@@ -151,14 +155,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     navigate('/login');
   };
 
-  const hasPermission = (permission: string) => {
+  const hasPermission = (p: string) => {
     if (!user) return false;
     if (user.permissions.includes('*')) return true;
-    return user.permissions.includes(permission);
+    return user.permissions.includes(p);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, hasPermission, login, logout, setUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, loading, hasPermission, login, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );
