@@ -33,8 +33,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import "../../css/OrderRoom.css";
 import api from "../../api/axios";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from '../../contexts/AuthContext';
-import { toast } from 'react-toastify';
+import { useAuth } from "../../contexts/AuthContext";
+import { toast } from "react-toastify";
 
 interface RoomType {
   id: number;
@@ -169,7 +169,9 @@ const OrderRoom: React.FC = () => {
   const [openDialog, setOpenDialog] = useState<boolean>(false);
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
   const [editRoom, setEditRoom] = useState<Partial<Room>>({});
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
   const [roomTypes, setRoomTypes] = useState<SimpleRoomType[]>([]);
   const [roomTypesLoading, setRoomTypesLoading] = useState<boolean>(true);
   const [roomTypesError, setRoomTypesError] = useState<string | null>(null);
@@ -473,7 +475,7 @@ const OrderRoom: React.FC = () => {
         await fetchRooms();
         setOpenDialog(false);
         toast.success("Ẩn phòng thành công!");
-        setTimeout(() => navigate('/hiddenrooms'), 2000);
+        setTimeout(() => navigate("/hiddenrooms"), 2000);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
@@ -987,7 +989,7 @@ const OrderRoom: React.FC = () => {
           {selectedRoom &&
             (selectedRoom.status === "available" ||
               selectedRoom.status === "maintenance") &&
-            hasPermission('hide_rooms') && (
+            hasPermission("hide_rooms") && (
               <button onClick={handleSoftDeleteRoom} className="delete-button">
                 <DeleteIcon /> Ẩn phòng
               </button>

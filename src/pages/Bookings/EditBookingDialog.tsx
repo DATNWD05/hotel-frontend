@@ -155,7 +155,14 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const fetchPromotions = async () => {
     try {
       setPromotionsLoading(true);
-      const { data } = await api.get("/promotions");
+      // Modify API request to fetch only active promotions
+      const { data } = await api.get("/promotions", {
+        params: {
+          status: "active",
+          is_active: true,
+        },
+      });
+
       let promotionsData = [];
 
       if (data.data) {
@@ -164,9 +171,20 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         promotionsData = data;
       }
 
-      const activePromotions = promotionsData.filter(
-        (promo: Promotion) => promo.is_active && promo.status === "active"
-      );
+      // Filter promotions to ensure only active ones within valid date range
+      const activePromotions = promotionsData.filter((promo: Promotion) => {
+        const today = new Date();
+        const startDate = parseISO(promo.start_date);
+        const endDate = parseISO(promo.end_date);
+        return (
+          promo.is_active === true &&
+          promo.status === "active" &&
+          isValid(startDate) &&
+          isValid(endDate) &&
+          startDate <= today &&
+          today <= endDate
+        );
+      });
 
       setPromotions(activePromotions);
     } catch (err) {
