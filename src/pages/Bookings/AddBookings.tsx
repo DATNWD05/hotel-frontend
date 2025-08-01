@@ -1769,7 +1769,7 @@ export default function HotelBooking() {
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting || loadingData}
-                    className="mb-2 btn btn-primary btn-full"
+                    className=""
                   >
                     {isSubmitting ? (
                       <>
@@ -1783,7 +1783,7 @@ export default function HotelBooking() {
                       </>
                     )}
                   </button>
-                  <button
+                  <button 
                     onClick={() => navigate("/")}
                     className="btn btn-outline btn-full"
                     aria-label="Hủy bỏ đặt phòng"
