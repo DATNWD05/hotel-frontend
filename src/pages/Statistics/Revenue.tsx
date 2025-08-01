@@ -55,6 +55,7 @@ export default function Revenue() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const params: any = { page };
       if (fromDate) params.from_date = fromDate.format("YYYY-MM-DD");
       if (toDate) params.to_date = toDate.format("YYYY-MM-DD");
@@ -64,6 +65,7 @@ export default function Revenue() {
       setFiltered(res.data.data || []);
       setTotalPage(res.data.pagination?.last_page || 1);
       setSummary(res.data.summary || { total_amount: 0, deposit_amount: 0, remaining_amount: 0 });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const msg = error.response?.data?.message || "Lỗi khi tải dữ liệu doanh thu";
       toast.error(msg);
