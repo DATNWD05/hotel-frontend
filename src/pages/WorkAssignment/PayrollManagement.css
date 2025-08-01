@@ -101,8 +101,8 @@
   font-size: 0.875rem;
 }
 
-.btn-primary {
-    width: 200px;
+.btn-primari {
+  width: 100px;
   background-color: #2563eb;
   color: white;
   padding: 0.5rem 1rem;
@@ -217,7 +217,7 @@
 }
 
 .filter-input {
-  width: 45%;
+  width: 30%;
   padding: 0.5rem 0.75rem;
   border: 1px solid #d1d5db;
   border-radius: 0.5rem;
