@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
 import "../../css/RosterTable.css";
@@ -78,7 +79,8 @@ const RosterTable: React.FC = () => {
         const data = res.data.data?.data || res.data.data || [];
         const mapped = data.reduce((acc: AssignmentCell[], a: any) => {
           const existing = acc.find(
-            (item) => item.employeeId === a.employee_id && item.date === a.work_date
+            (item) =>
+              item.employeeId === a.employee_id && item.date === a.work_date
           );
           if (existing) {
             existing.shiftIds.push(a.shift_id);
@@ -92,18 +94,23 @@ const RosterTable: React.FC = () => {
           return acc;
         }, []);
         // Sắp xếp lại sau khi tải dữ liệu
-        const sortedAssignments = mapped.map(assignment => ({
-          ...assignment,
-          shiftIds: sortShifts(assignment.shiftIds)
-        }));
+        const sortedAssignments = mapped.map(
+          (assignment: { shiftIds: (number | null)[] }) => ({
+            ...assignment,
+            shiftIds: sortShifts(assignment.shiftIds),
+          })
+        );
         setAssignments(sortedAssignments);
       })
       .catch((err) => console.error("Lỗi lấy danh sách phân công:", err));
   }, [currentWeekStart]);
 
   const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
-    if (shiftIds.length <= 1 || shiftIds.some(id => id === null)) return shiftIds;
-    const labels = shiftIds.map(id => shiftOptions.find(opt => opt.value === id)?.label || "");
+    if (shiftIds.length <= 1 || shiftIds.some((id) => id === null))
+      return shiftIds;
+    const labels = shiftIds.map(
+      (id) => shiftOptions.find((opt) => opt.value === id)?.label || ""
+    );
     const sangIndex = labels.indexOf("Ca Sáng");
     const chieuIndex = labels.indexOf("Ca Chiều");
     const toiIndex = labels.indexOf("Ca Tối");
@@ -175,18 +182,26 @@ const RosterTable: React.FC = () => {
     }
 
     try {
-      const response = await api.post("/work-assignments", { assignments: payloads }, { timeout: 30000 });
-      alert(`Phân công thành công! Đã tạo: ${response.data.created_count}, Xóa: ${response.data.deleted_count}, Bỏ qua: ${response.data.skipped_count}`);
+      const response = await api.post(
+        "/work-assignments",
+        { assignments: payloads },
+        { timeout: 30000 }
+      );
+      alert(
+        `Phân công thành công! Đã tạo: ${response.data.created_count}, Xóa: ${response.data.deleted_count}, Bỏ qua: ${response.data.skipped_count}`
+      );
       // Tải lại dữ liệu sau khi lưu
       const fromDate = currentWeekStart.format("YYYY-MM-DD");
       const toDate = currentWeekStart.add(6, "day").format("YYYY-MM-DD");
       const refreshResponse = await api.get("/work-assignments", {
         params: { from_date: fromDate, to_date: toDate, per_page: 1000 },
       });
-      const data = refreshResponse.data.data?.data || refreshResponse.data.data || [];
+      const data =
+        refreshResponse.data.data?.data || refreshResponse.data.data || [];
       const mapped = data.reduce((acc: AssignmentCell[], a: any) => {
         const existing = acc.find(
-          (item) => item.employeeId === a.employee_id && item.date === a.work_date
+          (item) =>
+            item.employeeId === a.employee_id && item.date === a.work_date
         );
         if (existing) {
           existing.shiftIds.push(a.shift_id);
@@ -200,14 +215,18 @@ const RosterTable: React.FC = () => {
         return acc;
       }, []);
       // Sắp xếp lại sau khi tải dữ liệu
-      const sortedAssignments = mapped.map(assignment => ({
-        ...assignment,
-        shiftIds: sortShifts(assignment.shiftIds)
-      }));
+      const sortedAssignments = mapped.map(
+        (assignment: { shiftIds: (number | null)[] }) => ({
+          ...assignment,
+          shiftIds: sortShifts(assignment.shiftIds),
+        })
+      );
       setAssignments(sortedAssignments);
     } catch (error: any) {
       console.error("Lỗi khi gửi phân công:", error);
-      const errorMessage = error.response?.data?.message || "Có lỗi xảy ra khi lưu phân công. Vui lòng thử lại.";
+      const errorMessage =
+        error.response?.data?.message ||
+        "Có lỗi xảy ra khi lưu phân công. Vui lòng thử lại.";
       alert(errorMessage);
     }
   };
@@ -271,30 +290,60 @@ const RosterTable: React.FC = () => {
                   >
                     <div className="shift-select-container">
                       <select
+                        title="Chọn ca làm"
                         disabled={isPast}
-                        value={selectedShiftIds[0] === null ? "0" : selectedShiftIds[0]?.toString() || "0"}
+                        value={
+                          selectedShiftIds[0] === null
+                            ? "0"
+                            : selectedShiftIds[0]?.toString() || "0"
+                        }
                         onChange={(e) =>
-                          handleSelectChange(emp.id, date, 0, e.target.value === "0" ? null : Number(e.target.value))
+                          handleSelectChange(
+                            emp.id,
+                            date,
+                            0,
+                            e.target.value === "0"
+                              ? null
+                              : Number(e.target.value)
+                          )
                         }
                       >
                         {shiftOptions.map((opt) => (
-                          <option key={opt.value ?? "0"} value={opt.value ?? "0"}>
+                          <option
+                            key={opt.value ?? "0"}
+                            value={opt.value ?? "0"}
+                          >
                             {opt.label}
                           </option>
                         ))}
                       </select>
                       {selectedShiftIds[0] !== null && (
                         <select
+                          title="Chọn ca làm"
                           disabled={isPast}
-                          value={selectedShiftIds[1] === null ? "0" : selectedShiftIds[1]?.toString() || "0"}
+                          value={
+                            selectedShiftIds[1] === null
+                              ? "0"
+                              : selectedShiftIds[1]?.toString() || "0"
+                          }
                           onChange={(e) =>
-                            handleSelectChange(emp.id, date, 1, e.target.value === "0" ? null : Number(e.target.value))
+                            handleSelectChange(
+                              emp.id,
+                              date,
+                              1,
+                              e.target.value === "0"
+                                ? null
+                                : Number(e.target.value)
+                            )
                           }
                         >
                           {shiftOptions
                             .filter((opt) => opt.value !== selectedShiftIds[0])
                             .map((opt) => (
-                              <option key={opt.value ?? "0"} value={opt.value ?? "0"}>
+                              <option
+                                key={opt.value ?? "0"}
+                                value={opt.value ?? "0"}
+                              >
                                 {opt.label}
                               </option>
                             ))}

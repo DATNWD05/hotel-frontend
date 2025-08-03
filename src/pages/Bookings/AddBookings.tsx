@@ -96,13 +96,6 @@ interface RoomNumber {
   status: string;
 }
 
-interface Booking {
-  id: number;
-  room_id: number;
-  check_in_date: string;
-  check_out_date: string;
-}
-
 export default function HotelBooking() {
   const navigate = useNavigate();
   const [bookingData, setBookingData] = useState<BookingData>({
@@ -143,10 +136,9 @@ export default function HotelBooking() {
   }>({});
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
   const [roomNumbers, setRoomNumbers] = useState<{
-    [key: string]: RoomNumber[];
+    [key: number]: RoomNumber[];
   }>({});
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   const isPromotionValid = (promo: Promotion): boolean => {
@@ -166,13 +158,10 @@ export default function HotelBooking() {
     const fetchData = async () => {
       setLoadingData(true);
       try {
-        const [roomTypesRes, roomsRes, promotionsRes, bookingsRes] =
-          await Promise.all([
-            api.get("/room-types"),
-            api.get("/rooms"),
-            api.get("/promotions"),
-            api.get("/bookings"),
-          ]);
+        const [roomTypesRes, promotionsRes] = await Promise.all([
+          api.get("/room-types"),
+          api.get("/promotions"),
+        ]);
 
         let typesData = roomTypesRes.data;
         if (typesData && typeof typesData === "object" && "data" in typesData) {
@@ -182,26 +171,6 @@ export default function HotelBooking() {
           setRoomTypes(typesData);
         } else {
           throw new Error("Dữ liệu từ /room-types không hợp lệ");
-        }
-
-        let roomsData = roomsRes.data;
-        if (roomsData && typeof roomsData === "object" && "data" in roomsData) {
-          roomsData = roomsData.data;
-        }
-        if (Array.isArray(roomsData)) {
-          setRoomNumbers(
-            roomsData.reduce(
-              (acc: { [key: string]: RoomNumber[] }, room: RoomNumber) => {
-                const typeId = room.room_type_id.toString();
-                if (!acc[typeId]) acc[typeId] = [];
-                acc[typeId].push(room);
-                return acc;
-              },
-              {}
-            )
-          );
-        } else {
-          throw new Error("Dữ liệu từ /rooms không hợp lệ");
         }
 
         let promotionsData = promotionsRes.data;
@@ -220,20 +189,6 @@ export default function HotelBooking() {
         } else {
           throw new Error("Dữ liệu từ /promotions không hợp lệ");
         }
-
-        let bookingsData = bookingsRes.data;
-        if (
-          bookingsData &&
-          typeof bookingsData === "object" &&
-          "data" in bookingsData
-        ) {
-          bookingsData = bookingsData.data;
-        }
-        if (Array.isArray(bookingsData)) {
-          setBookings(bookingsData);
-        } else {
-          throw new Error("Dữ liệu từ /bookings không hợp lệ");
-        }
       } catch (error: any) {
         setErrorMessage(
           "Lỗi khi tải dữ liệu: " +
@@ -245,6 +200,47 @@ export default function HotelBooking() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const fetchAvailableRooms = async () => {
+      if (bookingData.checkInDate && bookingData.checkOutDate) {
+        try {
+          const availableRoomsRes = await api.get("/available-rooms", {
+            params: {
+              check_in_date: bookingData.checkInDate,
+              check_out_date: bookingData.checkOutDate,
+            },
+          });
+          let roomsData = availableRoomsRes.data;
+          if (
+            roomsData &&
+            typeof roomsData === "object" &&
+            "data" in roomsData
+          ) {
+            roomsData = roomsData.data;
+          }
+          if (Array.isArray(roomsData)) {
+            const groupedRooms: { [key: number]: RoomNumber[] } = {};
+            roomsData.forEach((room: RoomNumber) => {
+              if (!groupedRooms[room.room_type_id]) {
+                groupedRooms[room.room_type_id] = [];
+              }
+              groupedRooms[room.room_type_id].push(room);
+            });
+            setRoomNumbers(groupedRooms);
+          } else {
+            throw new Error("Dữ liệu từ /available-rooms không hợp lệ");
+          }
+        } catch (error: any) {
+          setErrorMessage(
+            "Lỗi khi tải phòng khả dụng: " +
+              (error.response?.data?.message || error.message)
+          );
+        }
+      }
+    };
+    fetchAvailableRooms();
+  }, [bookingData.checkInDate, bookingData.checkOutDate]);
 
   useEffect(() => {
     const totalRoomPrice = bookingData.rooms.reduce((sum, room) => {
@@ -271,7 +267,6 @@ export default function HotelBooking() {
 
   const validateCCCD = (value: string): boolean => {
     if (!/^\d{12}$/.test(value)) return false;
-
     const provinceCode = value.substring(0, 3);
     const validProvinceCodes = [
       "001",
@@ -338,21 +333,20 @@ export default function HotelBooking() {
       "095",
       "096",
     ];
-
     if (!validProvinceCodes.includes(provinceCode)) return false;
-
     const genderCentury = parseInt(value.charAt(3), 10);
     if (genderCentury < 0 || genderCentury > 3) return false;
-
     return true;
   };
 
   const validateCustomerField = (field: keyof Customer, value: string) => {
     const errors = { ...validationErrors };
+    if (!errors.customer) errors.customer = {};
+
+    const trimmed = value.trim();
 
     switch (field) {
-      case "cccd": {
-        const trimmed = value.trim();
+      case "cccd":
         if (!trimmed) {
           errors.customer.cccd = "Vui lòng nhập số CCCD/CMND";
         } else if (!/^\d{9}$/.test(trimmed) && !/^\d{12}$/.test(trimmed)) {
@@ -363,16 +357,17 @@ export default function HotelBooking() {
           delete errors.customer.cccd;
         }
         break;
-      }
+
       case "name":
-        if (!value.trim()) {
+        if (!trimmed) {
           errors.customer.name = "Vui lòng nhập họ và tên";
-        } else if (value.trim().length < 2) {
+        } else if (trimmed.length < 2) {
           errors.customer.name = "Họ và tên phải có ít nhất 2 ký tự";
         } else {
           delete errors.customer.name;
         }
         break;
+
       case "gender":
         if (!value) {
           errors.customer.gender = "Vui lòng chọn giới tính";
@@ -380,31 +375,39 @@ export default function HotelBooking() {
           delete errors.customer.gender;
         }
         break;
+
       case "email":
-        if (!value.trim()) {
+        if (!trimmed) {
           errors.customer.email = "Vui lòng nhập email";
-        } else if (!validateEmail(value)) {
+        } else if (!validateEmail(trimmed)) {
           errors.customer.email = "Email không hợp lệ";
         } else {
           delete errors.customer.email;
         }
         break;
+
       case "phone":
-        if (!value.trim()) {
+        if (!trimmed) {
           errors.customer.phone = "Vui lòng nhập số điện thoại";
-        } else if (!validatePhone(value)) {
+        } else if (!validatePhone(trimmed)) {
           errors.customer.phone = "Số điện thoại không hợp lệ (10-11 chữ số)";
         } else {
           delete errors.customer.phone;
         }
         break;
+
       case "dateOfBirth":
         if (!value) {
           errors.customer.dateOfBirth = "Vui lòng chọn ngày sinh";
         } else {
           const birthDate = new Date(value);
           const today = new Date();
-          const age = today.getFullYear() - birthDate.getFullYear();
+          let age = today.getFullYear() - birthDate.getFullYear();
+          const m = today.getMonth() - birthDate.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+          }
+
           if (age < 18) {
             errors.customer.dateOfBirth = "Phải đủ 18 tuổi để đặt phòng";
           } else {
@@ -412,10 +415,11 @@ export default function HotelBooking() {
           }
         }
         break;
+
       case "address":
-        if (!value.trim()) {
+        if (!trimmed) {
           errors.customer.address = "Vui lòng nhập địa chỉ";
-        } else if (value.trim().length < 10) {
+        } else if (trimmed.length < 10) {
           errors.customer.address = "Vui lòng nhập đầy đủ địa chỉ";
         } else {
           delete errors.customer.address;
@@ -500,7 +504,6 @@ export default function HotelBooking() {
       const diffDays = Math.ceil(
         (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
       );
-
       if (diffDays > 30) {
         errors.booking.dateRange =
           "Thời gian lưu trú không được vượt quá 30 ngày";
@@ -518,7 +521,6 @@ export default function HotelBooking() {
     value: string
   ) => {
     const errors = { ...validationErrors };
-
     if (!errors.rooms[roomId]) {
       errors.rooms[roomId] = {};
     }
@@ -554,7 +556,6 @@ export default function HotelBooking() {
     if (Object.keys(errors.rooms[roomId]).length === 0) {
       delete errors.rooms[roomId];
     }
-
     setValidationErrors(errors);
   };
 
@@ -584,12 +585,10 @@ export default function HotelBooking() {
 
   const calculateDiscount = () => {
     if (!bookingData.promotion_code) return 0;
-
     const selectedPromotion = promotions.find(
       (promo) => promo.code === bookingData.promotion_code
     );
     if (!selectedPromotion || !isPromotionValid(selectedPromotion)) return 0;
-
     const subtotal = calculateSubtotal();
     if (selectedPromotion.discount_type === "percent") {
       return (subtotal * selectedPromotion.discount_value) / 100;
@@ -610,7 +609,6 @@ export default function HotelBooking() {
       ...prev,
       customer: { ...prev.customer, [field]: value },
     }));
-
     markFieldAsTouched(`customer.${field}`);
     validateCustomerField(field, value);
   };
@@ -621,64 +619,27 @@ export default function HotelBooking() {
     );
   };
 
-  const isRoomAvailable = (
-    room: RoomNumber,
-    checkIn: string,
-    checkOut: string
+  const getAvailableRoomNumbers = (
+    roomTypeId: string,
+    currentRoomId: string
   ) => {
-    if (!checkIn || !checkOut) {
-      return false;
-    }
-
-    const checkInDate = new Date(checkIn);
-    checkInDate.setHours(0, 0, 0, 0);
-    const checkOutDate = new Date(checkOut);
-    checkOutDate.setHours(0, 0, 0, 0);
-
-    const isBooked = bookings.some((booking) => {
-      const bookingCheckIn = new Date(booking.check_in_date);
-      bookingCheckIn.setHours(0, 0, 0, 0);
-      const bookingCheckOut = new Date(booking.check_out_date);
-      bookingCheckOut.setHours(0, 0, 0, 0);
-
-      return (
-        booking.room_id === room.id &&
-        !(checkOutDate <= bookingCheckIn || checkInDate >= bookingCheckOut)
-      );
-    });
-
-    return !isBooked;
-  };
-
-  const getAvailableRoomNumbers = (roomType: string, currentRoomId: string) => {
     if (
-      !roomType ||
-      !roomNumbers[roomType] ||
+      !roomTypeId ||
+      !roomNumbers[parseInt(roomTypeId)] ||
       !bookingData.checkInDate ||
       !bookingData.checkOutDate
     ) {
       return [];
     }
-
-    const availableRooms = roomNumbers[roomType]
-      .filter(
-        (room) =>
-          room.status === "available" &&
-          isRoomAvailable(
-            room,
-            bookingData.checkInDate,
-            bookingData.checkOutDate
-          )
-      )
-      .map((room) => ({
-        value: room.room_number,
-        label: `Phòng ${room.room_number}`,
-      }));
-
+    const availableRooms = roomNumbers[parseInt(roomTypeId)].map((room) => ({
+      value: room.room_number,
+      label: `Phòng ${room.room_number}`,
+    }));
     const selectedRoomNumbers = bookingData.rooms
-      .filter((r) => r.id !== currentRoomId && r.type === roomType && r.number)
+      .filter(
+        (r) => r.id !== currentRoomId && r.type === roomTypeId && r.number
+      )
       .map((r) => r.number);
-
     return availableRooms.filter(
       (option) => !selectedRoomNumbers.includes(option.value)
     );
@@ -688,38 +649,20 @@ export default function HotelBooking() {
     setBookingData((prev) => ({
       ...prev,
       [field]: value,
+      ...(field === "checkInDate" || field === "checkOutDate"
+        ? {
+            rooms: prev.rooms.map((room) => ({
+              ...room,
+              type: "",
+              number: "",
+              price: 0,
+              roomId: 0,
+            })),
+          }
+        : {}),
     }));
-
     markFieldAsTouched(`booking.${field}`);
     validateBookingField(field, value);
-
-    if (field === "checkInDate" || field === "checkOutDate") {
-      setBookingData((prev) => ({
-        ...prev,
-        rooms: prev.rooms.map((room) => ({
-          ...room,
-          type: "",
-          number: "",
-          price: 0,
-          roomId: 0,
-        })),
-      }));
-    }
-  };
-
-  const handlePromotionChange = (value: string) => {
-    const selectedPromotion = promotions.find(
-      (promo) => promo.id.toString() === value
-    );
-    const promotionCode = selectedPromotion ? selectedPromotion.code : null;
-
-    setBookingData((prev) => ({
-      ...prev,
-      promotion_code: promotionCode,
-    }));
-
-    markFieldAsTouched("booking.promotion");
-    validateBookingField("promotion", promotionCode || "");
   };
 
   const handleRoomChange = (
@@ -754,7 +697,7 @@ export default function HotelBooking() {
             };
           }
           if (field === "number") {
-            const selectedRoom = roomNumbers[room.type]?.find(
+            const selectedRoom = roomNumbers[parseInt(room.type)]?.find(
               (rn) => rn.room_number === value.toString()
             );
             return {
@@ -768,9 +711,21 @@ export default function HotelBooking() {
         return room;
       }),
     }));
-
     markFieldAsTouched(`rooms.${roomId}.${field}`);
     validateRoomField(roomId, field, value.toString());
+  };
+
+  const handlePromotionChange = (value: string) => {
+    const selectedPromotion = promotions.find(
+      (promo) => promo.id.toString() === value
+    );
+    const promotionCode = selectedPromotion ? selectedPromotion.code : null;
+    setBookingData((prev) => ({
+      ...prev,
+      promotion_code: promotionCode,
+    }));
+    markFieldAsTouched("booking.promotion");
+    validateBookingField("promotion", promotionCode || "");
   };
 
   const addRoom = () => {
@@ -790,7 +745,6 @@ export default function HotelBooking() {
         ...prev,
         rooms: prev.rooms.filter((room) => room.id !== roomId),
       }));
-
       const errors = { ...validationErrors };
       delete errors.rooms[roomId];
       setValidationErrors(errors);
@@ -801,7 +755,6 @@ export default function HotelBooking() {
     try {
       const response = await api.get(`/customers/check-cccd/${cccd}`);
       const { status, data } = response.data;
-
       if (status === "exists" && data && data.id) {
         setBookingData((prev) => ({
           ...prev,
@@ -831,7 +784,6 @@ export default function HotelBooking() {
 
   const validateAllFields = (): boolean => {
     let isValid = true;
-
     Object.keys(bookingData.customer).forEach((key) => {
       const field = key as keyof Customer;
       if (field !== "note" && field !== "nationality") {
@@ -839,7 +791,6 @@ export default function HotelBooking() {
         markFieldAsTouched(`customer.${field}`);
       }
     });
-
     validateBookingField("checkInDate", bookingData.checkInDate);
     validateBookingField("checkOutDate", bookingData.checkOutDate);
     validateBookingField("depositAmount", bookingData.depositAmount);
@@ -863,10 +814,7 @@ export default function HotelBooking() {
       Object.keys(validationErrors.booking).length > 0 ||
       Object.keys(validationErrors.rooms).length > 0;
 
-    if (hasErrors) {
-      isValid = false;
-    }
-
+    if (hasErrors) isValid = false;
     return isValid;
   };
 
@@ -884,10 +832,12 @@ export default function HotelBooking() {
         .filter(
           (room) =>
             room.number &&
-            roomNumbers[room.type]?.some((rn) => rn.room_number === room.number)
+            roomNumbers[parseInt(room.type)]?.some(
+              (rn) => rn.room_number === room.number
+            )
         )
         .map((room) => {
-          const selectedRoom = roomNumbers[room.type]?.find(
+          const selectedRoom = roomNumbers[parseInt(room.type)]?.find(
             (rn) => rn.room_number === room.number
           );
           return selectedRoom ? selectedRoom.id : 0;
@@ -898,7 +848,6 @@ export default function HotelBooking() {
         throw new Error("Vui lòng chọn ít nhất một phòng hợp lệ");
       }
 
-      const totalAmount = calculateTotal();
       const apiData: any = {
         customer: {
           cccd: bookingData.customer.cccd.trim(),
@@ -915,10 +864,8 @@ export default function HotelBooking() {
         check_in_date: bookingData.checkInDate,
         check_out_date: bookingData.checkOutDate,
         deposit_amount: bookingData.depositAmount || 0,
-        total_amount: totalAmount > 0 ? totalAmount : 100000,
       };
 
-      // Only include promotion_code if a valid promotion is selected
       if (bookingData.promotion_code) {
         const selectedPromotion = promotions.find(
           (promo) => promo.code === bookingData.promotion_code
@@ -932,10 +879,7 @@ export default function HotelBooking() {
         }
       }
 
-      console.log("Dữ liệu gửi đến API /bookings:", apiData);
-
       const bookingRes = await api.post("/bookings", apiData);
-
       const bookingResponseData = bookingRes.data;
       if (
         !bookingResponseData ||
@@ -961,11 +905,9 @@ export default function HotelBooking() {
               const foundRoom = rooms.find(
                 (room) => room.id.toString() === roomId
               );
-              if (foundRoom) {
-                roomNumber = foundRoom.room_number;
-              }
+              if (foundRoom) roomNumber = foundRoom.room_number;
             });
-            errorMsg = `Phòng ${roomNumber} đã được đặt trong thời gian này.`;
+            errorMsg = `Phòng ${roomNumber} đã được đặt trong thời gian này. Vui lòng chọn phòng khác.`;
           }
         } else if (errorMsg.toLowerCase().includes("cccd")) {
           errorMsg = "Số CCCD/CMND đã tồn tại. Vui lòng kiểm tra lại.";
@@ -984,10 +926,7 @@ export default function HotelBooking() {
   };
 
   const toggleDropdown = (key: string) => {
-    setOpenDropdowns((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setOpenDropdowns((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const CustomSelect = ({
@@ -1006,7 +945,6 @@ export default function HotelBooking() {
     id: string;
   }) => {
     const isOpen = openDropdowns[id] || false;
-
     return (
       <div className="custom-select">
         <button
@@ -1549,7 +1487,11 @@ export default function HotelBooking() {
                                 room.type,
                                 room.id
                               )}
-                              placeholder="Chọn số phòng"
+                              placeholder={
+                                roomNumbers[parseInt(room.type)]?.length === 0
+                                  ? "Không có phòng khả dụng"
+                                  : "Chọn số phòng"
+                              }
                               disabled={
                                 !room.type ||
                                 !bookingData.checkInDate ||
