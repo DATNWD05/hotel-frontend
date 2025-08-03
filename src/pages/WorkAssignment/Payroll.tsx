@@ -376,7 +376,7 @@ const PayrollManagement = () => {
               <button
                 onClick={() => exportData("excel")}
                 disabled={exporting === "excel"}
-                className="btn-primary btn-success"
+                className="btn-primari btn-success"
               >
                 {exporting === "excel" && (
                   <Loader2
@@ -390,7 +390,7 @@ const PayrollManagement = () => {
               <button
                 onClick={() => exportData("pdf")}
                 disabled={exporting === "pdf"}
-                className="btn-primary btn-danger"
+                className="btn-primari btn-danger"
               >
                 {exporting === "pdf" && (
                   <Loader2

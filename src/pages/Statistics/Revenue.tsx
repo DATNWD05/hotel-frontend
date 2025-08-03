@@ -61,10 +61,10 @@ export default function Revenue() {
       if (toDate) params.to_date = toDate.format("YYYY-MM-DD");
 
       const res = await api.get(`/statistics/revenue-table`, { params });
-      setData(res.data.data);
-      setFiltered(res.data.data);
-      setTotalPage(res.data.pagination.last_page);
-      setSummary(res.data.summary);
+      setData(res.data.data || []);
+      setFiltered(res.data.data || []);
+      setTotalPage(res.data.pagination?.last_page || 1);
+      setSummary(res.data.summary || { total_amount: 0, deposit_amount: 0, remaining_amount: 0 });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const msg = error.response?.data?.message || "Lỗi khi tải dữ liệu doanh thu";
@@ -88,7 +88,9 @@ export default function Revenue() {
           (d) =>
             d.booking_code.toString().includes(lower) ||
             d.customer_name.toLowerCase().includes(lower) ||
-            d.room_number.toLowerCase().includes(lower)
+            d.room_number.toLowerCase().includes(lower) ||
+            d.room_type.toLowerCase().includes(lower) ||
+            d.status.toLowerCase().includes(lower)
         )
       );
     }
@@ -158,7 +160,7 @@ export default function Revenue() {
           </LocalizationProvider>
 
           <TextField
-            placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng)"
+            placeholder="Tìm kiếm (mã đặt phòng, khách hàng, số phòng, loại phòng, trạng thái)"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             size="small"
@@ -204,9 +206,13 @@ export default function Revenue() {
           >
             <CircularProgress />
           </Box>
+        ) : filtered.length === 0 ? (
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <Typography color="text.secondary">Không tìm thấy dữ liệu</Typography>
+          </Box>
         ) : (
           <>
-            <TableContainer>
+            <TableContainer sx={{ maxHeight: 400, overflowX: "auto" }}>
               <Table size="small" sx={{ minWidth: 1100 }}>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: "#f9f9f9" }}>
@@ -235,16 +241,20 @@ export default function Revenue() {
                       <TableCell>{row.customer_name}</TableCell>
                       <TableCell>{row.room_type}</TableCell>
                       <TableCell>{row.room_number}</TableCell>
-                      <TableCell>{row.check_in_date}</TableCell>
-                      <TableCell>{row.check_out_date}</TableCell>
-                      <TableCell align="right">
-                        {row.total_amount.toLocaleString()} ₫
+                      <TableCell>
+                        {new Date(row.check_in_date).toLocaleDateString("vi-VN")}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(row.check_out_date).toLocaleDateString("vi-VN")}
                       </TableCell>
                       <TableCell align="right">
-                        {row.deposit_amount.toLocaleString()} ₫
+                        {Number(row.total_amount).toLocaleString()} ₫
                       </TableCell>
                       <TableCell align="right">
-                        {row.remaining_amount.toLocaleString()} ₫
+                        {Number(row.deposit_amount).toLocaleString()} ₫
+                      </TableCell>
+                      <TableCell align="right">
+                        {Number(row.remaining_amount).toLocaleString()} ₫
                       </TableCell>
                       <TableCell>{row.status}</TableCell>
                     </TableRow>

@@ -23,64 +23,35 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { Dayjs } from "dayjs";
 
 interface BookingService {
-  booking_code: string;
   service_name: string;
   category_name: string;
-  price: number;
-  quantity: number;
+  total_quantity: number;
   total: number;
-  employee_name: string;
-  created_at: string;
-  room_number: string;
-  room_type: string;
 }
 
 export default function BookingService() {
   const [data, setData] = useState<BookingService[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filtered, setFiltered] = useState<BookingService[]>([]);
   const [page, setPage] = useState(1);
   const [totalPage, setTotalPage] = useState(1);
   const [fromDate, setFromDate] = useState<Dayjs | null>(null);
   const [toDate, setToDate] = useState<Dayjs | null>(null);
-  const [summary, setSummary] = useState<{ total: number } | null>(null);
-  const [serviceTotal, setServiceTotal] = useState<number>(0);
-
-  const fetchServiceTotal = async () => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const params: any = {};
-      if (fromDate) params.from_date = fromDate.format("YYYY-MM-DD");
-      if (toDate) params.to_date = toDate.format("YYYY-MM-DD");
-
-      const res = await api.get(`/statistics/total-service-revenue`, {
-        params,
-      });
-      console.log("Tổng doanh thu:", res.data);
-      setServiceTotal(res.data.total_service_revenue ?? 0);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
-      const msg = err.response?.data?.message || "Lỗi khi lấy tổng tiền dịch vụ";
-      toast.error(msg);
-    }
-  };
+  const [summary, setSummary] = useState<{ total_amount: number } | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const params: any = { page };
+      const params: any = { page, per_page: 10 };
       if (fromDate) params.from_date = fromDate.format("YYYY-MM-DD");
       if (toDate) params.to_date = toDate.format("YYYY-MM-DD");
+      if (search) params.search = search;
 
-      const res = await api.get(`/statistics/booking-service-table`, {
-        params,
-      });
-      setData(res.data.data);
-      setFiltered(res.data.data);
-      setTotalPage(res.data.pagination.last_page);
-      setSummary(res.data.summary);
+      const res = await api.get(`/statistics/booking-service-table`, { params });
+      setData(res.data.data || []);
+      setTotalPage(res.data.pagination?.last_page || 1);
+      setSummary(res.data.summary || { total_amount: 0 });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const msg = error.response?.data?.message || "Lỗi khi tải dữ liệu dịch vụ";
@@ -92,24 +63,7 @@ export default function BookingService() {
 
   useEffect(() => {
     fetchData();
-    fetchServiceTotal();
-  }, [page, fromDate, toDate]);
-
-  useEffect(() => {
-    if (!search) {
-      setFiltered(data);
-    } else {
-      const lower = search.toLowerCase();
-      setFiltered(
-        data.filter(
-          (d) =>
-            d.booking_code?.toString().toLowerCase().includes(lower) ||
-            d.service_name?.toLowerCase().includes(lower) ||
-            d.employee_name?.toLowerCase().includes(lower)
-        )
-      );
-    }
-  }, [search, data]);
+  }, [page, fromDate, toDate, search]);
 
   return (
     <Box sx={{ p: 4 }}>
@@ -175,9 +129,12 @@ export default function BookingService() {
           </LocalizationProvider>
 
           <TextField
-            placeholder="Tìm kiếm (Tên hoặc mã đặt phòng)"
+            placeholder="Tìm kiếm (Tên dịch vụ hoặc nhóm)"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             size="small"
             sx={{
               width: 350,
@@ -221,70 +178,40 @@ export default function BookingService() {
           >
             <CircularProgress />
           </Box>
+        ) : data.length === 0 ? (
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <Typography color="text.secondary">Không tìm thấy dữ liệu</Typography>
+          </Box>
         ) : (
           <>
-            <TableContainer>
-              <Table size="small" sx={{ minWidth: 1100 }}>
+            <TableContainer sx={{ maxHeight: 400, overflowX: "auto" }}>
+              <Table size="small">
                 <TableHead>
                   <TableRow sx={{ backgroundColor: "#f9f9f9" }}>
-                    <TableCell sx={{ fontWeight: 600 }}>Mã đặt phòng</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Tên dịch vụ</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Nhóm</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="right">
-                      Đơn giá
-                    </TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Nhóm dịch vụ</TableCell>
                     <TableCell sx={{ fontWeight: 600 }} align="center">
-                      SL
+                      Tổng số lượng
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600 }} align="right">
-                      Tổng cộng
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Nhân viên</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="center">
-                      Thời gian tạo
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="center">
-                      Nhận phòng
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }} align="center">
-                      Loại phòng
+                      Tổng tiền
                     </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filtered.map((row, idx) => (
+                  {data.map((row, idx) => (
                     <TableRow
                       key={idx}
                       hover
                       sx={{ "&:last-child td": { borderBottom: "none" } }}
                     >
-                      <TableCell>{row.booking_code}</TableCell>
                       <TableCell>{row.service_name}</TableCell>
                       <TableCell>{row.category_name}</TableCell>
+                      <TableCell align="center">{row.total_quantity}</TableCell>
                       <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(
-                          Math.round(row.price)
-                        )}{" "}
+                        {Intl.NumberFormat("vi-VN").format(Math.round(row.total))}{" "}
                         ₫
                       </TableCell>
-                      <TableCell align="center">{row.quantity}</TableCell>
-                      <TableCell align="right">
-                        {Intl.NumberFormat("vi-VN").format(
-                          Math.round(row.total)
-                        )}{" "}
-                        ₫
-                      </TableCell>
-                      <TableCell>{row.employee_name}</TableCell>
-                      <TableCell align="center">
-                        <Typography fontSize={13}>
-                          {new Date(row.created_at).toLocaleTimeString("vi-VN")}
-                        </Typography>
-                        <Typography fontSize={13} color="text.secondary">
-                          {new Date(row.created_at).toLocaleDateString("vi-VN")}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">{row.room_number}</TableCell>
-                      <TableCell align="center">{row.room_type}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -292,19 +219,8 @@ export default function BookingService() {
             </TableContainer>
 
             {summary && (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-start",
-                  mt: 3,
-                }}
-              >
-                <Box
-                  sx={{
-                    minWidth: 260,
-                    textAlign: "left",
-                  }}
-                >
+              <Box sx={{ display: "flex", justifyContent: "flex-start", mt: 3 }}>
+                <Box sx={{ minWidth: 260, textAlign: "left" }}>
                   <Typography
                     variant="subtitle2"
                     color="text.secondary"
@@ -317,7 +233,7 @@ export default function BookingService() {
                     fontWeight="bold"
                     sx={{ color: "#3f51b5" }}
                   >
- incroy                    {Number(serviceTotal).toLocaleString("vi-VN", {
+                    {Number(summary.total_amount).toLocaleString("vi-VN", {
                       minimumFractionDigits: 2,
                     })}{" "}
                     ₫

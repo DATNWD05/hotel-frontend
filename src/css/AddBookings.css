@@ -361,6 +361,9 @@
 }
 
 .btn-primary {
+  width: 269px !important;
+  height: 35px !important;
+  margin-bottom: 5px !important;
   background-color: #2563eb;
   color: white;
 }
