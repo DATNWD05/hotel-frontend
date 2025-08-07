@@ -44,7 +44,6 @@ interface Employee {
   };
 }
 
-
 interface ShiftOption {
   label: string;
   value: number | null;
@@ -83,7 +82,7 @@ const RosterTable: React.FC = () => {
     dayjs().startOf("week").add(1, "day")
   );
   const [searchTerm, setSearchTerm] = useState("");
-
+  const thisWeekStart = dayjs().startOf("week").add(1, "day");
   const today = dayjs().startOf("day");
   const dates = Array.from({ length: 7 }, (_, i) =>
     currentWeekStart.add(i, "day").format("YYYY-MM-DD")
@@ -91,45 +90,86 @@ const RosterTable: React.FC = () => {
 
   useEffect(() => {
     // Fetch employees
-    api.get("/employees").then((res) => {
-      const active = res.data.data.filter(
-        (emp: Employee) => emp.status !== "not_active"
-      );
-      setEmployees(active);
-    });
+    api
+      .get("/employees")
+      .then((res) => {
+        const active = res.data.data.filter(
+          (emp: Employee) => emp.status !== "not_active"
+        );
+        setEmployees(active);
+      })
+      .catch((err) => {
+        console.error("Lỗi lấy danh sách nhân viên:", err);
+        toast.error("Không thể tải danh sách nhân viên!");
+      });
+
     // Fetch shifts
-     api.get("/shifts")
-    .then((res) => {
-      const options = res.data.map((shift: any) => ({
-        label: shift.name,
-        value: shift.id,
-      }));
-      setShiftOptions([{ label: "Trống", value: null }, ...options]);
-    })
-    .catch((err) => console.error("Lỗi lấy danh sách ca làm:", err));
-}, []);
+    api
+      .get("/shifts")
+      .then((res) => {
+        const options = res.data.map((shift: any) => ({
+          label: shift.name,
+          value: shift.id,
+        }));
+        setShiftOptions([{ label: "Trống", value: null }, ...options]);
+      })
+      .catch((err) => console.error("Lỗi lấy danh sách ca làm:", err));
+  }, []);
 
   useEffect(() => {
-    const from = currentWeekStart.format("YYYY-MM-DD");
-    const to = currentWeekStart.add(6, "day").format("YYYY-MM-DD");
+    const fromDate = currentWeekStart.format("YYYY-MM-DD");
+    const toDate = currentWeekStart.add(6, "day").format("YYYY-MM-DD");
 
     api
+
       .get("/work-assignments", {
-        params: { from_date: from, to_date: to, per_page: 1000 },
+        params: {
+          from_date: fromDate,
+
+          to_date: toDate,
+
+          per_page: 1000,
+        },
       })
+
       .then((res) => {
-        const data = res.data.data || res.data || [];
-        setAssignments(
-          data.map((a: any) => ({
-            employeeId: a.employee_id,
-            date: a.work_date,
-            shiftIds: sortShifts(a.shift_ids || []),
-          }))
+        const data = res.data.data?.data || res.data.data || [];
+
+        const mapped = data.reduce((acc: AssignmentCell[], a: any) => {
+          const existing = acc.find(
+            (item) =>
+              item.employeeId === a.employee_id && item.date === a.work_date
+          );
+
+          if (existing) {
+            existing.shiftIds.push(a.shift_id);
+          } else {
+            acc.push({
+              employeeId: a.employee_id,
+
+              date: a.work_date,
+
+              shiftIds: a.shift_id ? [a.shift_id] : [],
+            });
+          }
+
+          return acc;
+        }, []);
+
+        // Sắp xếp lại sau khi tải dữ liệu
+
+        const sortedAssignments = mapped.map(
+          (assignment: { shiftIds: (number | null)[] }) => ({
+            ...assignment,
+
+            shiftIds: sortShifts(assignment.shiftIds),
+          })
         );
+
+        setAssignments(sortedAssignments);
       })
-      .catch(() => {
-        toast.error("Lỗi khi tải phân công!");
-      });
+
+      .catch((err) => console.error("Lỗi lấy danh sách phân công:", err));
   }, [currentWeekStart]);
 
   const handleFileChange = async (
@@ -158,7 +198,7 @@ const RosterTable: React.FC = () => {
         .then((res) => {
           const data = res.data.data || [];
           setAssignments(
-             data.map((a: any) => ({
+            data.map((a: any) => ({
               employeeId: a.employee_id,
               date: a.work_date,
               shiftIds: sortShifts(a.shift_ids || []),
@@ -170,24 +210,33 @@ const RosterTable: React.FC = () => {
     }
   };
 
-const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
-  if (shiftIds.length <= 1 || shiftIds.some(id => id === null)) return shiftIds;
+  const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
+    const shiftOrder: Record<string, number> = {
+      "Ca Sáng": 1,
+      "Ca Chiều": 2,
+      "Ca Tối": 3,
+    };
 
-  const labels = shiftIds.map(id => shiftOptions.find(opt => opt.value === id)?.label || "");
-  const sangIndex = labels.indexOf("Ca Sáng");
-  const chieuIndex = labels.indexOf("Ca Chiều");
-  const toiIndex = labels.indexOf("Ca Tối");
+    // Tìm thông tin chi tiết ca làm
+    const validShifts = shiftIds
+      .filter((id): id is number => id !== null)
+      .map((id) => {
+        const label = shiftOptions.find((opt) => opt.value === id)?.label || "";
+        return { id, order: shiftOrder[label] ?? 99 };
+      });
 
-  const sortedIds = [...shiftIds];
+    // Sắp xếp theo thứ tự ưu tiên
+    const sorted = validShifts
+      .sort((a, b) => a.order - b.order)
+      .map((s) => s.id as number | null);
 
-  if (sangIndex !== -1 && chieuIndex !== -1 && toiIndex !== -1) {
-    const order = [sangIndex, chieuIndex, toiIndex].sort((a, b) => a - b);
-    sortedIds[0] = shiftIds[order[0]];
-    sortedIds[1] = shiftIds[order[1]];
-  }
-  return sortedIds.slice(0, 2);
-};
+    // Đảm bảo mảng có đúng 2 phần tử (bù null nếu thiếu)
+    while (sorted.length < 2) {
+      sorted.push(null);
+    }
 
+    return sorted;
+  };
 
   const handleSelectChange = async (
     employeeId: number,
@@ -201,16 +250,17 @@ const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
       return;
     }
 
-    // Update local state
+    // Cập nhật state trước
     setAssignments((prev) => {
       const found = prev.find(
         (a) => a.employeeId === employeeId && a.date === date
       );
-      let newShiftIds = found ? [...found.shiftIds] : [];
+      let newShiftIds = found ? [...found.shiftIds] : [null, null];
 
       if (index === 0) {
         newShiftIds[0] = value;
-        if (value === null && newShiftIds[1]) newShiftIds[1] = null;
+        // Nếu chọn "Trống" ca 1 -> reset luôn ca 2
+        if (value === null) newShiftIds[1] = null;
       } else {
         newShiftIds[1] = value;
       }
@@ -220,18 +270,18 @@ const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
       const updated = prev.filter(
         (a) => !(a.employeeId === employeeId && a.date === date)
       );
-      if (newShiftIds.length > 0 || newShiftIds[0] !== null) {
+      if (newShiftIds.some((id) => id !== null)) {
         updated.push({ employeeId, date, shiftIds: newShiftIds });
       }
 
-      // Send update to backend
+      // Gửi API cập nhật hoặc xóa
       api
         .post("/work-assignments", {
           assignments: [
             {
               employee_id: employeeId,
               work_date: date,
-              shift_ids: newShiftIds,
+              shift_ids: newShiftIds.filter((id) => id !== null), // chỉ gửi ca hợp lệ
             },
           ],
         })
@@ -243,14 +293,19 @@ const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
               toast.warn(`Bỏ qua: ${skip.reason}`);
             });
           } else {
-            toast.success(
-              `Cập nhật thành công: ${created_count} ca thêm, ${deleted_count} ca xóa`
-            );
+            if (newShiftIds.every((id) => id === null)) {
+              toast.success(
+                `Đã xoá toàn bộ phân công ngày ${dayjs(date).format("DD/MM")}`
+              );
+            } else {
+              toast.success(
+                `Cập nhật thành công: ${created_count} ca thêm, ${deleted_count} ca xóa`
+              );
+            }
           }
         })
         .catch(() => {
           toast.error("Lỗi khi cập nhật phân công!");
-          // Revert local state on error
           return prev;
         });
 
@@ -400,8 +455,8 @@ const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
               Tuần hiện tại
             </Typography>
             <Typography variant="h6" fontWeight="bold">
-              {currentWeekStart.format("DD/MM/YYYY")} -{" "}
-              {currentWeekStart.add(6, "day").format("DD/MM/YYYY")}
+              {thisWeekStart.format("DD/MM/YYYY")} -{" "}
+              {thisWeekStart.add(6, "day").format("DD/MM/YYYY")}
             </Typography>
           </Box>
         </Box>
