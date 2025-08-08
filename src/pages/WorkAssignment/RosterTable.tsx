@@ -1,7 +1,37 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
-import "../../css/RosterTable.css";
 import dayjs from "dayjs";
+import { toast } from "react-toastify";
+import GroupIcon from "@mui/icons-material/Group";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  Grid,
+  MenuItem,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  styled,
+} from "@mui/material";
+import { ChevronLeft, ChevronRight } from "@mui/icons-material";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import "../../css/RosterTable.css";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 interface Employee {
   id: number;
@@ -9,6 +39,8 @@ interface Employee {
   position: string;
   status: string;
   user?: {
+    status?: string;
+    role_id?: number;
     role?: {
       name: string;
     };
@@ -26,6 +58,25 @@ interface AssignmentCell {
   shiftIds: (number | null)[];
 }
 
+const SoftSelect = styled(Select)(({ theme }) => ({
+  backgroundColor: "#f1f5f9",
+  borderRadius: "9999px",
+  fontSize: "13px",
+  fontWeight: 500,
+  minWidth: 90,
+  paddingLeft: 12,
+  paddingRight: 12,
+  height: 32,
+  border: "none",
+  "& .MuiSelect-select": {
+    paddingTop: 4,
+    paddingBottom: 4,
+  },
+  "& fieldset": {
+    border: "none",
+  },
+}));
+
 const RosterTable: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [shiftOptions, setShiftOptions] = useState<ShiftOption[]>([]);
@@ -33,23 +84,26 @@ const RosterTable: React.FC = () => {
   const [currentWeekStart, setCurrentWeekStart] = useState(
     dayjs().startOf("week").add(1, "day")
   );
-
+  const [searchTerm, setSearchTerm] = useState("");
+  const thisWeekStart = dayjs().startOf("week").add(1, "day");
   const today = dayjs().startOf("day");
   const dates = Array.from({ length: 7 }, (_, i) =>
     currentWeekStart.add(i, "day").format("YYYY-MM-DD")
   );
 
   useEffect(() => {
+    // Fetch employees
     api
       .get("/employees")
       .then((res) => {
-        const active = res.data.data.filter(
-          (emp: Employee) => emp.status !== "not_active"
-        );
-        setEmployees(active);
+        setEmployees(res.data.data); // 👈 giữ nguyên tất cả
       })
-      .catch((err) => console.error("Lỗi lấy danh sách nhân viên:", err));
+      .catch((err) => {
+        console.error("Lỗi lấy danh sách nhân viên:", err);
+        toast.error("Không thể tải danh sách nhân viên!");
+      });
 
+    // Fetch shifts
     api
       .get("/shifts")
       .then((res) => {
@@ -67,250 +121,563 @@ const RosterTable: React.FC = () => {
     const toDate = currentWeekStart.add(6, "day").format("YYYY-MM-DD");
 
     api
+
       .get("/work-assignments", {
         params: {
           from_date: fromDate,
+
           to_date: toDate,
+
           per_page: 1000,
         },
       })
+
       .then((res) => {
         const data = res.data.data?.data || res.data.data || [];
+
         const mapped = data.reduce((acc: AssignmentCell[], a: any) => {
           const existing = acc.find(
-            (item) => item.employeeId === a.employee_id && item.date === a.work_date
+            (item) =>
+              item.employeeId === a.employee_id && item.date === a.work_date
           );
+
           if (existing) {
             existing.shiftIds.push(a.shift_id);
           } else {
             acc.push({
               employeeId: a.employee_id,
+
               date: a.work_date,
+
               shiftIds: a.shift_id ? [a.shift_id] : [],
             });
           }
+
           return acc;
         }, []);
+
         // Sắp xếp lại sau khi tải dữ liệu
-        const sortedAssignments = mapped.map(assignment => ({
-          ...assignment,
-          shiftIds: sortShifts(assignment.shiftIds)
-        }));
+
+        const sortedAssignments = mapped.map(
+          (assignment: { shiftIds: (number | null)[] }) => ({
+            ...assignment,
+
+            shiftIds: sortShifts(assignment.shiftIds),
+          })
+        );
+
         setAssignments(sortedAssignments);
       })
+
       .catch((err) => console.error("Lỗi lấy danh sách phân công:", err));
   }, [currentWeekStart]);
 
-  const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
-    if (shiftIds.length <= 1 || shiftIds.some(id => id === null)) return shiftIds;
-    const labels = shiftIds.map(id => shiftOptions.find(opt => opt.value === id)?.label || "");
-    const sangIndex = labels.indexOf("Ca Sáng");
-    const chieuIndex = labels.indexOf("Ca Chiều");
-    const toiIndex = labels.indexOf("Ca Tối");
-    const sortedIds = [...shiftIds];
-    if (sangIndex !== -1 && chieuIndex !== -1 && toiIndex !== -1) {
-      const order = [sangIndex, chieuIndex, toiIndex].sort((a, b) => a - b);
-      sortedIds[0] = shiftIds[order[0]];
-      sortedIds[1] = shiftIds[order[1]];
-    } else if (sangIndex !== -1 && chieuIndex !== -1) {
-      sortedIds[0] = shiftIds[sangIndex < chieuIndex ? sangIndex : chieuIndex];
-      sortedIds[1] = shiftIds[sangIndex < chieuIndex ? chieuIndex : sangIndex];
-    } else if (chieuIndex !== -1 && toiIndex !== -1) {
-      sortedIds[0] = shiftIds[chieuIndex < toiIndex ? chieuIndex : toiIndex];
-      sortedIds[1] = shiftIds[chieuIndex < toiIndex ? toiIndex : chieuIndex];
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      await api.post("/api/import-roster", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      toast.success("Import thành công!");
+      // Refresh assignments after import
+      const from = currentWeekStart.format("YYYY-MM-DD");
+      const to = currentWeekStart.add(6, "day").format("YYYY-MM-DD");
+      api
+        .get("/work-assignments", {
+          params: { from_date: from, to_date: to, per_page: 1000 },
+        })
+        .then((res) => {
+          const data = res.data.data || [];
+          setAssignments(
+            data.map((a: any) => ({
+              employeeId: a.employee_id,
+              date: a.work_date,
+              shiftIds: sortShifts(a.shift_ids || []),
+            }))
+          );
+        });
+    } catch (error) {
+      toast.error("Import thất bại!");
     }
-    return sortedIds.slice(0, 2);
   };
 
-  const handleSelectChange = (
+  const sortShifts = (shiftIds: (number | null)[]): (number | null)[] => {
+    const shiftOrder: Record<string, number> = {
+      "Ca Sáng": 1,
+      "Ca Chiều": 2,
+      "Ca Tối": 3,
+    };
+
+    // Tìm thông tin chi tiết ca làm
+    const validShifts = shiftIds
+      .filter((id): id is number => id !== null)
+      .map((id) => {
+        const label = shiftOptions.find((opt) => opt.value === id)?.label || "";
+        return { id, order: shiftOrder[label] ?? 99 };
+      });
+
+    // Sắp xếp theo thứ tự ưu tiên
+    const sorted = validShifts
+      .sort((a, b) => a.order - b.order)
+      .map((s) => s.id as number | null);
+
+    // Đảm bảo mảng có đúng 2 phần tử (bù null nếu thiếu)
+    while (sorted.length < 2) {
+      sorted.push(null);
+    }
+
+    return sorted;
+  };
+
+  const handleSelectChange = async (
     employeeId: number,
     date: string,
     index: number,
     value: number | null
   ) => {
     const isPast = dayjs(date).isBefore(today, "day");
-    if (isPast) return;
+    if (isPast) {
+      toast.warn("Không thể chỉnh sửa ca cho ngày đã qua!");
+      return;
+    }
 
+    // Cập nhật state trước
     setAssignments((prev) => {
-      const existing = prev.find(
-        (item) => item.employeeId === employeeId && item.date === date
+      const found = prev.find(
+        (a) => a.employeeId === employeeId && a.date === date
       );
-      let newShiftIds = existing ? [...existing.shiftIds] : [];
+      let newShiftIds = found ? [...found.shiftIds] : [null, null];
 
       if (index === 0) {
         newShiftIds[0] = value;
-        if (value === null && newShiftIds[1]) newShiftIds[1] = null; // Nếu ca 1 là "Trống", xóa ca 2
-      } else if (index === 1) {
+        // Nếu chọn "Trống" ca 1 -> reset luôn ca 2
+        if (value === null) newShiftIds[1] = null;
+      } else {
         newShiftIds[1] = value;
       }
 
-      // Sắp xếp lại để "Ca Sáng" > "Ca Chiều" > "Ca Tối"
       newShiftIds = sortShifts(newShiftIds);
 
       const updated = prev.filter(
-        (item) => !(item.employeeId === employeeId && item.date === date)
+        (a) => !(a.employeeId === employeeId && a.date === date)
       );
-      if (newShiftIds.length > 0 || newShiftIds[0] !== null) {
+      if (newShiftIds.some((id) => id !== null)) {
         updated.push({ employeeId, date, shiftIds: newShiftIds });
       }
+
+      // Gửi API cập nhật hoặc xóa
+      api
+        .post("/work-assignments", {
+          assignments: [
+            {
+              employee_id: employeeId,
+              work_date: date,
+              shift_ids: newShiftIds.filter((id) => id !== null), // chỉ gửi ca hợp lệ
+            },
+          ],
+        })
+        .then((res) => {
+          const { created_count, deleted_count, skipped_count, data } =
+            res.data;
+          if (skipped_count > 0) {
+            data.skipped.forEach((skip: any) => {
+              toast.warn(`Bỏ qua: ${skip.reason}`);
+            });
+          } else {
+            if (newShiftIds.every((id) => id === null)) {
+              toast.success(
+                `Đã xoá toàn bộ phân công ngày ${dayjs(date).format("DD/MM")}`
+              );
+            } else {
+              toast.success(
+                `Cập nhật thành công: ${created_count} ca thêm, ${deleted_count} ca xóa`
+              );
+            }
+          }
+        })
+        .catch(() => {
+          toast.error("Lỗi khi cập nhật phân công!");
+          return prev;
+        });
+
       return updated;
     });
   };
 
-  const handleSubmit = async () => {
-    const today = dayjs().startOf("day");
-
-    const payloads = assignments
-      .filter((a) => !dayjs(a.date).isBefore(today, "day"))
-      .map((assignment) => ({
-        employee_id: assignment.employeeId,
-        work_date: assignment.date,
-        shift_ids: sortShifts(assignment.shiftIds).filter((id) => id !== null), // Sắp xếp trước khi gửi
-      }))
-      .filter((payload) => payload.shift_ids.length > 0); // Chỉ gửi nếu có ca
-
-    if (payloads.length === 0) {
-      alert("Không có dữ liệu mới để phân công.");
-      return;
-    }
-
-    try {
-      const response = await api.post("/work-assignments", { assignments: payloads }, { timeout: 30000 });
-      alert(`Phân công thành công! Đã tạo: ${response.data.created_count}, Xóa: ${response.data.deleted_count}, Bỏ qua: ${response.data.skipped_count}`);
-      // Tải lại dữ liệu sau khi lưu
-      const fromDate = currentWeekStart.format("YYYY-MM-DD");
-      const toDate = currentWeekStart.add(6, "day").format("YYYY-MM-DD");
-      const refreshResponse = await api.get("/work-assignments", {
-        params: { from_date: fromDate, to_date: toDate, per_page: 1000 },
-      });
-      const data = refreshResponse.data.data?.data || refreshResponse.data.data || [];
-      const mapped = data.reduce((acc: AssignmentCell[], a: any) => {
-        const existing = acc.find(
-          (item) => item.employeeId === a.employee_id && item.date === a.work_date
-        );
-        if (existing) {
-          existing.shiftIds.push(a.shift_id);
-        } else {
-          acc.push({
-            employeeId: a.employee_id,
-            date: a.work_date,
-            shiftIds: a.shift_id ? [a.shift_id] : [],
-          });
-        }
-        return acc;
-      }, []);
-      // Sắp xếp lại sau khi tải dữ liệu
-      const sortedAssignments = mapped.map(assignment => ({
-        ...assignment,
-        shiftIds: sortShifts(assignment.shiftIds)
-      }));
-      setAssignments(sortedAssignments);
-    } catch (error: any) {
-      console.error("Lỗi khi gửi phân công:", error);
-      const errorMessage = error.response?.data?.message || "Có lỗi xảy ra khi lưu phân công. Vui lòng thử lại.";
-      alert(errorMessage);
-    }
+  const handleExportExcel = () => {
+    const data = assignments.map((a) => {
+      const emp = employees.find((e) => e.id === a.employeeId);
+      return {
+        Tên: emp?.name || "",
+        Chức_vụ: emp?.position || "",
+        Ngày: a.date,
+        Ca: a.shiftIds
+          .map(
+            (id) =>
+              shiftOptions.find((opt) => opt.value === id)?.label || "Trống"
+          )
+          .join(", "),
+      };
+    });
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Roster");
+    XLSX.writeFile(wb, "roster.xlsx");
   };
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const rows = assignments.map((a) => {
+      const emp = employees.find((e) => e.id === a.employeeId);
+      return [
+        emp?.name || "",
+        emp?.position || "",
+        a.date,
+        a.shiftIds
+          .map(
+            (id) =>
+              shiftOptions.find((opt) => opt.value === id)?.label || "Trống"
+          )
+          .join(", "),
+      ];
+    });
+    (doc as any).autoTable({
+      head: [["Tên", "Chức vụ", "Ngày", "Ca"]],
+      body: rows,
+    });
+    doc.save("roster.pdf");
+  };
+
+  const OWNER_ROLE_ID = 1;
+
+  const filteredEmployees = employees
+  .filter((e) => e.user?.status !== "not_active") // ẩn user not_active
+  .filter((e) => {
+    const name = e.user?.role?.name?.toLowerCase();
+    const id = e.user?.role_id;
+    return !(name === "owner" || id === OWNER_ROLE_ID); // ẩn owner
+  })
+  .filter(
+    (e) =>
+      e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (e.user?.role?.name || e.position).toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // past-day check
+  const isPast = (d: string) => dayjs(d).isBefore(today, "day");
+
+  // unify Select text color (MUI Select renders text in .MuiSelect-select)
+  const selectColorSx = (past: boolean): SxProps<Theme> => ({
+    "& .MuiSelect-select": {
+      color: past ? "#9aa3b2" : "#000", // grey for past, black otherwise
+    },
+    // when disabled, Chrome uses -webkit-text-fill-color and MUI adds opacity
+    "&.Mui-disabled .MuiSelect-select": {
+      WebkitTextFillColor: past ? "#9aa3b2" : "#000",
+      color: past ? "#9aa3b2" : "#000",
+      opacity: 1, // keep it readable
+    },
+  });
+
   return (
-    <div className="roster-wrapper">
-      <h2>ROSTER - PHÂN CA LÀM NHÂN VIÊN</h2>
+    <Box p={3} className="roster-container">
+      <Typography
+        variant="h5"
+        fontWeight="bold"
+        className="roster-title"
+        sx={{ mb: 3, zIndex: 2, position: "relative" }}
+      >
+        Quản lý phân ca
+      </Typography>
 
-      <div className="roster-toolbar">
-        <button
-          onClick={() =>
-            setCurrentWeekStart(currentWeekStart.subtract(1, "week"))
-          }
+      {/* Thống kê */}
+      <Grid
+        container
+        spacing={2}
+        mb={2}
+        ml={0}
+        justifyContent="space-between"
+        className="stats-container"
+      >
+        <Box
+          className="stat-box"
+          sx={{
+            bgcolor: "#ffffff",
+            borderRadius: "16px",
+            width: "31%",
+            height: "120px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+            padding: "20px",
+          }}
         >
-          ⬅ Tuần trước
-        </button>
-        <strong>
-          Tuần: {currentWeekStart.format("DD/MM/YYYY")} –{" "}
-          {currentWeekStart.add(6, "day").format("DD/MM/YYYY")}
-        </strong>
-        <button
-          onClick={() => setCurrentWeekStart(currentWeekStart.add(1, "week"))}
-        >
-          Tuần sau ➡
-        </button>
-      </div>
+          <GroupIcon color="primary" fontSize="large" />
+          <Box>
+            <Typography variant="body2" color="text.secondary">
+              Tổng nhân viên
+            </Typography>
+            <Typography variant="h6" fontWeight="bold">
+              {filteredEmployees.length}
+            </Typography>
+          </Box>
+        </Box>
 
-      <table className="roster-table">
-        <thead>
-          <tr>
-            <th rowSpan={2}>STT</th>
-            <th rowSpan={2}>HỌ TÊN</th>
-            <th rowSpan={2}>Chức vụ</th>
-            {dates.map((date) => (
-              <th key={date}>{dayjs(date).format("DD/MM/YYYY")}</th>
-            ))}
-          </tr>
-          <tr>
-            {dates.map((date) => (
-              <th key={date + "-day"}>{dayjs(date).format("ddd")}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {employees.map((emp, index) => (
-            <tr key={emp.id}>
-              <td>{index + 1}</td>
-              <td>{emp.name}</td>
-              <td>{emp.user?.role?.name || emp.position || "---"}</td>
+        <Box
+          className="stat-box"
+          sx={{
+            bgcolor: "#ffffff",
+            borderRadius: "16px",
+            width: "31%",
+            height: "120px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+            padding: "20px",
+          }}
+        >
+          <AccessTimeIcon color="primary" fontSize="large" />
+          <Box>
+            <Typography variant="body2" color="text.secondary">
+              Tổng ca
+            </Typography>
+            <Typography variant="h6" fontWeight="bold">
+              {assignments.flatMap((a) => a.shiftIds).filter((id) => id).length}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box
+          className="stat-box"
+          sx={{
+            bgcolor: "#ffffff",
+            borderRadius: "16px",
+            width: "31%",
+            height: "120px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+            padding: "20px",
+          }}
+        >
+          <CalendarTodayIcon color="primary" fontSize="large" />
+          <Box>
+            <Typography variant="body2" color="text.secondary">
+              Tuần hiện tại
+            </Typography>
+            <Typography variant="h6" fontWeight="bold">
+              {thisWeekStart.format("DD/MM/YYYY")} -{" "}
+              {thisWeekStart.add(6, "day").format("DD/MM/YYYY")}
+            </Typography>
+          </Box>
+        </Box>
+      </Grid>
+
+      {/* Toolbar */}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
+        flexWrap="wrap"
+        gap={2}
+        className="toolbar-container"
+      >
+        <Box display="flex" gap={1} alignItems="center" className="nav-buttons">
+          <Button
+            variant="outlined"
+            onClick={() =>
+              setCurrentWeekStart(currentWeekStart.subtract(1, "week"))
+            }
+            className="nav-button"
+          >
+            <ChevronLeft /> Tuần trước
+          </Button>
+          <Typography>
+            {currentWeekStart.format("DD/MM/YYYY")} -{" "}
+            {currentWeekStart.add(6, "day").format("DD/MM/YYYY")}
+          </Typography>
+          <Button
+            variant="outlined"
+            onClick={() => setCurrentWeekStart(currentWeekStart.add(1, "week"))}
+            className="nav-button"
+          >
+            Tuần sau <ChevronRight />
+          </Button>
+        </Box>
+        <Box display="flex" gap={1} className="export-buttons">
+          <TextField
+            size="small"
+            placeholder="Tìm kiếm nhân viên..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-field"
+          />
+          <Button
+            variant="contained"
+            color="success"
+            onClick={handleExportExcel}
+            className="export-button"
+          >
+            Excel
+          </Button>
+          <Button
+            variant="contained"
+            component="label"
+            sx={{
+              borderRadius: "999px",
+              padding: "6px 24px",
+              fontWeight: "bold",
+              backgroundColor: "#d32f2f",
+              color: "#fff",
+              "&:hover": { backgroundColor: "#9a0007" },
+            }}
+          >
+            Import
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              hidden
+              onChange={handleFileChange}
+            />
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Bảng */}
+      <TableContainer component={Card} className="table-container">
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>STT</TableCell>
+              <TableCell>HỌ TÊN</TableCell>
+              <TableCell>CHỨC VỤ</TableCell>
               {dates.map((date) => {
-                const isPast = dayjs(date).isBefore(today, "day");
-                const assignment = assignments.find(
-                  (a) => a.employeeId === emp.id && a.date === date
-                );
-                const selectedShiftIds = assignment?.shiftIds || [null, null];
-
+                const past = isPast(date);
                 return (
-                  <td
-                    key={`${emp.id}-${date}`}
-                    className={isPast ? "disabled-cell" : ""}
-                  >
-                    <div className="shift-select-container">
-                      <select
-                        disabled={isPast}
-                        value={selectedShiftIds[0] === null ? "0" : selectedShiftIds[0]?.toString() || "0"}
-                        onChange={(e) =>
-                          handleSelectChange(emp.id, date, 0, e.target.value === "0" ? null : Number(e.target.value))
-                        }
+                  <TableCell key={date}>
+                    <Box textAlign="center">
+                      <Typography
+                        fontWeight="bold"
+                        sx={{ color: past ? "#9aa3b2" : "#000" }}
                       >
-                        {shiftOptions.map((opt) => (
-                          <option key={opt.value ?? "0"} value={opt.value ?? "0"}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                      {selectedShiftIds[0] !== null && (
-                        <select
-                          disabled={isPast}
-                          value={selectedShiftIds[1] === null ? "0" : selectedShiftIds[1]?.toString() || "0"}
-                          onChange={(e) =>
-                            handleSelectChange(emp.id, date, 1, e.target.value === "0" ? null : Number(e.target.value))
-                          }
-                        >
-                          {shiftOptions
-                            .filter((opt) => opt.value !== selectedShiftIds[0])
-                            .map((opt) => (
-                              <option key={opt.value ?? "0"} value={opt.value ?? "0"}>
-                                {opt.label}
-                              </option>
-                            ))}
-                        </select>
-                      )}
-                    </div>
-                  </td>
+                        {dayjs(date).format("DD/MM")}
+                      </Typography>
+                      <Typography
+                        fontSize={12}
+                        sx={{ color: past ? "#9aa3b2" : "#000" }}
+                      >
+                        {dayjs(date).format("ddd")}
+                      </Typography>
+                    </Box>
+                  </TableCell>
                 );
               })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            </TableRow>
+          </TableHead>
 
-      <button onClick={handleSubmit}>Lưu Phân Công</button>
-    </div>
+          <TableBody>
+            {filteredEmployees.map((employee, index) => (
+              <TableRow key={index}>
+                <TableCell>{index + 1}</TableCell>
+                <TableCell>
+                  <Typography fontWeight="bold">{employee.name}</Typography>
+                  <Typography fontSize={12} color="text.secondary">
+                    ID: NV{String(employee.id).padStart(2, "0")}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={employee.user?.role?.name || "—"}
+                    sx={{ backgroundColor: "#e6e9f1" }}
+                  />
+                </TableCell>
+                {dates.map((date) => {
+                  const assignment = assignments.find(
+                    (a) => a.employeeId === employee.id && a.date === date
+                  );
+                  const shiftIds = assignment?.shiftIds || [null, null];
+                  const past = dayjs(date).isBefore(today, "day");
+                  const isEmployeeInactive = employee.status === "not_active"; // từ bảng employees
+                  const lockAssignment = isEmployeeInactive;
+                  return (
+                    <TableCell key={date}>
+                      <Box display="flex" flexDirection="column" gap={1}>
+                        {/* First Shift */}
+                        <SoftSelect
+                          value={shiftIds[0] !== null ? shiftIds[0] : ""}
+                          onChange={(e) =>
+                            handleSelectChange(
+                              employee.id,
+                              date,
+                              0,
+                              e.target.value === ""
+                                ? null
+                                : Number(e.target.value)
+                            )
+                          }
+                          disabled={past || lockAssignment}
+                          sx={selectColorSx(past || lockAssignment)}
+                        >
+                          {shiftOptions.map((option) => (
+                            <MenuItem
+                              key={option.value ?? "empty"}
+                              value={option.value ?? ""}
+                            >
+                              {option.label}
+                            </MenuItem>
+                          ))}
+                        </SoftSelect>
+
+                        {/* Second Shift */}
+                        <SoftSelect
+                          value={shiftIds[1] ?? ""}
+                          onChange={(e) =>
+                            handleSelectChange(
+                              employee.id,
+                              date,
+                              1,
+                              e.target.value === ""
+                                ? null
+                                : Number(e.target.value)
+                            )
+                          }
+                          disabled={past || !shiftIds[0] || lockAssignment}
+                          sx={selectColorSx(past || lockAssignment)}
+                        >
+                          {shiftOptions
+                            .filter((option) => option.value !== shiftIds[0])
+                            .map((option) => (
+                              <MenuItem
+                                key={option.value ?? "empty"}
+                                value={option.value ?? ""}
+                              >
+                                {option.label}
+                              </MenuItem>
+                            ))}
+                        </SoftSelect>
+                      </Box>
+                    </TableCell>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
   );
 };
 

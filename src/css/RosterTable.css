@@ -1,166 +1,96 @@
-/* Wrapper chính */
-.roster-wrapper {
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-  background: #ffffff;
+.roster-container {
+  background: linear-gradient(to bottom, #e6f0fa, #ffffff);
   border-radius: 16px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
-  font-family: 'Segoe UI', sans-serif;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-/* Tiêu đề */
-.roster-wrapper h2 {
-  text-align: center;
-  font-size: 2.2rem;
-  font-weight: 700;
-  color: #1f2937;
-  margin-bottom: 2rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+.roster-title {
+  margin-bottom: 20px;
+  color: #1e3a8a;
+  text-align: left;
 }
 
-/* Thanh chuyển tuần */
-.roster-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding: 0 0.5rem;
-  font-size: 1.05rem;
-  color: #374151;
+.stats-container {
+  margin-bottom: 20px;
 }
 
-.roster-toolbar button {
-  background: linear-gradient(to right, #e2e8f0, #cbd5e1);
-  border: 1px solid #cbd5e1;
-  padding: 0.5rem 1rem;
-  border-radius: 10px;
-  font-weight: 500;
-  color: #1e293b;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+.stat-box {
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.roster-toolbar button:hover {
-  background: linear-gradient(to right, #cfd8e3, #bfcbd9);
-  border-color: #a0aec0;
-  transform: translateY(-1px);
+.stat-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Bảng */
-.roster-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 2rem;
+.toolbar-container {
+  background: #fff;
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.nav-buttons, .export-buttons {
+  transition: all 0.3s ease;
+}
+
+.nav-button, .export-button {
+  border-radius: 20px !important;
+  padding: 6px 16px !important;
+  transition: all 0.3s ease;
+}
+
+.nav-button:hover, .export-button:hover {
+  transform: scale(1.05);
+}
+
+.search-field {
+  border-radius: 20px !important;
+  transition: all 0.3s ease;
+}
+
+.search-field:hover {
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.table-container {
   border-radius: 12px;
   overflow: hidden;
-  table-layout: fixed;
-}
-
-/* Cố định độ rộng cột */
-.roster-table th:nth-child(1),
-.roster-table td:nth-child(1) {
-  width: 50px;
-}
-.roster-table th:nth-child(2),
-.roster-table td:nth-child(2) {
-  width: 180px;
-}
-.roster-table th:nth-child(3),
-.roster-table td:nth-child(3) {
-  width: 140px;
-}
-.roster-table th:not(:nth-child(-n+3)),
-.roster-table td:not(:nth-child(-n+3)) {
-  min-width: 110px;
-  max-width: 120px;
-}
-
-/* Nội dung bảng */
-.roster-table th,
-.roster-table td {
-  padding: 0.75rem 1rem;
-  border: 1px solid #e2e8f0;
-  text-align: center;
-  font-size: 0.95rem;
-}
-
-.roster-table th {
-  background-color: #f1f5f9;
-  color: #1e293b;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.roster-table td {
-  color: #4b5563;
-  background-color: #ffffff;
-}
-
-/* Highlight hôm nay */
-.roster-table td.today-cell {
-  background-color: #eef2ff;
-  font-weight: bold;
-  color: #4338ca;
-}
-
-/* Select box */
-.roster-table select {
-  width: 100%;
-  padding: 0.4rem 0.5rem;
-  font-size: 0.9rem;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  background-color: #ffffff;
-  color: #1e293b;
-  outline: none;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
-}
-
-.roster-table select:focus {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
-}
-
-/* Select ô bị disable */
-.disabled-cell select {
-  background-color: #f3f4f6;
-  color: #9ca3af;
-  border-color: #d1d5db;
-}
-
-/* Nút lưu phân công */
-.roster-wrapper > button {
-  display: block;
-  margin: 0 auto;
-  background: linear-gradient(to right, #4f46e5, #6366f1);
-  color: white;
-  font-weight: 600;
-  border: none;
-  padding: 0.75rem 2.2rem;
-  border-radius: 12px;
-  cursor: pointer;
-  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
 }
 
-.roster-wrapper > button:hover {
-  background: linear-gradient(to right, #4338ca, #4f46e5);
-  transform: translateY(-1px);
+.table-row {
+  transition: all 0.3s ease;
 }
 
-/* Ô bị vô hiệu hóa */
-.disabled-cell {
-  pointer-events: none;
+.table-row:hover {
+  background-color: #f1f5f9;
+  transform: scale(1.01);
 }
 
-/* Select bị vô hiệu hóa sẽ có màu nền xám */
-.disabled-cell select {
-  background-color: #f3f4f6 !important;
-  color: #9ca3af;
-  border-color: #d1d5db;
+.date-cell, .shift-cell {
+  padding: 8px !important;
+  transition: all 0.3s ease;
 }
 
+.shift-select {
+  border-radius: 20px !important;
+  transition: all 0.3s ease;
+}
+
+.shift-select:hover {
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}
+.nav-button {
+  border-radius: 10px !important;
+  padding: 6px 16px !important;
+  transition: all 0.3s ease;
+  color: #0b090e !important;      /* <-- chỉnh màu chữ */
+  border-color: #c4b5fd !important;  /* chỉnh màu viền nếu muốn */
+  font-weight: 600;
+}
