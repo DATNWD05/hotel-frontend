@@ -31,6 +31,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import "../../css/RosterTable.css";
+import type { SxProps, Theme } from "@mui/material/styles";
 
 interface Employee {
   id: number;
@@ -38,6 +39,8 @@ interface Employee {
   position: string;
   status: string;
   user?: {
+    status?: string;
+    role_id?: number;
     role?: {
       name: string;
     };
@@ -93,10 +96,7 @@ const RosterTable: React.FC = () => {
     api
       .get("/employees")
       .then((res) => {
-        const active = res.data.data.filter(
-          (emp: Employee) => emp.status !== "not_active"
-        );
-        setEmployees(active);
+        setEmployees(res.data.data); // 👈 giữ nguyên tất cả
       })
       .catch((err) => {
         console.error("Lỗi lấy danh sách nhân viên:", err);
@@ -357,13 +357,36 @@ const RosterTable: React.FC = () => {
     doc.save("roster.pdf");
   };
 
-  const filteredEmployees = employees.filter(
+  const OWNER_ROLE_ID = 1;
+
+  const filteredEmployees = employees
+  .filter((e) => e.user?.status !== "not_active") // ẩn user not_active
+  .filter((e) => {
+    const name = e.user?.role?.name?.toLowerCase();
+    const id = e.user?.role_id;
+    return !(name === "owner" || id === OWNER_ROLE_ID); // ẩn owner
+  })
+  .filter(
     (e) =>
       e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (e.user?.role?.name || e.position)
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
+      (e.user?.role?.name || e.position).toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // past-day check
+  const isPast = (d: string) => dayjs(d).isBefore(today, "day");
+
+  // unify Select text color (MUI Select renders text in .MuiSelect-select)
+  const selectColorSx = (past: boolean): SxProps<Theme> => ({
+    "& .MuiSelect-select": {
+      color: past ? "#9aa3b2" : "#000", // grey for past, black otherwise
+    },
+    // when disabled, Chrome uses -webkit-text-fill-color and MUI adds opacity
+    "&.Mui-disabled .MuiSelect-select": {
+      WebkitTextFillColor: past ? "#9aa3b2" : "#000",
+      color: past ? "#9aa3b2" : "#000",
+      opacity: 1, // keep it readable
+    },
+  });
 
   return (
     <Box p={3} className="roster-container">
@@ -405,7 +428,7 @@ const RosterTable: React.FC = () => {
               Tổng nhân viên
             </Typography>
             <Typography variant="h6" fontWeight="bold">
-              {employees.length}
+              {filteredEmployees.length}
             </Typography>
           </Box>
         </Box>
@@ -541,18 +564,27 @@ const RosterTable: React.FC = () => {
               <TableCell>STT</TableCell>
               <TableCell>HỌ TÊN</TableCell>
               <TableCell>CHỨC VỤ</TableCell>
-              {dates.map((date) => (
-                <TableCell key={date}>
-                  <Box textAlign="center">
-                    <Typography fontWeight="bold">
-                      {dayjs(date).format("DD/MM")}
-                    </Typography>
-                    <Typography fontSize={12} color="text.secondary">
-                      {dayjs(date).format("ddd")}
-                    </Typography>
-                  </Box>
-                </TableCell>
-              ))}
+              {dates.map((date) => {
+                const past = isPast(date);
+                return (
+                  <TableCell key={date}>
+                    <Box textAlign="center">
+                      <Typography
+                        fontWeight="bold"
+                        sx={{ color: past ? "#9aa3b2" : "#000" }}
+                      >
+                        {dayjs(date).format("DD/MM")}
+                      </Typography>
+                      <Typography
+                        fontSize={12}
+                        sx={{ color: past ? "#9aa3b2" : "#000" }}
+                      >
+                        {dayjs(date).format("ddd")}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                );
+              })}
             </TableRow>
           </TableHead>
 
@@ -577,6 +609,9 @@ const RosterTable: React.FC = () => {
                     (a) => a.employeeId === employee.id && a.date === date
                   );
                   const shiftIds = assignment?.shiftIds || [null, null];
+                  const past = dayjs(date).isBefore(today, "day");
+                  const isEmployeeInactive = employee.status === "not_active"; // từ bảng employees
+                  const lockAssignment = isEmployeeInactive;
                   return (
                     <TableCell key={date}>
                       <Box display="flex" flexDirection="column" gap={1}>
@@ -593,7 +628,8 @@ const RosterTable: React.FC = () => {
                                 : Number(e.target.value)
                             )
                           }
-                          disabled={dayjs(date).isBefore(today, "day")}
+                          disabled={past || lockAssignment}
+                          sx={selectColorSx(past || lockAssignment)}
                         >
                           {shiftOptions.map((option) => (
                             <MenuItem
@@ -604,6 +640,7 @@ const RosterTable: React.FC = () => {
                             </MenuItem>
                           ))}
                         </SoftSelect>
+
                         {/* Second Shift */}
                         <SoftSelect
                           value={shiftIds[1] ?? ""}
@@ -617,9 +654,8 @@ const RosterTable: React.FC = () => {
                                 : Number(e.target.value)
                             )
                           }
-                          disabled={
-                            dayjs(date).isBefore(today, "day") || !shiftIds[0]
-                          }
+                          disabled={past || !shiftIds[0] || lockAssignment}
+                          sx={selectColorSx(past || lockAssignment)}
                         >
                           {shiftOptions
                             .filter((option) => option.value !== shiftIds[0])
