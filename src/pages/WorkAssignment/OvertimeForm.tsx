@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Card,
@@ -37,7 +37,7 @@ import {
   createTheme,
   CssBaseline,
   AlertTitle,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Add as AddIcon,
   CalendarToday as CalendarIcon,
@@ -49,11 +49,11 @@ import {
   Refresh as RefreshIcon,
   Clear as ClearIcon,
   Warning as WarningIcon,
-} from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, parseISO } from 'date-fns';
+} from "@mui/icons-material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { format, parseISO } from "date-fns";
 import api from "../../api/axios";
 
 // ==================== TYPES & INTERFACES ====================
@@ -68,7 +68,7 @@ interface OvertimeRequest {
   id: number;
   employee_id: number;
   employee: Employee;
-  overtime_type: 'after_shift' | 'custom';
+  overtime_type: "after_shift" | "custom";
   work_date: string;
   start_datetime: string;
   end_datetime: string;
@@ -79,7 +79,7 @@ interface OvertimeRequest {
 
 interface OvertimeRequestInput {
   employee_id: number;
-  overtime_type: 'after_shift' | 'custom';
+  overtime_type: "after_shift" | "custom";
   duration?: number;
   start_datetime?: string;
   end_datetime?: string;
@@ -119,40 +119,90 @@ interface Statistics {
 
 // ==================== API SERVICE ====================
 class OvertimeApiService {
-  async getOvertimeRequests(filters?: { date?: string; employee_id?: number }): Promise<ApiResponse<OvertimeRequest[]>> {
+  async getOvertimeRequests(filters?: {
+    date?: string;
+    employee_id?: number;
+  }): Promise<ApiResponse<OvertimeRequest[]>> {
     try {
       const params = new URLSearchParams();
-      if (filters?.date) params.append('date', filters.date);
-      if (filters?.employee_id) params.append('employee_id', filters.employee_id.toString());
-      
+      if (filters?.date) params.append("date", filters.date);
+      if (filters?.employee_id)
+        params.append("employee_id", filters.employee_id.toString());
+
       const queryString = params.toString();
-      const response = await api.get(`/overtime-requests${queryString ? `?${queryString}` : ''}`);
-      
+      const response = await api.get(
+        `/overtime-requests${queryString ? `?${queryString}` : ""}`
+      );
+
       return response.data;
     } catch (error: any) {
-console.error('Get overtime requests error:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Không thể tải danh sách đăng ký tăng ca');
+      console.error("Get overtime requests error:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Không thể tải danh sách đăng ký tăng ca"
+      );
     }
   }
 
-  async createOvertimeRequests(data: CreateOvertimeRequest): Promise<ApiResponse<CreateOvertimeResponse>> {
+  async createOvertimeRequests(
+    data: CreateOvertimeRequest
+  ): Promise<ApiResponse<CreateOvertimeResponse>> {
     try {
-      const response = await api.post('/overtime-requests', data);
+      const response = await api.post("/overtime-requests", data);
       return response.data;
     } catch (error: any) {
-      console.error('Create overtime requests error:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Không thể tạo đăng ký tăng ca');
+      console.error("Create overtime requests error:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Không thể tạo đăng ký tăng ca"
+      );
     }
   }
 
   async getEmployees(): Promise<ApiResponse<Employee[]>> {
     try {
-      const response = await api.get('/employees');
-      return response.data;
+      // nếu backend có phân trang, xin thật nhiều để lấy hết
+      const response = await api.get("/employees", {
+        params: { per_page: 1000 },
+      });
+      const payload = response.data;
+
+      let list: Employee[] = [];
+
+      // 1) Backend trả mảng thuần
+      if (Array.isArray(payload)) list = payload;
+      // 2) Backend trả { success, data: [...] }
+      else if (Array.isArray(payload?.data)) list = payload.data;
+      // 3) Backend trả kiểu phân trang { data: { data: [...] } }
+      else if (Array.isArray(payload?.data?.data)) list = payload.data.data;
+      // 4) Một số API trả { employees: [...] }
+      else if (Array.isArray(payload?.employees)) list = payload.employees;
+
+      return { success: true, data: list };
     } catch (error: any) {
-      console.error('Get employees error:', error);
-      throw new Error(error.response?.data?.message || error.message || 'Không thể tải danh sách nhân viên');
+      console.error("Get employees error:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Không thể tải danh sách nhân viên"
+      );
     }
+  }
+
+  async getAssignments(employee_id: number, dateISO: string) {
+    // tuỳ backend của bạn, nếu có phân trang thì per_page lớn 1 chút
+    const res = await api.get('/work-assignments', {
+      params: { employee_id, date: dateISO, per_page: 1000 }
+    });
+    const payload = res.data;
+    // map linh hoạt
+    const list =
+      Array.isArray(payload) ? payload :
+      Array.isArray(payload?.data) ? payload.data :
+      Array.isArray(payload?.data?.data) ? payload.data.data : [];
+    return list as Array<any>;
   }
 }
 
@@ -162,24 +212,25 @@ const overtimeApi = new OvertimeApiService();
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#3b82f6',
+      main: "#3b82f6",
     },
     secondary: {
-      main: '#8b5cf6',
+      main: "#8b5cf6",
     },
     background: {
-      default: '#f8fafc',
+      default: "#f8fafc",
     },
   },
   typography: {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   components: {
     MuiCard: {
       styleOverrides: {
         root: {
           borderRadius: 12,
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
         },
       },
     },
@@ -187,7 +238,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 8,
-          textTransform: 'none',
+          textTransform: "none",
           fontWeight: 500,
         },
       },
@@ -218,9 +269,9 @@ const StatCard: React.FC<{
             backgroundColor: color,
             borderRadius: 2,
             p: 1.5,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
           {icon}
@@ -233,50 +284,56 @@ const StatCard: React.FC<{
 // ==================== MAIN COMPONENT ====================
 const OvertimeManagement: React.FC = () => {
   // State management
-  const [overtimeRequests, setOvertimeRequests] = useState<OvertimeRequest[]>([]);
+  const [overtimeRequests, setOvertimeRequests] = useState<OvertimeRequest[]>(
+    []
+  );
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [statistics, setStatistics] = useState<Statistics>({
     total: 0,
     afterShift: 0,
-custom: 0,
-    employees: 0
+    custom: 0,
+    employees: 0,
   });
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Form state
   const [workDate, setWorkDate] = useState<Date | null>(new Date());
-  const [selectedEmployee, setSelectedEmployee] = useState<number | ''>('');
-  const [overtimeType, setOvertimeType] = useState<'after_shift' | 'custom'>('after_shift');
+  const [selectedEmployee, setSelectedEmployee] = useState<number | "">("");
+  const [overtimeType, setOvertimeType] = useState<"after_shift" | "custom">(
+    "after_shift"
+  );
   const [duration, setDuration] = useState<number>(1);
-  const [startTime, setStartTime] = useState<string>('');
-  const [endTime, setEndTime] = useState<string>('');
-  const [reason, setReason] = useState<string>('');
-  
+  const [startTime, setStartTime] = useState<string>("");
+  const [endTime, setEndTime] = useState<string>("");
+  const [reason, setReason] = useState<string>("");
+
   // Filter state
   const [filterDate, setFilterDate] = useState<Date | null>(null);
-  const [filterEmployeeId, setFilterEmployeeId] = useState<number | ''>('');
-  
+  const [filterEmployeeId, setFilterEmployeeId] = useState<number | "">("");
+
   // Notification state
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
-    severity: 'success' | 'error' | 'warning' | 'info';
+    severity: "success" | "error" | "warning" | "info";
   }>({
     open: false,
-    message: '',
-    severity: 'info'
+    message: "",
+    severity: "info",
   });
 
   // Error state for detailed error display
-  const [submitErrors, setSubmitErrors] = useState<Array<{
-    employee_id: number;
-    employee_name?: string;
-    reason: string;
-  }>>([]);
+  const [submitErrors, setSubmitErrors] = useState<
+    Array<{
+      employee_id: number;
+      employee_name?: string;
+      reason: string;
+    }>
+  >([]);
 
   // Memoized functions to fix useEffect dependencies
   const loadEmployees = useCallback(async () => {
@@ -286,7 +343,7 @@ custom: 0,
         setEmployees(response.data);
       }
     } catch (error: any) {
-      showNotification(error.message, 'error');
+      showNotification(error.message, "error");
     }
   }, []);
 
@@ -294,9 +351,9 @@ custom: 0,
     try {
       setLoading(true);
       const filters: { date?: string; employee_id?: number } = {};
-      
+
       if (filterDate) {
-        filters.date = format(filterDate, 'yyyy-MM-dd');
+        filters.date = format(filterDate, "yyyy-MM-dd");
       }
       if (filterEmployeeId) {
         filters.employee_id = filterEmployeeId as number;
@@ -308,7 +365,7 @@ custom: 0,
         calculateStatistics(response.data);
       }
     } catch (error: any) {
-      showNotification(error.message, 'error');
+      showNotification(error.message, "error");
     } finally {
       setLoading(false);
     }
@@ -323,54 +380,64 @@ custom: 0,
   const calculateStatistics = (requests: OvertimeRequest[]) => {
     const stats: Statistics = {
       total: requests.length,
-      afterShift: requests.filter(r => r.overtime_type === 'after_shift').length,
-      custom: requests.filter(r => r.overtime_type === 'custom').length,
-      employees: new Set(requests.map(r => r.employee_id)).size
+      afterShift: requests.filter((r) => r.overtime_type === "after_shift")
+        .length,
+      custom: requests.filter((r) => r.overtime_type === "custom").length,
+      employees: new Set(requests.map((r) => r.employee_id)).size,
     };
     setStatistics(stats);
   };
-const showNotification = (message: string, severity: 'success' | 'error' | 'warning' | 'info') => {
+  const showNotification = (
+    message: string,
+    severity: "success" | "error" | "warning" | "info"
+  ) => {
     setNotification({
       open: true,
       message,
-      severity
+      severity,
     });
   };
 
   const handleCloseNotification = () => {
-    setNotification(prev => ({ ...prev, open: false }));
+    setNotification((prev) => ({ ...prev, open: false }));
   };
 
   const resetForm = () => {
     setWorkDate(new Date());
-    setSelectedEmployee('');
-    setOvertimeType('after_shift');
+    setSelectedEmployee("");
+    setOvertimeType("after_shift");
     setDuration(1);
-    setStartTime('');
-    setEndTime('');
-    setReason('');
+    setStartTime("");
+    setEndTime("");
+    setReason("");
     setSubmitErrors([]);
   };
 
   const validateForm = (): boolean => {
     if (!workDate) {
-      showNotification('Vui lòng chọn ngày làm việc', 'error');
+      showNotification("Vui lòng chọn ngày làm việc", "error");
       return false;
     }
 
     if (!selectedEmployee) {
-      showNotification('Vui lòng chọn nhân viên', 'error');
+      showNotification("Vui lòng chọn nhân viên", "error");
       return false;
     }
 
-    if (overtimeType === 'custom') {
+    if (overtimeType === "custom") {
       if (!startTime || !endTime) {
-        showNotification('Vui lòng chọn thời gian bắt đầu và kết thúc', 'error');
+        showNotification(
+          "Vui lòng chọn thời gian bắt đầu và kết thúc",
+          "error"
+        );
         return false;
       }
 
       if (startTime >= endTime) {
-        showNotification('Thời gian kết thúc phải sau thời gian bắt đầu', 'error');
+        showNotification(
+          "Thời gian kết thúc phải sau thời gian bắt đầu",
+          "error"
+        );
         return false;
       }
     }
@@ -382,65 +449,85 @@ const showNotification = (message: string, severity: 'success' | 'error' | 'warn
     if (!validateForm()) {
       return;
     }
+    const ok = await ensureEligibleForOT();
+    if (!ok) return;
 
     try {
       setSubmitting(true);
       setSubmitErrors([]);
-      
+
       const overtimeRequest: OvertimeRequestInput = {
         employee_id: selectedEmployee as number,
         overtime_type: overtimeType,
         reason: reason.trim() || undefined,
       };
 
-      if (overtimeType === 'after_shift') {
+      if (overtimeType === "after_shift") {
         overtimeRequest.duration = duration;
       } else {
-        const workDateStr = format(workDate!, 'yyyy-MM-dd');
+        const workDateStr = format(workDate!, "yyyy-MM-dd");
         overtimeRequest.start_datetime = `${workDateStr} ${startTime}`;
         overtimeRequest.end_datetime = `${workDateStr} ${endTime}`;
       }
 
       const response = await overtimeApi.createOvertimeRequests({
-        work_date: format(workDate!, 'yyyy-MM-dd'),
-        overtime_requests: [overtimeRequest]
+        work_date: format(workDate!, "yyyy-MM-dd"),
+        overtime_requests: [overtimeRequest],
       });
 
       if (response.success && response.data) {
         const { created, errors } = response.data;
-        
+
         if (created.length > 0 && errors.length === 0) {
-          showNotification(`Đăng ký tăng ca thành công cho ${created[0].employee_name}`, 'success');
+          showNotification(
+            `Đăng ký tăng ca thành công cho ${created[0].employee_name}`,
+            "success"
+          );
           setIsModalOpen(false);
           resetForm();
           loadOvertimeRequests();
         } else if (errors.length > 0) {
           setSubmitErrors(errors);
-          showNotification('Có lỗi xảy ra khi đăng ký tăng ca', 'error');
+          showNotification("Có lỗi xảy ra khi đăng ký tăng ca", "error");
         }
       }
     } catch (error: any) {
-      showNotification(error.message, 'error');
+      showNotification(error.message, "error");
     } finally {
       setSubmitting(false);
     }
   };
 
+  const ensureEligibleForOT = async () => {
+  const dateISO = format(workDate!, 'yyyy-MM-dd');
+  const assignments = await overtimeApi.getAssignments(Number(selectedEmployee), dateISO);
+
+  // Đếm số ca chính trong ngày (tuỳ payload, ví dụ filter theo type === 'main' nếu backend có cờ)
+  const mainShifts = assignments.filter((a: any) => a.type ? a.type === 'main' : true);
+  if (mainShifts.length >= 2) {
+    showNotification('Nhân viên đã làm đủ 2 ca chính trong ngày, không được đăng ký tăng ca.', 'error');
+    return false;
+  }
+  return true;
+};
+
+
+
   const clearFilters = () => {
     setFilterDate(null);
-    setFilterEmployeeId('');
+    setFilterEmployeeId("");
   };
 
   const formatDateTime = (dateTimeString: string): string => {
     try {
-      return format(parseISO(dateTimeString), 'HH:mm');
+      return format(parseISO(dateTimeString), "HH:mm");
     } catch {
       return dateTimeString;
     }
   };
-const formatDate = (dateString: string): string => {
+  const formatDate = (dateString: string): string => {
     try {
-      return format(parseISO(dateString), 'dd/MM/yyyy');
+      return format(parseISO(dateString), "dd/MM/yyyy");
     } catch {
       return dateString;
     }
@@ -450,23 +537,27 @@ const formatDate = (dateString: string): string => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Box sx={{ maxWidth: 1200, margin: '0 auto', p: 3 }}>
+        <Box sx={{ maxWidth: 1200, margin: "0 auto", p: 3 }}>
           {/* Header */}
           <Card sx={{ mb: 3 }}>
             <CardContent>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
                 <Box display="flex" alignItems="center" gap={2}>
                   <Box
                     sx={{
-                      backgroundColor: '#3b82f6',
+                      backgroundColor: "#3b82f6",
                       borderRadius: 2,
                       p: 1.5,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <ScheduleIcon sx={{ color: 'white', fontSize: 24 }} />
+                    <ScheduleIcon sx={{ color: "white", fontSize: 24 }} />
                   </Box>
                   <Box>
                     <Typography variant="h5" component="h1" fontWeight={600}>
@@ -481,7 +572,7 @@ const formatDate = (dateString: string): string => {
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={() => setIsModalOpen(true)}
-                  sx={{ backgroundColor: '#3b82f6' }}
+                  sx={{ backgroundColor: "#3b82f6" }}
                 >
                   Đăng ký tăng ca
                 </Button>
@@ -495,7 +586,7 @@ const formatDate = (dateString: string): string => {
               <StatCard
                 title="Tổng đăng ký"
                 value={statistics.total}
-                icon={<CalendarIcon sx={{ color: '#3b82f6' }} />}
+                icon={<CalendarIcon sx={{ color: "#3b82f6" }} />}
                 color="#dbeafe"
               />
             </Grid>
@@ -503,7 +594,7 @@ const formatDate = (dateString: string): string => {
               <StatCard
                 title="Sau ca chính"
                 value={statistics.afterShift}
-                icon={<ScheduleIcon sx={{ color: '#0ea5e9' }} />}
+                icon={<ScheduleIcon sx={{ color: "#0ea5e9" }} />}
                 color="#e0f2fe"
               />
             </Grid>
@@ -511,7 +602,7 @@ const formatDate = (dateString: string): string => {
               <StatCard
                 title="Tùy chỉnh"
                 value={statistics.custom}
-                icon={<SettingsIcon sx={{ color: '#8b5cf6' }} />}
+                icon={<SettingsIcon sx={{ color: "#8b5cf6" }} />}
                 color="#f3e8ff"
               />
             </Grid>
@@ -519,8 +610,8 @@ const formatDate = (dateString: string): string => {
               <StatCard
                 title="Nhân viên"
                 value={statistics.employees}
-                icon={<GroupIcon sx={{ color: '#22c55e' }} />}
-color="#dcfce7"
+                icon={<GroupIcon sx={{ color: "#22c55e" }} />}
+                color="#dcfce7"
               />
             </Grid>
           </Grid>
@@ -542,13 +633,22 @@ color="#dcfce7"
                   />
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
+                  <Box
+                    display="flex"
+                    gap={2}
+                    alignItems="center"
+                    flexWrap="wrap"
+                  >
                     <TextField
                       sx={{ minWidth: 200, flex: 1 }}
                       label="Lọc theo ID nhân viên"
                       type="number"
                       value={filterEmployeeId}
-                      onChange={(e) => setFilterEmployeeId(e.target.value ? Number(e.target.value) : '')}
+                      onChange={(e) =>
+                        setFilterEmployeeId(
+                          e.target.value ? Number(e.target.value) : ""
+                        )
+                      }
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -584,14 +684,16 @@ color="#dcfce7"
               <Typography variant="h6" gutterBottom>
                 Danh sách đăng ký tăng ca
               </Typography>
-              
+
               {loading ? (
                 <Box display="flex" justifyContent="center" p={4}>
                   <CircularProgress />
                 </Box>
               ) : overtimeRequests.length === 0 ? (
                 <Box textAlign="center" py={8}>
-                  <CalendarIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                  <CalendarIcon
+                    sx={{ fontSize: 64, color: "text.secondary", mb: 2 }}
+                  />
                   <Typography variant="h6" gutterBottom>
                     Không có dữ liệu
                   </Typography>
@@ -600,7 +702,7 @@ color="#dcfce7"
                   </Typography>
                 </Box>
               ) : (
-<TableContainer component={Paper} variant="outlined">
+                <TableContainer component={Paper} variant="outlined">
                   <Table>
                     <TableHead>
                       <TableRow>
@@ -620,27 +722,35 @@ color="#dcfce7"
                               <Typography variant="body2" fontWeight={500}>
                                 {request.employee?.name}
                               </Typography>
-                              <Typography variant="caption" color="textSecondary">
+                              <Typography
+                                variant="caption"
+                                color="textSecondary"
+                              >
                                 ID: {request.employee_id}
                               </Typography>
                             </Box>
                           </TableCell>
-                          <TableCell>
-                            {formatDate(request.work_date)}
-                          </TableCell>
+                          <TableCell>{formatDate(request.work_date)}</TableCell>
                           <TableCell>
                             <Chip
-                              label={request.overtime_type === 'after_shift' ? 'Sau ca chính' : 'Tùy chỉnh'}
-                              color={request.overtime_type === 'after_shift' ? 'primary' : 'secondary'}
+                              label={
+                                request.overtime_type === "after_shift"
+                                  ? "Sau ca chính"
+                                  : "Tùy chỉnh"
+                              }
+                              color={
+                                request.overtime_type === "after_shift"
+                                  ? "primary"
+                                  : "secondary"
+                              }
                               size="small"
                             />
                           </TableCell>
                           <TableCell>
-                            {formatDateTime(request.start_datetime)} - {formatDateTime(request.end_datetime)}
+                            {formatDateTime(request.start_datetime)} -{" "}
+                            {formatDateTime(request.end_datetime)}
                           </TableCell>
-                          <TableCell>
-                            {request.reason || '-'}
-                          </TableCell>
+                          <TableCell>{request.reason || "-"}</TableCell>
                           <TableCell>
                             <Typography variant="caption" color="textSecondary">
                               {formatDate(request.created_at)}
@@ -663,17 +773,21 @@ color="#dcfce7"
             fullWidth
           >
             <DialogTitle>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
                 Đăng ký tăng ca
                 <IconButton
-onClick={() => setIsModalOpen(false)}
+                  onClick={() => setIsModalOpen(false)}
                   disabled={submitting}
                 >
                   <CloseIcon />
                 </IconButton>
               </Box>
             </DialogTitle>
-            
+
             <DialogContent>
               <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
                 Vui lòng điền đầy đủ thông tin để đăng ký tăng ca
@@ -685,13 +799,14 @@ onClick={() => setIsModalOpen(false)}
                   <AlertTitle>Lỗi đăng ký tăng ca</AlertTitle>
                   {submitErrors.map((error, index) => (
                     <Typography key={index} variant="body2">
-                      • {error.employee_name ? `${error.employee_name}: ` : ''}{error.reason}
+                      • {error.employee_name ? `${error.employee_name}: ` : ""}
+                      {error.reason}
                     </Typography>
                   ))}
                 </Alert>
               )}
 
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
                 <DatePicker
                   label="Ngày làm việc *"
                   value={workDate}
@@ -708,7 +823,9 @@ onClick={() => setIsModalOpen(false)}
                   <InputLabel>Chọn nhân viên *</InputLabel>
                   <Select
                     value={selectedEmployee}
-                    onChange={(e) => setSelectedEmployee(e.target.value as number)}
+                    onChange={(e) =>
+                      setSelectedEmployee(e.target.value as number)
+                    }
                     startAdornment={
                       <InputAdornment position="start">
                         <PersonIcon />
@@ -727,7 +844,11 @@ onClick={() => setIsModalOpen(false)}
                   <FormLabel component="legend">Loại tăng ca *</FormLabel>
                   <RadioGroup
                     value={overtimeType}
-                    onChange={(e) => setOvertimeType(e.target.value as 'after_shift' | 'custom')}
+                    onChange={(e) =>
+                      setOvertimeType(
+                        e.target.value as "after_shift" | "custom"
+                      )
+                    }
                   >
                     <Card variant="outlined" sx={{ mb: 1 }}>
                       <CardContent sx={{ py: 2 }}>
@@ -738,7 +859,7 @@ onClick={() => setIsModalOpen(false)}
                             <Box>
                               <Typography variant="body1" fontWeight={500}>
                                 Sau ca chính
-</Typography>
+                              </Typography>
                               <Typography variant="body2" color="textSecondary">
                                 Tăng ca ngay sau ca làm việc cuối cùng
                               </Typography>
@@ -747,7 +868,7 @@ onClick={() => setIsModalOpen(false)}
                         />
                       </CardContent>
                     </Card>
-                    
+
                     <Card variant="outlined">
                       <CardContent sx={{ py: 2 }}>
                         <FormControlLabel
@@ -769,7 +890,7 @@ onClick={() => setIsModalOpen(false)}
                   </RadioGroup>
                 </FormControl>
 
-                {overtimeType === 'after_shift' ? (
+                {overtimeType === "after_shift" ? (
                   <FormControl fullWidth disabled={submitting}>
                     <InputLabel>Số giờ tăng ca *</InputLabel>
                     <Select
@@ -809,7 +930,7 @@ onClick={() => setIsModalOpen(false)}
                     </Grid>
                   </Grid>
                 )}
-<TextField
+                <TextField
                   fullWidth
                   label="Lý do tăng ca"
                   multiline
@@ -834,7 +955,7 @@ onClick={() => setIsModalOpen(false)}
             </DialogContent>
 
             <DialogActions sx={{ p: 3 }}>
-              <Button 
+              <Button
                 onClick={() => setIsModalOpen(false)}
                 disabled={submitting}
               >
@@ -844,7 +965,7 @@ onClick={() => setIsModalOpen(false)}
                 variant="contained"
                 onClick={handleSubmit}
                 disabled={submitting}
-                sx={{ backgroundColor: '#3b82f6' }}
+                sx={{ backgroundColor: "#3b82f6" }}
               >
                 {submitting ? (
                   <>
@@ -852,7 +973,7 @@ onClick={() => setIsModalOpen(false)}
                     Đang xử lý...
                   </>
                 ) : (
-                  'Đăng ký'
+                  "Đăng ký"
                 )}
               </Button>
             </DialogActions>
@@ -863,12 +984,12 @@ onClick={() => setIsModalOpen(false)}
             open={notification.open}
             autoHideDuration={6000}
             onClose={handleCloseNotification}
-            anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+            anchorOrigin={{ vertical: "top", horizontal: "right" }}
           >
             <Alert
               onClose={handleCloseNotification}
               severity={notification.severity}
-              sx={{ width: '100%' }}
+              sx={{ width: "100%" }}
             >
               {notification.message}
             </Alert>
