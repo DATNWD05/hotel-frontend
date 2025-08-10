@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography';
 import CollapseListItem from './list-items/CollapseListItem';
 import DrawerItem from './list-items/DrawerItem';
 import Image from '../../../components/base/Image';
-import LogoImg from '../../../assets/images/logo.png';
+import LogoImg from '../../../image/Logo.jpg';
 import sitemap, { MenuItem, SubMenuItem } from '../../../routes/sitemap';
 import { fontFamily } from '../../../theme/typography';
 
@@ -67,9 +67,9 @@ export default function DrawerItems({ collapsed }: { collapsed: boolean }) {
           <Image
             src={LogoImg}
             alt="logo"
-            height={collapsed ? 40 : 60}
-            width={collapsed ? 40 : 60}
-            sx={{ mr: collapsed ? 0 : 1.5 }}
+            height={collapsed ? 30 : 70}
+            width={collapsed ? 30 : 70}
+            sx={{ mr: collapsed ? 0 : 2.5 ,border: '2px', borderRadius: '30%'}}
           />
           {!collapsed && (
             <Typography
