@@ -60,7 +60,7 @@ interface BookingData {
   checkOutDate: string;
   depositAmount: number | "";
   promotion_code?: string | null;
-  isHourly: boolean; // Thêm trường isHourly
+  is_hourly: boolean;
 }
 
 interface ValidationErrors {
@@ -79,6 +79,7 @@ interface ValidationErrors {
     depositAmount?: string;
     dateRange?: string;
     promotion?: string;
+    is_hourly?: string;
   };
   rooms: { [key: string]: { guests?: string; type?: string; number?: string } };
 }
@@ -87,7 +88,7 @@ interface RoomType {
   id: number;
   name: string;
   base_rate: string;
-  hourly_rate?: string; // Thêm trường hourly_rate
+  hourly_rate?: string;
   max_occupancy: number;
 }
 
@@ -96,13 +97,6 @@ interface RoomNumber {
   room_number: string;
   room_type_id: number;
   status: string;
-}
-
-interface Booking {
-  id: number;
-  room_id: number;
-  check_in_date: string;
-  check_out_date: string;
 }
 
 export default function HotelBooking() {
@@ -124,7 +118,7 @@ export default function HotelBooking() {
     checkOutDate: "",
     depositAmount: "",
     promotion_code: null,
-    isHourly: false, // Khởi tạo mặc định là đặt theo ngày
+    is_hourly: false,
   });
 
   const [activeTab, setActiveTab] = useState("customer");
@@ -149,8 +143,8 @@ export default function HotelBooking() {
     [key: string]: RoomNumber[];
   }>({});
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadingRooms, setLoadingRooms] = useState(false);
 
   const isPromotionValid = (promo: Promotion): boolean => {
     const now = new Date();
@@ -166,31 +160,57 @@ export default function HotelBooking() {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
       setLoadingData(true);
       try {
-        const [roomTypesRes, roomsRes, promotionsRes, bookingsRes] =
-          await Promise.all([
-            api.get("/room-types"),
-            api.get("/rooms"),
-            api.get("/promotions"),
-            api.get("/bookings"),
-          ]);
+        const [roomTypesRes, promotionsRes] = await Promise.all([
+          api.get("/room-types"),
+          api.get("/promotions"),
+        ]);
 
-        let typesData = roomTypesRes.data;
-        if (typesData && typeof typesData === "object" && "data" in typesData) {
-          typesData = typesData.data;
-        }
+        const typesData = roomTypesRes.data.data || roomTypesRes.data;
         if (Array.isArray(typesData)) {
           setRoomTypes(typesData);
         } else {
           throw new Error("Dữ liệu từ /room-types không hợp lệ");
         }
 
-        let roomsData = roomsRes.data;
-        if (roomsData && typeof roomsData === "object" && "data" in roomsData) {
-          roomsData = roomsData.data;
+        const promotionsData = promotionsRes.data.data || promotionsRes.data;
+        if (Array.isArray(promotionsData)) {
+          const validPromotions = promotionsData.filter((promo: Promotion) =>
+            isPromotionValid(promo)
+          );
+          setPromotions(validPromotions);
+        } else {
+          throw new Error("Dữ liệu từ /promotions không hợp lệ");
         }
+      } catch (error: any) {
+        setErrorMessage(
+          "Lỗi khi tải dữ liệu: " +
+            (error.response?.data?.message || error.message)
+        );
+      } finally {
+        setLoadingData(false);
+      }
+    };
+    fetchInitialData();
+  }, []);
+
+  useEffect(() => {
+    const fetchAvailableRooms = async () => {
+      if (!bookingData.checkInDate || !bookingData.checkOutDate) return;
+
+      setLoadingRooms(true);
+      try {
+        const response = await api.get("/available-rooms", {
+          params: {
+            check_in_date: bookingData.checkInDate,
+            check_out_date: bookingData.checkOutDate,
+            is_hourly: bookingData.is_hourly,
+          },
+        });
+
+        const roomsData = response.data.data || response.data;
         if (Array.isArray(roomsData)) {
           setRoomNumbers(
             roomsData.reduce(
@@ -203,58 +223,45 @@ export default function HotelBooking() {
               {}
             )
           );
-        } else {
-          throw new Error("Dữ liệu từ /rooms không hợp lệ");
-        }
 
-        let promotionsData = promotionsRes.data;
-        if (
-          promotionsData &&
-          typeof promotionsData === "object" &&
-          "data" in promotionsData
-        ) {
-          promotionsData = promotionsData.data;
-        }
-        if (Array.isArray(promotionsData)) {
-          const validPromotions = promotionsData.filter((promo: Promotion) =>
-            isPromotionValid(promo)
-          );
-          setPromotions(validPromotions);
+          setBookingData((prev) => ({
+            ...prev,
+            rooms: prev.rooms.map((room) => {
+              const availableRooms = roomNumbers[room.type] || [];
+              const isSelectedRoomAvailable = availableRooms.some(
+                (r) => r.room_number === room.number
+              );
+              if (!isSelectedRoomAvailable) {
+                return { ...room, type: "", number: "", price: 0, roomId: 0 };
+              }
+              return room;
+            }),
+          }));
         } else {
-          throw new Error("Dữ liệu từ /promotions không hợp lệ");
-        }
-
-        let bookingsData = bookingsRes.data;
-        if (
-          bookingsData &&
-          typeof bookingsData === "object" &&
-          "data" in bookingsData
-        ) {
-          bookingsData = bookingsData.data;
-        }
-        if (Array.isArray(bookingsData)) {
-          setBookings(bookingsData);
-        } else {
-          throw new Error("Dữ liệu từ /bookings không hợp lệ");
+          throw new Error("Dữ liệu từ /available-rooms không hợp lệ");
         }
       } catch (error: any) {
         setErrorMessage(
-          "Lỗi khi tải dữ liệu: " +
+          "Lỗi khi tải phòng khả dụng: " +
             (error.response?.data?.message || error.message)
         );
       } finally {
-        setLoadingData(false);
+        setLoadingRooms(false);
       }
     };
-    fetchData();
-  }, []);
+
+    fetchAvailableRooms();
+  }, [
+    bookingData.checkInDate,
+    bookingData.checkOutDate,
+    bookingData.is_hourly,
+  ]);
 
   useEffect(() => {
     const totalRoomPrice = bookingData.rooms.reduce((sum, room) => {
-      if (!room.price || !room.number) return sum;
-      return bookingData.isHourly
-        ? sum + room.price * calculateHours()
-        : sum + room.price * calculateNights();
+      return room.price && room.number
+        ? sum + room.price * calculateDuration()
+        : sum;
     }, 0);
     const calculatedDeposit = Math.round(totalRoomPrice * 0.1);
     setBookingData((prev) => ({
@@ -265,7 +272,7 @@ export default function HotelBooking() {
     bookingData.rooms,
     bookingData.checkInDate,
     bookingData.checkOutDate,
-    bookingData.isHourly,
+    bookingData.is_hourly,
   ]);
 
   const validateEmail = (email: string): boolean => {
@@ -435,7 +442,10 @@ export default function HotelBooking() {
     setValidationErrors(errors);
   };
 
-  const validateBookingField = (field: string, value: string | number | "") => {
+  const validateBookingField = (
+    field: string,
+    value: string | number | boolean | ""
+  ) => {
     const errors = { ...validationErrors };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -443,14 +453,13 @@ export default function HotelBooking() {
     switch (field) {
       case "checkInDate":
         if (!value) {
-          errors.booking.checkInDate = "Vui lòng chọn ngày giờ nhận phòng";
+          errors.booking.checkInDate = "Vui lòng chọn ngày nhận phòng";
         } else {
           const checkInDate = new Date(value as string);
-          if (bookingData.isHourly) {
-            const now = new Date();
-            if (checkInDate < now) {
+          if (bookingData.is_hourly) {
+            if (new Date(value as string) < new Date()) {
               errors.booking.checkInDate =
-                "Ngày giờ nhận phòng không thể là thời điểm trong quá khứ";
+                "Thời gian nhận phòng không thể là quá khứ";
             } else {
               delete errors.booking.checkInDate;
             }
@@ -467,18 +476,17 @@ export default function HotelBooking() {
         break;
       case "checkOutDate":
         if (!value) {
-          errors.booking.checkOutDate = "Vui lòng chọn ngày giờ trả phòng";
+          errors.booking.checkOutDate = "Vui lòng chọn ngày trả phòng";
         } else if (bookingData.checkInDate) {
           const checkInDate = new Date(bookingData.checkInDate);
           const checkOutDate = new Date(value as string);
-          if (bookingData.isHourly) {
-            const now = new Date();
+          if (bookingData.is_hourly) {
             if (checkOutDate <= checkInDate) {
               errors.booking.checkOutDate =
-                "Ngày giờ trả phòng phải sau ngày giờ nhận phòng";
-            } else if (checkOutDate < now) {
+                "Thời gian trả phòng phải sau thời gian nhận phòng";
+            } else if (checkOutDate < new Date()) {
               errors.booking.checkOutDate =
-                "Ngày giờ trả phòng không thể là thời điểm trong quá khứ";
+                "Thời gian trả phòng không thể là quá khứ";
             } else {
               delete errors.booking.checkOutDate;
             }
@@ -522,20 +530,20 @@ export default function HotelBooking() {
           delete errors.booking.promotion;
         }
         break;
+      case "is_hourly":
+        delete errors.booking.is_hourly;
+        break;
     }
 
     if (bookingData.checkInDate && bookingData.checkOutDate) {
       const checkInDate = new Date(bookingData.checkInDate);
       const checkOutDate = new Date(bookingData.checkOutDate);
-      if (bookingData.isHourly) {
+      if (bookingData.is_hourly) {
         const diffHours =
           (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60);
         if (diffHours > 24) {
           errors.booking.dateRange =
             "Thời gian lưu trú theo giờ không được vượt quá 24 giờ";
-        } else if (diffHours < 1) {
-          errors.booking.dateRange =
-            "Thời gian lưu trú theo giờ phải ít nhất 1 giờ";
         } else {
           delete errors.booking.dateRange;
         }
@@ -548,7 +556,7 @@ export default function HotelBooking() {
         );
         if (diffDays > 30) {
           errors.booking.dateRange =
-            "Thời gian lưu trú không được vượt quá 30 ngày";
+            "Thời gian lưu trú theo ngày không được vượt quá 30 ngày";
         } else {
           delete errors.booking.dateRange;
         }
@@ -608,42 +616,34 @@ export default function HotelBooking() {
     setTouchedFields((prev) => ({ ...prev, [fieldPath]: true }));
   };
 
-  const calculateNights = () => {
-    if (
-      bookingData.checkInDate &&
-      bookingData.checkOutDate &&
-      !bookingData.isHourly
-    ) {
-      const checkIn = new Date(bookingData.checkInDate);
-      checkIn.setHours(0, 0, 0, 0);
-      const checkOut = new Date(bookingData.checkOutDate);
-      checkOut.setHours(0, 0, 0, 0);
-      const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
-    return 0;
-  };
-
-  const calculateHours = () => {
-    if (
-      bookingData.checkInDate &&
-      bookingData.checkOutDate &&
-      bookingData.isHourly
-    ) {
+  const calculateDuration = () => {
+    if (bookingData.checkInDate && bookingData.checkOutDate) {
       const checkIn = new Date(bookingData.checkInDate);
       const checkOut = new Date(bookingData.checkOutDate);
-      const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
-      return Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60)));
+      if (bookingData.is_hourly) {
+        return Math.max(
+          1,
+          Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60))
+        );
+      } else {
+        checkIn.setHours(0, 0, 0, 0);
+        checkOut.setHours(0, 0, 0, 0);
+        return Math.max(
+          1,
+          Math.ceil(
+            (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)
+          )
+        );
+      }
     }
     return 0;
   };
 
   const calculateSubtotal = () => {
     return bookingData.rooms.reduce((sum, room) => {
-      if (!room.price || !room.number) return sum;
-      return bookingData.isHourly
-        ? sum + room.price * calculateHours()
-        : sum + room.price * calculateNights();
+      return room.price && room.number
+        ? sum + room.price * calculateDuration()
+        : sum;
     }, 0);
   };
 
@@ -680,101 +680,33 @@ export default function HotelBooking() {
     validateCustomerField(field, value);
   };
 
-  const handleBookingTypeChange = (isHourly: boolean) => {
-    setBookingData((prev) => ({
-      ...prev,
-      isHourly,
-      checkInDate: "",
-      checkOutDate: "",
-      rooms: prev.rooms.map((room) => ({
-        ...room,
-        type: "",
-        number: "",
-        price: 0,
-        roomId: 0,
-      })),
-    }));
-    setValidationErrors((prev) => ({
-      ...prev,
-      booking: {
-        ...prev.booking,
-        checkInDate: undefined,
-        checkOutDate: undefined,
-        dateRange: undefined,
-      },
-    }));
-    setTouchedFields((prev) => ({
-      ...prev,
-      "booking.checkInDate": false,
-      "booking.checkOutDate": false,
-    }));
-  };
-
   const getFilteredRoomTypes = (guests: number) => {
     return roomTypes.filter(
       (type) => type.max_occupancy >= guests && guests > 0
     );
   };
 
-  const isRoomAvailable = (
-    room: RoomNumber,
-    checkIn: string,
-    checkOut: string
-  ) => {
-    if (!checkIn || !checkOut) {
-      return false;
-    }
-
-    const checkInDate = new Date(checkIn);
-    const checkOutDate = new Date(checkOut);
-
-    const isBooked = bookings.some((booking) => {
-      const bookingCheckIn = new Date(booking.check_in_date);
-      const bookingCheckOut = new Date(booking.check_out_date);
-      return (
-        booking.room_id === room.id &&
-        !(checkOutDate <= bookingCheckIn || checkInDate >= bookingCheckOut)
-      );
-    });
-
-    return !isBooked;
-  };
-
   const getAvailableRoomNumbers = (roomType: string, currentRoomId: string) => {
-    if (
-      !roomType ||
-      !roomNumbers[roomType] ||
-      !bookingData.checkInDate ||
-      !bookingData.checkOutDate
-    ) {
+    if (!roomType || !roomNumbers[roomType]) {
       return [];
     }
-
-    const availableRooms = roomNumbers[roomType]
-      .filter(
-        (room) =>
-          room.status === "available" &&
-          isRoomAvailable(
-            room,
-            bookingData.checkInDate,
-            bookingData.checkOutDate
-          )
-      )
-      .map((room) => ({
-        value: room.room_number,
-        label: `Phòng ${room.room_number}`,
-      }));
 
     const selectedRoomNumbers = bookingData.rooms
       .filter((r) => r.id !== currentRoomId && r.type === roomType && r.number)
       .map((r) => r.number);
 
-    return availableRooms.filter(
-      (option) => !selectedRoomNumbers.includes(option.value)
-    );
+    return roomNumbers[roomType]
+      .filter((room) => !selectedRoomNumbers.includes(room.room_number))
+      .map((room) => ({
+        value: room.room_number,
+        label: `Phòng ${room.room_number}`,
+      }));
   };
 
-  const handleBookingChange = (field: string, value: string | number | "") => {
+  const handleBookingChange = (
+    field: string,
+    value: string | number | boolean | ""
+  ) => {
     setBookingData((prev) => ({
       ...prev,
       [field]: value,
@@ -783,7 +715,11 @@ export default function HotelBooking() {
     markFieldAsTouched(`booking.${field}`);
     validateBookingField(field, value);
 
-    if (field === "checkInDate" || field === "checkOutDate") {
+    if (
+      field === "checkInDate" ||
+      field === "checkOutDate" ||
+      field === "is_hourly"
+    ) {
       setBookingData((prev) => ({
         ...prev,
         rooms: prev.rooms.map((room) => ({
@@ -841,7 +777,7 @@ export default function HotelBooking() {
               number: "",
               price: selectedType
                 ? parseFloat(
-                    bookingData.isHourly
+                    bookingData.is_hourly
                       ? selectedType.hourly_rate || "0"
                       : selectedType.base_rate
                   )
@@ -940,10 +876,12 @@ export default function HotelBooking() {
     validateBookingField("checkOutDate", bookingData.checkOutDate);
     validateBookingField("depositAmount", bookingData.depositAmount);
     validateBookingField("promotion", bookingData.promotion_code || "");
+    validateBookingField("is_hourly", bookingData.is_hourly);
     markFieldAsTouched("booking.checkInDate");
     markFieldAsTouched("booking.checkOutDate");
     markFieldAsTouched("booking.depositAmount");
     markFieldAsTouched("booking.promotion");
+    markFieldAsTouched("booking.is_hourly");
 
     bookingData.rooms.forEach((room) => {
       validateRoomField(room.id, "guests", room.guests?.toString() || "");
@@ -994,7 +932,22 @@ export default function HotelBooking() {
         throw new Error("Vui lòng chọn ít nhất một phòng hợp lệ");
       }
 
-      const totalAmount = calculateTotal();
+      const validateResponse = await api.post("/bookings/validate-rooms", {
+        room_ids: validRoomIds,
+        check_in_date: bookingData.checkInDate,
+        check_out_date: bookingData.checkOutDate,
+        is_hourly: bookingData.is_hourly,
+      });
+
+      if (validateResponse.data.status === "invalid") {
+        const unavailableRooms = validateResponse.data.unavailable_rooms
+          .map((room: any) => `Phòng ${room.room_number}`)
+          .join(", ");
+        throw new Error(
+          `Các phòng không khả dụng: ${unavailableRooms}. Vui lòng chọn phòng khác.`
+        );
+      }
+
       const apiData: any = {
         customer: {
           cccd: bookingData.customer.cccd.trim(),
@@ -1011,28 +964,13 @@ export default function HotelBooking() {
         check_in_date: bookingData.checkInDate,
         check_out_date: bookingData.checkOutDate,
         deposit_amount: bookingData.depositAmount || 0,
-        total_amount: totalAmount > 0 ? totalAmount : 100000,
-        is_hourly: bookingData.isHourly, // Thêm is_hourly vào payload
+        is_hourly: bookingData.is_hourly,
+        promotion_code: bookingData.promotion_code || undefined,
       };
 
-      if (bookingData.promotion_code) {
-        const selectedPromotion = promotions.find(
-          (promo) => promo.code === bookingData.promotion_code
-        );
-        if (selectedPromotion && isPromotionValid(selectedPromotion)) {
-          apiData.promotion_code = bookingData.promotion_code;
-        } else {
-          throw new Error(
-            "Mã khuyến mãi không hợp lệ hoặc đã hết lượt sử dụng"
-          );
-        }
-      }
-
-      console.log("Dữ liệu gửi đến API /bookings:", apiData);
-
       const bookingRes = await api.post("/bookings", apiData);
-
       const bookingResponseData = bookingRes.data;
+
       if (
         !bookingResponseData ||
         (!bookingResponseData.id && !bookingResponseData.data?.id)
@@ -1421,20 +1359,26 @@ export default function HotelBooking() {
                   <div>
                     <div className="mb-4 form-group">
                       <label className="form-label required">
-                        Kiểu đặt phòng
+                        Loại đặt phòng
                       </label>
                       <CustomSelect
-                        id="booking-type"
-                        value={bookingData.isHourly ? "hourly" : "daily"}
+                        id="is_hourly"
+                        value={bookingData.is_hourly ? "hourly" : "daily"}
                         onChange={(value) =>
-                          handleBookingTypeChange(value === "hourly")
+                          handleBookingChange("is_hourly", value === "hourly")
                         }
                         options={[
                           { value: "daily", label: "Theo ngày" },
                           { value: "hourly", label: "Theo giờ" },
                         ]}
-                        placeholder="Chọn kiểu đặt phòng"
+                        placeholder="Chọn loại đặt phòng"
                       />
+                      {touchedFields["booking.is_hourly"] &&
+                        validationErrors.booking.is_hourly && (
+                          <ErrorMessage
+                            message={validationErrors.booking.is_hourly}
+                          />
+                        )}
                     </div>
 
                     <div className="mb-6 form-grid form-grid-3">
@@ -1443,14 +1387,14 @@ export default function HotelBooking() {
                           htmlFor="checkIn"
                           className="form-label required"
                         >
-                          {bookingData.isHourly
-                            ? "Giờ nhận phòng"
+                          {bookingData.is_hourly
+                            ? "Thời gian nhận phòng"
                             : "Ngày nhận phòng"}
                         </label>
                         <input
                           id="checkIn"
                           type={
-                            bookingData.isHourly ? "datetime-local" : "date"
+                            bookingData.is_hourly ? "datetime-local" : "date"
                           }
                           className={`form-input ${
                             validationErrors.booking.checkInDate ? "error" : ""
@@ -1476,14 +1420,14 @@ export default function HotelBooking() {
                           htmlFor="checkOut"
                           className="form-label required"
                         >
-                          {bookingData.isHourly
-                            ? "Giờ trả phòng"
+                          {bookingData.is_hourly
+                            ? "Thời gian trả phòng"
                             : "Ngày trả phòng"}
                         </label>
                         <input
                           id="checkOut"
                           type={
-                            bookingData.isHourly ? "datetime-local" : "date"
+                            bookingData.is_hourly ? "datetime-local" : "date"
                           }
                           className={`form-input ${
                             validationErrors.booking.checkOutDate ? "error" : ""
@@ -1553,20 +1497,12 @@ export default function HotelBooking() {
                       </div>
                     )}
 
-                    {(bookingData.isHourly
-                      ? calculateHours()
-                      : calculateNights()) > 0 && (
+                    {calculateDuration() > 0 && (
                       <div className="mb-4 price-info price-info-blue">
                         <p>
-                          <strong>
-                            {bookingData.isHourly
-                              ? "Số giờ lưu trú:"
-                              : "Số đêm lưu trú:"}
-                          </strong>{" "}
-                          {bookingData.isHourly
-                            ? calculateHours()
-                            : calculateNights()}{" "}
-                          {bookingData.isHourly ? "giờ" : "đêm"}
+                          <strong>Thời gian lưu trú:</strong>{" "}
+                          {calculateDuration()}{" "}
+                          {bookingData.is_hourly ? "giờ" : "đêm"}
                         </p>
                       </div>
                     )}
@@ -1632,37 +1568,39 @@ export default function HotelBooking() {
                             <label className="form-label required">
                               Loại phòng
                             </label>
-                            <CustomSelect
-                              id={`room-type-${room.id}`}
-                              value={room.type}
-                              onChange={(value) =>
-                                handleRoomChange(room.id, "type", value)
-                              }
-                              options={getFilteredRoomTypes(
-                                room.guests || 0
-                              ).map((type) => ({
-                                value: type.id.toString(),
-                                label: `${type.name} - ${
-                                  bookingData.isHourly
-                                    ? parseFloat(
-                                        type.hourly_rate || "0"
-                                      ).toLocaleString()
-                                    : parseFloat(
-                                        type.base_rate
-                                      ).toLocaleString()
-                                } VNĐ/${
-                                  bookingData.isHourly ? "giờ" : "đêm"
-                                } (Tối đa ${type.max_occupancy} khách)`,
-                              }))}
-                              placeholder="Chọn loại phòng"
-                              disabled={
-                                !room.guests ||
-                                getFilteredRoomTypes(room.guests || 0)
-                                  .length === 0 ||
-                                !bookingData.checkInDate ||
-                                !bookingData.checkOutDate
-                              }
-                            />
+                            {loadingRooms ? (
+                              <div className="loading">
+                                Đang tải loại phòng...
+                              </div>
+                            ) : (
+                              <CustomSelect
+                                id={`room-type-${room.id}`}
+                                value={room.type}
+                                onChange={(value) =>
+                                  handleRoomChange(room.id, "type", value)
+                                }
+                                options={getFilteredRoomTypes(
+                                  room.guests || 0
+                                ).map((type) => ({
+                                  value: type.id.toString(),
+                                  label: `${type.name} - ${parseFloat(
+                                    bookingData.is_hourly
+                                      ? type.hourly_rate || "0"
+                                      : type.base_rate
+                                  ).toLocaleString()} VNĐ/${
+                                    bookingData.is_hourly ? "giờ" : "đêm"
+                                  } (Tối đa ${type.max_occupancy} khách)`,
+                                }))}
+                                placeholder="Chọn loại phòng"
+                                disabled={
+                                  !room.guests ||
+                                  getFilteredRoomTypes(room.guests || 0)
+                                    .length === 0 ||
+                                  !bookingData.checkInDate ||
+                                  !bookingData.checkOutDate
+                                }
+                              />
+                            )}
                             {touchedFields[`rooms.${room.id}.type`] &&
                               validationErrors.rooms[room.id]?.type && (
                                 <ErrorMessage
@@ -1676,23 +1614,29 @@ export default function HotelBooking() {
                             <label className="form-label required">
                               Số phòng
                             </label>
-                            <CustomSelect
-                              id={`room-number-${room.id}`}
-                              value={room.number}
-                              onChange={(value) =>
-                                handleRoomChange(room.id, "number", value)
-                              }
-                              options={getAvailableRoomNumbers(
-                                room.type,
-                                room.id
-                              )}
-                              placeholder="Chọn số phòng"
-                              disabled={
-                                !room.type ||
-                                !bookingData.checkInDate ||
-                                !bookingData.checkOutDate
-                              }
-                            />
+                            {loadingRooms ? (
+                              <div className="loading">
+                                Đang tải số phòng...
+                              </div>
+                            ) : (
+                              <CustomSelect
+                                id={`room-number-${room.id}`}
+                                value={room.number}
+                                onChange={(value) =>
+                                  handleRoomChange(room.id, "number", value)
+                                }
+                                options={getAvailableRoomNumbers(
+                                  room.type,
+                                  room.id
+                                )}
+                                placeholder="Chọn số phòng"
+                                disabled={
+                                  !room.type ||
+                                  !bookingData.checkInDate ||
+                                  !bookingData.checkOutDate
+                                }
+                              />
+                            )}
                             {touchedFields[`rooms.${room.id}.number`] &&
                               validationErrors.rooms[room.id]?.number && (
                                 <ErrorMessage
@@ -1709,7 +1653,7 @@ export default function HotelBooking() {
                             <p>
                               <strong>Giá phòng:</strong>{" "}
                               {room.price.toLocaleString()} VNĐ/
-                              {bookingData.isHourly ? "giờ" : "đêm"}
+                              {bookingData.is_hourly ? "giờ" : "đêm"}
                             </p>
                           </div>
                         )}
@@ -1748,12 +1692,10 @@ export default function HotelBooking() {
                   </div>
                   <div className="stat-card stat-card-purple">
                     <div className="stat-number stat-number-purple">
-                      {bookingData.isHourly
-                        ? calculateHours()
-                        : calculateNights()}
+                      {calculateDuration()}
                     </div>
                     <div className="stat-label">
-                      {bookingData.isHourly ? "Giờ" : "Đêm"}
+                      {bookingData.is_hourly ? "Giờ" : "Đêm"}
                     </div>
                   </div>
                 </div>
@@ -1769,9 +1711,7 @@ export default function HotelBooking() {
                           (sum, room) =>
                             sum +
                             (room.price && room.number
-                              ? bookingData.isHourly
-                                ? room.price * calculateHours()
-                                : room.price * calculateNights()
+                              ? room.price * calculateDuration()
                               : 0),
                           0
                         )
@@ -1844,15 +1784,15 @@ export default function HotelBooking() {
                 {bookingData.checkInDate && bookingData.checkOutDate && (
                   <div className="date-info">
                     {new Date(bookingData.checkInDate).toLocaleString("vi-VN", {
-                      dateStyle: bookingData.isHourly ? "short" : "medium",
-                      timeStyle: bookingData.isHourly ? "short" : undefined,
+                      dateStyle: bookingData.is_hourly ? "medium" : "short",
+                      timeStyle: bookingData.is_hourly ? "short" : undefined,
                     })}{" "}
                     -{" "}
                     {new Date(bookingData.checkOutDate).toLocaleString(
                       "vi-VN",
                       {
-                        dateStyle: bookingData.isHourly ? "short" : "medium",
-                        timeStyle: bookingData.isHourly ? "short" : undefined,
+                        dateStyle: bookingData.is_hourly ? "medium" : "short",
+                        timeStyle: bookingData.is_hourly ? "short" : undefined,
                       }
                     )}
                   </div>
@@ -1885,16 +1825,10 @@ export default function HotelBooking() {
                                   (rt) => rt.id.toString() === room.type
                                 )?.name
                               }{" "}
-                              (Phòng {room.number}) x{" "}
-                              {bookingData.isHourly
-                                ? calculateHours()
-                                : calculateNights()}{" "}
-                              {bookingData.isHourly ? "giờ" : "đêm"} ={" "}
+                              (Phòng {room.number}) x {calculateDuration()}{" "}
+                              {bookingData.is_hourly ? "giờ" : "đêm"} ={" "}
                               {(
-                                room.price *
-                                (bookingData.isHourly
-                                  ? calculateHours()
-                                  : calculateNights())
+                                room.price * calculateDuration()
                               ).toLocaleString()}{" "}
                               VNĐ
                             </div>
@@ -1907,7 +1841,7 @@ export default function HotelBooking() {
                 <div className="mt-4">
                   <button
                     onClick={handleSubmit}
-                    disabled={isSubmitting || loadingData}
+                    disabled={isSubmitting || loadingData || loadingRooms}
                     className="btn btn-primary btn-full"
                   >
                     {isSubmitting ? (
