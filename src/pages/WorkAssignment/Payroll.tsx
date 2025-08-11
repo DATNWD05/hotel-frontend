@@ -308,7 +308,7 @@ const PayrollManagement = () => {
             <div className="stats-content">
               <div>
                 <p className="stats-text">Tổng lương</p>
-                <p className="stats-number text-xl">
+                <p className="text-xl stats-number">
                   {formatCurrency(
                     payrolls.reduce(
                       (sum, p) => sum + (Number(p.final_salary) || 0),
@@ -460,13 +460,13 @@ const PayrollManagement = () => {
                       <td className="text-right">
                         {formatCurrency(payroll.total_salary)}
                       </td>
-                      <td className="text-right text-green font-medium">
+                      <td className="font-medium text-right text-green">
                         +{formatCurrency(payroll.bonus)}
                       </td>
-                      <td className="text-right text-red font-medium">
+                      <td className="font-medium text-right text-red">
                         -{formatCurrency(payroll.penalty)}
                       </td>
-                      <td className="text-right font-semibold">
+                      <td className="font-semibold text-right">
                         {formatCurrency(payroll.final_salary)}
                       </td>
                       <td className="text-center">
