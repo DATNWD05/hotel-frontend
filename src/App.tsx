@@ -51,8 +51,8 @@ import AddDepartment from "./pages/Departments/DepartmentAdd";
 
 import RosterTable from "./pages/WorkAssignment/RosterTable";
 import OvertimeForm from "./pages/WorkAssignment/OvertimeForm";
-import Payroll from "./pages/WorkAssignment/Payroll";
-import DetailBookings from "./pages/DetailBooking/DetailBookings";
+import PayrollManagement from "./pages/WorkAssignment/Payroll";
+import BookingManagement from "./pages/DetailBooking/BookingManagement";
 
 const App: React.FC = () => {
   return (
@@ -143,7 +143,7 @@ const App: React.FC = () => {
             path="listbookings/detail/:id"
             element={
               <ProtectedRoute permission="view_bookings">
-                <DetailBookings />
+                <BookingManagement />
               </ProtectedRoute>
             }
           />
@@ -345,7 +345,7 @@ const App: React.FC = () => {
             path="payroll"
             element={
               <ProtectedRoute permission="">
-                <Payroll />
+                <PayrollManagement />
               </ProtectedRoute>
             }
           />

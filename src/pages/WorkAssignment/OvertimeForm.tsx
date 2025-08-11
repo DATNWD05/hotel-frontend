@@ -24,7 +24,7 @@ interface Employee {
 interface OvertimeFormData {
   employeeId: string;
   startDateTime: string; // Đổi thành startDateTime để khớp với backend
-  endDateTime: string;   // Đổi thành endDateTime để khớp với backend
+  endDateTime: string; // Đổi thành endDateTime để khớp với backend
 }
 
 interface Shift {
@@ -46,7 +46,9 @@ interface OvertimeRequest {
 
 // Hàm chuẩn hóa định dạng thời gian
 const normalizeDateTime = (datetime: string): string => {
-  return datetime.replace("T", " ").split(":")[0] + ":" + datetime.split(":")[1];
+  return (
+    datetime.replace("T", " ").split(":")[0] + ":" + datetime.split(":")[1]
+  );
 };
 
 const OvertimeForm: React.FC = () => {
@@ -87,7 +89,10 @@ const OvertimeForm: React.FC = () => {
           Array.isArray(assignmentResponse.data.data)
         ) {
           const assignmentsByEmployee = assignmentResponse.data.data.reduce(
-            (acc: Record<string, WorkAssignment[]>, assignment: WorkAssignment) => {
+            (
+              acc: Record<string, WorkAssignment[]>,
+              assignment: WorkAssignment
+            ) => {
               const employeeId = assignment.employee_id;
               if (!acc[employeeId]) acc[employeeId] = [];
               acc[employeeId].push(assignment);
@@ -108,7 +113,10 @@ const OvertimeForm: React.FC = () => {
           Array.isArray(overtimeResponse.data.data)
         ) {
           const overtimeByEmployee = overtimeResponse.data.data.reduce(
-            (acc: Record<string, OvertimeRequest[]>, request: OvertimeRequest) => {
+            (
+              acc: Record<string, OvertimeRequest[]>,
+              request: OvertimeRequest
+            ) => {
               const employeeId = request.employee_id;
               if (!acc[employeeId]) acc[employeeId] = [];
               acc[employeeId].push(request);
@@ -120,7 +128,7 @@ const OvertimeForm: React.FC = () => {
         } else {
           setExistingOvertimeRequests({});
         }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         console.error("Lỗi khi lấy dữ liệu:", err);
         setEmployees([]);
@@ -168,23 +176,31 @@ const OvertimeForm: React.FC = () => {
 
     if (otHours > maxAllowed) {
       setError(
-        `Tăng ca của nhân viên ${employeeId} (${otHours.toFixed(2)} tiếng) vượt quá giới hạn ${maxAllowed} tiếng`
+        `Tăng ca của nhân viên ${employeeId} (${otHours.toFixed(
+          2
+        )} tiếng) vượt quá giới hạn ${maxAllowed} tiếng`
       );
       return false;
     }
 
-    const hasMainShiftConflict = workAssignments[employeeId]?.some((assignment) => {
-      const shiftStart = new Date(`${workDate} ${assignment.shift.start_time}:00`);
-      const shiftEnd = new Date(`${workDate} ${assignment.shift.end_time}:00`);
-      if (shiftEnd < shiftStart) {
-        shiftEnd.setDate(shiftEnd.getDate() + 1);
+    const hasMainShiftConflict = workAssignments[employeeId]?.some(
+      (assignment) => {
+        const shiftStart = new Date(
+          `${workDate} ${assignment.shift.start_time}:00`
+        );
+        const shiftEnd = new Date(
+          `${workDate} ${assignment.shift.end_time}:00`
+        );
+        if (shiftEnd < shiftStart) {
+          shiftEnd.setDate(shiftEnd.getDate() + 1);
+        }
+        return (
+          (start >= shiftStart && start < shiftEnd) ||
+          (end > shiftStart && end <= shiftEnd) ||
+          (start <= shiftStart && end >= shiftEnd)
+        );
       }
-      return (
-        (start >= shiftStart && start < shiftEnd) ||
-        (end > shiftStart && end <= shiftEnd) ||
-        (start <= shiftStart && end >= shiftEnd)
-      );
-    });
+    );
 
     if (hasMainShiftConflict) {
       setError(
@@ -227,8 +243,8 @@ const OvertimeForm: React.FC = () => {
           )
         : [...prev, { employeeId, startDateTime: value, endDateTime: "" }];
       const endDateTime =
-        updatedData.find((data) => data.employeeId === employeeId)?.endDateTime ||
-        "";
+        updatedData.find((data) => data.employeeId === employeeId)
+          ?.endDateTime || "";
       validateTime(employeeId, value, endDateTime);
       return updatedData;
     });
@@ -246,8 +262,8 @@ const OvertimeForm: React.FC = () => {
           )
         : [...prev, { employeeId, startDateTime: "", endDateTime: value }];
       const startDateTime =
-        updatedData.find((data) => data.employeeId === employeeId)?.startDateTime ||
-        "";
+        updatedData.find((data) => data.employeeId === employeeId)
+          ?.startDateTime || "";
       validateTime(employeeId, startDateTime, value);
       return updatedData;
     });
@@ -259,11 +275,17 @@ const OvertimeForm: React.FC = () => {
 
     const validOvertimeData = overtimeData.filter((data) => {
       if (!data.startDateTime || !data.endDateTime) return false;
-      return validateTime(data.employeeId, data.startDateTime, data.endDateTime);
+      return validateTime(
+        data.employeeId,
+        data.startDateTime,
+        data.endDateTime
+      );
     });
 
     if (error || validOvertimeData.length === 0) {
-      setError(error || "Vui lòng nhập thời gian hợp lệ cho ít nhất một nhân viên");
+      setError(
+        error || "Vui lòng nhập thời gian hợp lệ cho ít nhất một nhân viên"
+      );
       return;
     }
 
@@ -360,7 +382,10 @@ const OvertimeForm: React.FC = () => {
                           type="datetime-local"
                           value={data.startDateTime}
                           onChange={(e) =>
-                            handleStartDateTimeChange(employee.id, e.target.value)
+                            handleStartDateTimeChange(
+                              employee.id,
+                              e.target.value
+                            )
                           }
                           InputLabelProps={{ shrink: true }}
                           inputProps={{ step: 300 }}
