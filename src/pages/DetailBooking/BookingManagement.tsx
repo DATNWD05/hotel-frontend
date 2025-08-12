@@ -45,6 +45,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Chip,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import { format, parseISO, isValid } from "date-fns";
@@ -149,6 +150,7 @@ interface Booking {
   creator: Creator;
   services: Service[];
   promotions: Promotion[];
+  is_hourly: boolean;
 }
 
 const BookingManagement = () => {
@@ -237,35 +239,46 @@ const BookingManagement = () => {
             id: Number(room.id),
             services: (room.services || []).map((service: Service) => ({
               ...service,
-              total: service.total ?? Number.parseFloat(service.price) * (service.quantity || 1),
+              total:
+                service.total ??
+                Number.parseFloat(service.price) * (service.quantity || 1),
               icon: service.icon || Coffee, // Ensure icon is set
             })),
             room_type: {
               ...room.room_type,
-              amenities: (room.room_type?.amenities || []).map((amenity: Amenity) => ({
-                ...amenity,
-                icon: amenity.icon || Coffee, // Ensure icon is set
-              })),
+              amenities: (room.room_type?.amenities || []).map(
+                (amenity: Amenity) => ({
+                  ...amenity,
+                  icon: amenity.icon || Coffee, // Ensure icon is set
+                })
+              ),
             },
           })),
           services: (data.services || []).map((service: Service) => ({
             ...service,
-            total: service.total ?? Number.parseFloat(service.price) * (service.quantity || 1),
+            total:
+              service.total ??
+              Number.parseFloat(service.price) * (service.quantity || 1),
             icon: service.icon || Coffee, // Ensure icon is set
           })),
           creator: data.creator || { id: 0, name: "Unknown", email: "N/A" },
           promotions: data.promotions || [],
+          is_hourly: data.is_hourly ?? false, // Xử lý is_hourly với giá trị mặc định
         };
         setBooking(bookingData);
         setRoomServices(
           data.rooms.reduce(
             (acc: Record<number, Service[]>, room: Room) => ({
               ...acc,
-              [Number(room.id)]: (room.services || []).map((service: Service) => ({
-                ...service,
-                total: service.total ?? Number.parseFloat(service.price) * (service.quantity || 1),
-                icon: service.icon || Coffee, // Ensure icon is set
-              })),
+              [Number(room.id)]: (room.services || []).map(
+                (service: Service) => ({
+                  ...service,
+                  total:
+                    service.total ??
+                    Number.parseFloat(service.price) * (service.quantity || 1),
+                  icon: service.icon || Coffee, // Ensure icon is set
+                })
+              ),
             }),
             {}
           )
@@ -356,30 +369,23 @@ const BookingManagement = () => {
     fetchAvailablePromotions();
   }, [bookingId]);
 
-  const formatCurrency = (amount: string) => {
+  const formatCurrency = (amount: string | number) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
-    }).format(Number.parseFloat(amount));
+    }).format(Number.parseFloat(String(amount)));
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("vi-VN", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatDateTime = (dateTimeString: string) => {
-    return new Date(dateTimeString).toLocaleString("vi-VN", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatDateTime = (dateTimeString: string, isHourly: boolean) => {
+    try {
+      const parsedDate = parseISO(dateTimeString);
+      if (!isValid(parsedDate)) throw new Error("Invalid date");
+      return isHourly
+        ? format(parsedDate, "dd/MM/yyyy HH:mm")
+        : format(parsedDate, "dd/MM/yyyy");
+    } catch {
+      return "N/A";
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -671,21 +677,19 @@ const BookingManagement = () => {
   };
 
   const calculateAllServicesTotal = () => {
-    return Object.values(roomServices).reduce((total, services) => {
-      return (
-        total +
-        services.reduce(
-          (roomTotal, service) => roomTotal + (service.total || 0),
-          0
-        )
-      );
-    }, 0);
+    if (!booking) return 0;
+    return booking.services.reduce(
+      (total, service) => total + (service.total || 0),
+      0
+    );
   };
 
   const calculateGrandTotal = () => {
-    const roomTotal = Number.parseFloat(booking?.total_amount || "0");
+    if (!booking) return 0;
+    const roomTotal = Number.parseFloat(booking.raw_total || "0");
     const servicesTotal = calculateAllServicesTotal();
-    return roomTotal + servicesTotal;
+    const discount = Number.parseFloat(booking.discount_amount || "0");
+    return roomTotal + servicesTotal - discount;
   };
 
   const handleSnackbarClose = () => {
@@ -722,7 +726,7 @@ const BookingManagement = () => {
   }: {
     services: Service[];
     onAddService: (service: Service, quantity: number, note: string) => void;
-    formatCurrency: (amount: string) => string;
+    formatCurrency: (amount: string | number) => string;
   }) => {
     const [selectedService, setSelectedService] = useState<Service | null>(
       null
@@ -888,7 +892,7 @@ const BookingManagement = () => {
     availableServices: Service[];
     onAddService: (service: Service, quantity: number, note: string) => void;
     onRemoveService: (serviceId: number) => void;
-    formatCurrency: (amount: string) => string;
+    formatCurrency: (amount: string | number) => string;
   }) => {
     const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
 
@@ -896,7 +900,7 @@ const BookingManagement = () => {
       "WiFi miễn phí": Wifi,
       "Điều hòa không khí": Wind,
       "TV màn hình phẳng": Tv,
-      "Minibar": Refrigerator,
+      Minibar: Refrigerator,
       "Két an toàn": Shield,
       "Phòng tắm riêng": Bath,
       "Dịch vụ phòng 24/7": Phone,
@@ -925,7 +929,9 @@ const BookingManagement = () => {
             </h3>
             <div className="room-price">
               <p className="price">{formatCurrency(room.pivot.rate)}</p>
-              <p className="price-unit">/ đêm</p>
+              <p className="price-unit">
+                {booking?.is_hourly ? "/ giờ" : "/ đêm"}
+              </p>
             </div>
           </div>
           <div className="room-description">
@@ -1018,7 +1024,7 @@ const BookingManagement = () => {
                   </div>
                   <div className="service-item-actions">
                     <span className="service-total">
-                      {formatCurrency((service.total || 0).toString())}
+                      {formatCurrency(service.total || 0)}
                     </span>
                     <button
                       title="Xóa dịch vụ"
@@ -1033,7 +1039,7 @@ const BookingManagement = () => {
               <div className="services-total">
                 <span>Tổng dịch vụ phòng {room.room_number}:</span>
                 <span className="total-amount">
-                  {formatCurrency(calculateRoomServicesTotal().toString())}
+                  {formatCurrency(calculateRoomServicesTotal())}
                 </span>
               </div>
             </div>
@@ -1087,6 +1093,12 @@ const BookingManagement = () => {
                     <AlertCircle className="icon-small" /> Chưa thanh toán cọc
                   </span>
                 )}
+                <Chip
+                  label={booking.is_hourly ? "Theo giờ" : "Theo ngày"}
+                  color={booking.is_hourly ? "warning" : "primary"}
+                  size="small"
+                  sx={{ fontWeight: "bold", ml: 1 }}
+                />
               </div>
             </div>
           </div>
@@ -1132,7 +1144,11 @@ const BookingManagement = () => {
                       <div className="detail-item">
                         <CalendarDays className="icon-small" />
                         <span>
-                          Sinh: {formatDate(booking.customer.date_of_birth)}
+                          Sinh:{" "}
+                          {formatDateTime(
+                            booking.customer.date_of_birth,
+                            false
+                          )}
                         </span>
                       </div>
                     </div>
@@ -1208,13 +1224,24 @@ const BookingManagement = () => {
                   <div className="timeline-item">
                     <div className="timeline-dot timeline-dot-blue"></div>
                     <div>
-                      <p className="timeline-title">Ngày nhận phòng</p>
+                      <p className="timeline-title">
+                        {booking.is_hourly
+                          ? "Thời gian nhận phòng"
+                          : "Ngày nhận phòng"}
+                      </p>
                       <p className="timeline-text">
-                        {formatDate(booking.check_in_date)}
+                        {formatDateTime(
+                          booking.check_in_date,
+                          booking.is_hourly
+                        )}
                       </p>
                       {booking.check_in_at && (
                         <p className="timeline-status">
-                          ✓ Đã nhận: {formatDateTime(booking.check_in_at)}
+                          ✓ Đã nhận:{" "}
+                          {formatDateTime(
+                            booking.check_in_at,
+                            booking.is_hourly
+                          )}
                         </p>
                       )}
                     </div>
@@ -1223,13 +1250,24 @@ const BookingManagement = () => {
                   <div className="timeline-item">
                     <div className="timeline-dot timeline-dot-green"></div>
                     <div>
-                      <p className="timeline-title">Ngày trả phòng</p>
+                      <p className="timeline-title">
+                        {booking.is_hourly
+                          ? "Thời gian trả phòng"
+                          : "Ngày trả phòng"}
+                      </p>
                       <p className="timeline-text">
-                        {formatDate(booking.check_out_date)}
+                        {formatDateTime(
+                          booking.check_out_date,
+                          booking.is_hourly
+                        )}
                       </p>
                       {booking.check_out_at && (
                         <p className="timeline-status">
-                          ✓ Đã trả: {formatDateTime(booking.check_out_at)}
+                          ✓ Đã trả:{" "}
+                          {formatDateTime(
+                            booking.check_out_at,
+                            booking.is_hourly
+                          )}
                         </p>
                       )}
                     </div>
@@ -1243,18 +1281,19 @@ const BookingManagement = () => {
                 </h2>
                 <div className="payment-details">
                   <div className="payment-row">
-                    <span>Tổng tiền phòng:</span>
+                    <span>
+                      Tổng tiền phòng (
+                      {booking.is_hourly ? "theo giờ" : "theo ngày"}):
+                    </span>
                     <span className="payment-amount">
                       {formatCurrency(booking.raw_total)}
                     </span>
                   </div>
-                  {Object.keys(roomServices).some(
-                    (roomId) => roomServices[Number(roomId)]?.length > 0
-                  ) && (
+                  {booking.services.length > 0 && (
                     <div className="payment-row">
-                      <span>Tổng dịch vụ:</span>
+                      <span>Tổng tiền dịch vụ:</span>
                       <span className="payment-amount">
-                        {formatCurrency(calculateAllServicesTotal().toString())}
+                        {formatCurrency(calculateAllServicesTotal())}
                       </span>
                     </div>
                   )}
@@ -1270,7 +1309,7 @@ const BookingManagement = () => {
                   <div className="payment-row payment-total">
                     <span>Tổng cộng:</span>
                     <span className="payment-amount payment-amount-large">
-                      {formatCurrency(calculateGrandTotal().toString())}
+                      {formatCurrency(calculateGrandTotal())}
                     </span>
                   </div>
                   <hr className="separator" />

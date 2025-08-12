@@ -16,7 +16,7 @@ import {
   Checkbox,
   ClickAwayListener,
 } from "@mui/material";
-import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
+import { KeyboardArrowDown } from "@mui/icons-material";
 import { format, parseISO, isValid } from "date-fns";
 import { toast } from "react-toastify";
 import api from "../../api/axios";
@@ -62,6 +62,7 @@ interface Booking {
     };
   };
   rooms?: Room[];
+  is_hourly: boolean;
 }
 
 interface EditBookingDialogProps {
@@ -70,6 +71,16 @@ interface EditBookingDialogProps {
   bookingInfo: Booking | null;
   onConfirm: (updatedBooking: any) => void;
 }
+
+const formatDate = (date: string, isHourly: boolean) => {
+  try {
+    const parsedDate = parseISO(date);
+    if (!isValid(parsedDate)) throw new Error("Invalid date");
+    return format(parsedDate, isHourly ? "dd/MM/yyyy HH:mm" : "dd/MM/yyyy");
+  } catch {
+    return "N/A";
+  }
+};
 
 const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   open,
@@ -86,18 +97,17 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const [roomsLoading, setRoomsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [roomDropdownOpen, setRoomDropdownOpen] = useState<boolean>(false);
+  const [isHourly, setIsHourly] = useState<boolean>(false);
 
   const fetchAvailableRooms = async () => {
     try {
       setRoomsLoading(true);
-      const { data } = await api.get("/rooms");
-      let roomsData = [];
-
-      if (data.data) {
-        roomsData = data.data;
-      } else if (Array.isArray(data)) {
-        roomsData = data;
-      }
+      const { data } = await api.post("/available-rooms", {
+        check_in_date: checkInDate,
+        check_out_date: checkOutDate,
+        is_hourly: isHourly,
+      });
+      const roomsData = Array.isArray(data) ? data : data.data || [];
 
       const availableRoomsFiltered = roomsData.filter(
         (room: Room) => room.status === "available"
@@ -105,12 +115,10 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
 
       if (bookingInfo) {
         const currentRooms = bookingInfo.rooms || [bookingInfo.room];
-
         currentRooms.forEach((currentRoom) => {
           const existsInAvailable = availableRoomsFiltered.some(
             (room: Room) => room.id === currentRoom.id
           );
-
           if (!existsInAvailable) {
             availableRoomsFiltered.push({
               id: currentRoom.id,
@@ -133,36 +141,47 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   };
 
   useEffect(() => {
-    if (open) {
+    if (open && checkInDate && checkOutDate) {
       fetchAvailableRooms();
     }
-  }, [open]);
+  }, [open, checkInDate, checkOutDate, isHourly]);
 
   useEffect(() => {
     if (bookingInfo) {
-      setCheckInDate(format(parseISO(bookingInfo.check_in_date), "yyyy-MM-dd"));
+      const parsedCheckIn = parseISO(bookingInfo.check_in_date);
+      const parsedCheckOut = parseISO(bookingInfo.check_out_date);
+      setCheckInDate(
+        isValid(parsedCheckIn)
+          ? format(
+              parsedCheckIn,
+              bookingInfo.is_hourly ? "yyyy-MM-dd'T'HH:mm" : "yyyy-MM-dd"
+            )
+          : ""
+      );
       setCheckOutDate(
-        format(parseISO(bookingInfo.check_out_date), "yyyy-MM-dd")
+        isValid(parsedCheckOut)
+          ? format(
+              parsedCheckOut,
+              bookingInfo.is_hourly ? "yyyy-MM-dd'T'HH:mm" : "yyyy-MM-dd"
+            )
+          : ""
       );
       setDepositAmount(bookingInfo.deposit_amount);
-
+      setIsHourly(bookingInfo.is_hourly ?? false);
       const currentRoomIds = bookingInfo.rooms
         ? bookingInfo.rooms.map((room) => room.id)
         : [bookingInfo.room.id];
-
       setSelectedRoomIds(currentRoomIds);
       setError(null);
     }
   }, [bookingInfo]);
 
   const handleRoomToggle = (roomId: number) => {
-    setSelectedRoomIds((prev) => {
-      if (prev.includes(roomId)) {
-        return prev.filter((id) => id !== roomId);
-      } else {
-        return [...prev, roomId];
-      }
-    });
+    setSelectedRoomIds((prev) =>
+      prev.includes(roomId)
+        ? prev.filter((id) => id !== roomId)
+        : [...prev, roomId]
+    );
   };
 
   const removeRoom = (roomIdToRemove: number) => {
@@ -222,6 +241,25 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       return;
     }
 
+    if (isHourly) {
+      const hoursDiff =
+        (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+      if (hoursDiff < 1) {
+        setError(
+          "Thời gian trả phòng phải sau thời gian nhận phòng ít nhất 1 giờ"
+        );
+        toast.error(
+          "Thời gian trả phòng phải sau thời gian nhận phòng ít nhất 1 giờ"
+        );
+        return;
+      }
+      if (checkIn.getHours() >= 20) {
+        setError("Booking theo giờ không được bắt đầu sau 20:00");
+        toast.error("Booking theo giờ không được bắt đầu sau 20:00");
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
 
@@ -231,17 +269,14 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         check_in_date: checkInDate,
         check_out_date: checkOutDate,
         deposit_amount: depositAmount,
+        is_hourly: isHourly,
       };
-
-      console.log("Payload gửi đi:", updateData);
 
       const { data } = await api.put(
         `/bookings/${bookingInfo.id}`,
         updateData,
         {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
 
@@ -258,7 +293,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   };
 
   const getRoomDisplayName = (room: Room) => {
-    return `Phòng ${room.room_number}`;
+    return `Phòng ${room.room_number} - ${room.room_type.name}`;
   };
 
   const getSelectedRoomsDisplay = () => {
@@ -271,296 +306,307 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{ sx: { borderRadius: 2 } }}
+    >
       <DialogTitle
         sx={{ fontWeight: 600, fontSize: "25px", color: "#4318FF", mb: 2 }}
       >
-        🏡 Sửa Đặt Phòng
+        🧾 Chỉnh sửa đặt phòng
       </DialogTitle>
-      <DialogContent dividers sx={{ px: 4, py: 3 }}>
+      <DialogContent dividers sx={{ px: 4, py: 3, bgcolor: "#fff" }}>
         {error && (
-          <Typography
-            color="error"
-            sx={{ mb: 2, p: 2, bgcolor: "#ffebee", borderRadius: 2 }}
-          >
-            {error}
-          </Typography>
+          <Typography sx={{ color: "#dc2626", mb: 3 }}>{error}</Typography>
         )}
-
-        <Typography color="warning" sx={{ mb: 2 }}>
-          Lưu ý: Mọi thay đổi cần phải chính xác!. Vui lòng xác nhận với quản lý
-          để tránh trùng lặp đặt phòng.
-        </Typography>
-
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3, mt: 2 }}>
-          {/* Room Selection */}
-          <Paper
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              border: "1px solid #ccc",
-              backgroundColor: "#fdfdfd",
-            }}
-          >
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              🛏️ Chọn phòng
-            </Typography>
-
-            {/* Display selected rooms as chips */}
-            {selectedRoomIds.length > 0 && (
-              <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
-                {selectedRoomIds.map((roomId) => {
-                  const room = availableRooms.find((r) => r.id === roomId);
-                  return (
-                    <Chip
-                      key={roomId}
-                      label={room ? getRoomDisplayName(room) : `Room ${roomId}`}
-                      onDelete={() => removeRoom(roomId)}
-                      color="primary"
-                      variant="outlined"
-                      size="small"
-                      sx={{
-                        bgcolor: "#e3f2fd",
-                        "&:hover": { bgcolor: "#bbdefb" },
-                      }}
-                    />
-                  );
-                })}
-              </Box>
-            )}
-
-            {/* Custom Dropdown with Enhanced Styling */}
-            <ClickAwayListener onClickAway={() => setRoomDropdownOpen(false)}>
-              <Box sx={{ position: "relative" }}>
-                <Box
-                  onClick={() => setRoomDropdownOpen(!roomDropdownOpen)}
+        {bookingInfo ? (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {/* Loại đặt phòng */}
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: "1px solid #ccc",
+                backgroundColor: "#fdfdfd",
+              }}
+            >
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                📅 Loại đặt phòng
+              </Typography>
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <Button
+                  variant={!isHourly ? "contained" : "outlined"}
+                  onClick={() => setIsHourly(false)}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    p: "12px 14px",
-                    border: "1px solid #ccc",
-                    borderRadius: 1,
-                    bgcolor: "#fff",
-                    cursor: "pointer",
-                    "&:hover": { borderColor: "#4318FF", bgcolor: "#f5f5f5" },
-                    "&:focus": { borderColor: "#4318FF", outline: "none" },
+                    borderRadius: 2,
+                    px: 3,
+                    textTransform: "none",
+                    ...(isHourly
+                      ? { borderColor: "#ccc", color: "#6b7280" }
+                      : { bgcolor: "#4318FF", color: "white" }),
                   }}
                 >
-                  <Typography
-                    variant="body1"
-                    color={
-                      selectedRoomIds.length === 0
-                        ? "text.secondary"
-                        : "text.primary"
-                    }
-                  >
-                    {getSelectedRoomsDisplay()}
-                  </Typography>
-                  {roomDropdownOpen ? (
-                    <KeyboardArrowUp />
-                  ) : (
-                    <KeyboardArrowDown />
-                  )}
-                </Box>
+                  Theo ngày
+                </Button>
+                <Button
+                  variant={isHourly ? "contained" : "outlined"}
+                  onClick={() => setIsHourly(true)}
+                  sx={{
+                    borderRadius: 2,
+                    px: 3,
+                    textTransform: "none",
+                    ...(isHourly
+                      ? { bgcolor: "#4318FF", color: "white" }
+                      : { borderColor: "#ccc", color: "#6b7280" }),
+                  }}
+                >
+                  Theo giờ
+                </Button>
+              </Box>
+            </Paper>
 
-                {/* Enhanced Dropdown Menu */}
-                {roomDropdownOpen && (
-                  <Paper
-                    sx={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      zIndex: 1000,
-                      maxHeight: "300px",
-                      overflowY: "auto",
-                      border: "1px solid #ccc",
-                      borderTop: "none",
-                      borderRadius: "0 0 4px 4px",
-                      mt: 0,
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                    }}
+            {/* Phòng */}
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: "1px solid #ccc",
+                backgroundColor: "#fdfdfd",
+              }}
+            >
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                🛏️ Phòng
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                {selectedRoomIds.length > 0 && (
+                  <Box
+                    sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}
                   >
-                    {roomsLoading ? (
-                      <Box
+                    {selectedRoomIds.map((roomId) => {
+                      const room = availableRooms.find((r) => r.id === roomId);
+                      return (
+                        <Chip
+                          key={roomId}
+                          label={
+                            room ? getRoomDisplayName(room) : `Phòng ${roomId}`
+                          }
+                          onDelete={() => removeRoom(roomId)}
+                          sx={{
+                            bgcolor: "#f3f4f6",
+                            color: "#374151",
+                            fontWeight: 500,
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                )}
+                <ClickAwayListener
+                  onClickAway={() => setRoomDropdownOpen(false)}
+                >
+                  <Box sx={{ position: "relative" }}>
+                    <Box
+                      onClick={() => setRoomDropdownOpen(!roomDropdownOpen)}
+                      sx={{
+                        p: 2,
+                        border: "1px solid #ccc",
+                        borderRadius: 2,
+                        bgcolor: "#fff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        color={
+                          selectedRoomIds.length === 0 ? "#6b7280" : "#374151"
+                        }
+                      >
+                        {getSelectedRoomsDisplay()}
+                      </Typography>
+                      <KeyboardArrowDown
                         sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          p: 2,
+                          position: "absolute",
+                          right: 10,
+                          top: "50%",
+                          transform: roomDropdownOpen
+                            ? "rotate(180deg)"
+                            : "rotate(0deg)",
+                          transition: "transform 0.2s",
+                        }}
+                      />
+                    </Box>
+                    {roomDropdownOpen && (
+                      <Paper
+                        sx={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          right: 0,
+                          zIndex: 1000,
+                          maxHeight: "300px",
+                          overflowY: "auto",
+                          mt: 1,
+                          border: "1px solid #ccc",
+                          borderRadius: 2,
                         }}
                       >
-                        <CircularProgress size={20} sx={{ mr: 1 }} />
-                        <Typography>Đang tải...</Typography>
-                      </Box>
-                    ) : (
-                      <Box sx={{ p: 1 }}>
-                        {availableRooms.map((room) => (
-                          <Box
-                            key={room.id}
-                            onClick={() => handleRoomToggle(room.id)}
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              p: "10px",
-                              cursor: "pointer",
-                              bgcolor: selectedRoomIds.includes(room.id)
-                                ? "#e3f2fd"
-                                : "transparent",
-                              "&:hover": { bgcolor: "#f5f5f5" },
-                              borderBottom: "1px solid #eee",
-                              "&:last-child": { borderBottom: "none" },
-                              borderRadius: 1,
-                            }}
-                          >
-                            <Checkbox
-                              checked={selectedRoomIds.includes(room.id)}
-                              onChange={() => handleRoomToggle(room.id)}
-                              color="primary"
-                              size="small"
-                              sx={{ mr: 1, p: 0 }}
-                            />
-                            <Box sx={{ flex: 1 }}>
-                              <Typography
-                                variant="body2"
-                                fontWeight="medium"
-                                color={
-                                  room.status === "available" ? "green" : "red"
-                                }
-                              >
-                                {getRoomDisplayName(room)}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {room.room_type.name} -{" "}
-                                {Number.parseInt(
-                                  room.room_type.base_rate
-                                ).toLocaleString()}{" "}
-                                VNĐ -{" "}
-                                {room.status === "available"
-                                  ? "Đang Trống"
-                                  : "Đã đặt"}
-                              </Typography>
-                            </Box>
+                        {roomsLoading ? (
+                          <Box sx={{ p: 2, textAlign: "center" }}>
+                            <CircularProgress size={20} sx={{ mr: 2 }} />
+                            <Typography variant="body2">Đang tải...</Typography>
                           </Box>
-                        ))}
-                      </Box>
+                        ) : (
+                          availableRooms.map((room) => (
+                            <Box
+                              key={room.id}
+                              onClick={() => handleRoomToggle(room.id)}
+                              sx={{
+                                p: 2,
+                                display: "flex",
+                                alignItems: "center",
+                                cursor: "pointer",
+                                bgcolor: selectedRoomIds.includes(room.id)
+                                  ? "#f3f4f6"
+                                  : "transparent",
+                                "&:hover": { bgcolor: "#f9fafb" },
+                              }}
+                            >
+                              <Checkbox
+                                checked={selectedRoomIds.includes(room.id)}
+                                sx={{ mr: 2 }}
+                              />
+                              <Box>
+                                <Typography variant="body2" fontWeight={500}>
+                                  {getRoomDisplayName(room)}
+                                </Typography>
+                                <Typography variant="body2" color="#6b7280">
+                                  <b>Giá:</b>{" "}
+                                  {Number.parseInt(
+                                    room.room_type.base_rate
+                                  ).toLocaleString()}{" "}
+                                  VNĐ
+                                </Typography>
+                                <Typography variant="body2" color="#6b7280">
+                                  <b>Trạng thái:</b>{" "}
+                                  {room.status === "available"
+                                    ? "Trống"
+                                    : "Đã đặt"}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          ))
+                        )}
+                      </Paper>
                     )}
-                  </Paper>
-                )}
+                  </Box>
+                </ClickAwayListener>
+                <Typography variant="body2" sx={{ mt: 1 }}>
+                  <b>Đã chọn:</b> {selectedRoomIds.length} phòng
+                </Typography>
               </Box>
-            </ClickAwayListener>
+            </Paper>
 
-            <Typography
-              variant="caption"
-              color="primary"
-              sx={{ mt: 1, display: "block", fontWeight: "bold" }}
+            {/* Thời gian */}
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: "1px solid #ccc",
+                backgroundColor: "#fdfdfd",
+              }}
             >
-              Đã chọn: {selectedRoomIds.length} phòng
-            </Typography>
-          </Paper>
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                📅 Thời gian
+              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: { xs: "column", md: "row" },
+                  gap: 2,
+                }}
+              >
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>{isHourly ? "Thời gian nhận:" : "Ngày nhận:"}</b>{" "}
+                    {checkInDate ? formatDate(checkInDate, isHourly) : "N/A"}
+                  </Typography>
+                  <TextField
+                    type={isHourly ? "datetime-local" : "date"}
+                    value={checkInDate}
+                    onChange={(e) => setCheckInDate(e.target.value)}
+                    fullWidth
+                    size="small"
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>{isHourly ? "Thời gian trả:" : "Ngày trả:"}</b>{" "}
+                    {checkOutDate ? formatDate(checkOutDate, isHourly) : "N/A"}
+                  </Typography>
+                  <TextField
+                    type={isHourly ? "datetime-local" : "date"}
+                    value={checkOutDate}
+                    onChange={(e) => setCheckOutDate(e.target.value)}
+                    fullWidth
+                    size="small"
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  />
+                </Box>
+              </Box>
+            </Paper>
 
-          {/* Check-in Date */}
-          <Paper
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              border: "1px solid #ccc",
-              backgroundColor: "#fdfdfd",
-            }}
-          >
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              📅 Ngày nhận phòng
-            </Typography>
-            <TextField
-              type="date"
-              value={checkInDate}
-              onChange={(e) => setCheckInDate(e.target.value)}
-              fullWidth
-              InputProps={{ style: { padding: "8px" } }}
-              inputProps={{
-                min: format(new Date(), "yyyy-MM-dd"),
+            {/* Đặt cọc */}
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: "1px solid #ccc",
+                backgroundColor: "#fdfdfd",
               }}
-              error={!!error && error.includes("ngày nhận")}
-              helperText={error && error.includes("ngày nhận") ? error : null}
-            />
-          </Paper>
-
-          {/* Check-out Date */}
-          <Paper
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              border: "1px solid #ccc",
-              backgroundColor: "#fdfdfd",
-            }}
-          >
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              📅 Ngày trả phòng
-            </Typography>
-            <TextField
-              type="date"
-              value={checkOutDate}
-              onChange={(e) => setCheckOutDate(e.target.value)}
-              fullWidth
-              InputProps={{ style: { padding: "8px" } }}
-              inputProps={{
-                min: checkInDate || format(new Date(), "yyyy-MM-dd"),
-              }}
-              error={!!error && error.includes("ngày trả")}
-              helperText={error && error.includes("ngày trả") ? error : null}
-            />
-          </Paper>
-
-          {/* Deposit Amount */}
-          <Paper
-            sx={{
-              p: 2,
-              borderRadius: 2,
-              border: "1px solid #ccc",
-              backgroundColor: "#fdfdfd",
-            }}
-          >
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              💰 Số tiền đặt cọc (VNĐ)
-            </Typography>
-            <TextField
-              type="number"
-              value={depositAmount}
-              onChange={(e) => setDepositAmount(e.target.value)}
-              fullWidth
-              InputProps={{ style: { padding: "8px" } }}
-              error={!!error && error.includes("đặt cọc")}
-              helperText={error && error.includes("đặt cọc") ? error : null}
-            />
-          </Paper>
-        </Box>
+            >
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                💰 Đặt cọc
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 1 }}>
+                <b>Số tiền đặt cọc:</b>{" "}
+                {depositAmount
+                  ? `${Number.parseFloat(depositAmount).toLocaleString()} VNĐ`
+                  : "N/A"}
+              </Typography>
+              <TextField
+                type="number"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                fullWidth
+                size="small"
+                placeholder="0 VNĐ"
+                sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+              />
+            </Paper>
+          </Box>
+        ) : (
+          <Typography>Đang tải thông tin...</Typography>
+        )}
       </DialogContent>
-
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} color="inherit">
-          Hủy
+          Đóng
         </Button>
         <Button
           onClick={handleConfirm}
           variant="contained"
           color="primary"
           disabled={loading || selectedRoomIds.length === 0}
-          sx={{
-            borderRadius: 2,
-            px: 3,
-            backgroundColor: "#4318FF",
-            "&:hover": { backgroundColor: "#3311CC" },
-          }}
+          sx={{ borderRadius: 2, px: 3 }}
         >
           {loading ? (
-            <CircularProgress size={24} color="inherit" />
-          ) : (
-            "Xác nhận"
-          )}
+            <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
+          ) : null}
+          {loading ? "Đang xử lý..." : "Cập nhật"}
         </Button>
       </DialogActions>
     </Dialog>
