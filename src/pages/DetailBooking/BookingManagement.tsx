@@ -46,6 +46,7 @@ import {
   FormControl,
   InputLabel,
   Chip,
+  Input,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import { format, parseISO, isValid } from "date-fns";
@@ -64,6 +65,7 @@ interface Customer {
   nationality: string;
   address: string;
   note: string | null;
+  cccd_image_url?: string; // Thêm trường cho URL ảnh CCCD
 }
 
 interface RoomType {
@@ -173,6 +175,10 @@ const BookingManagement = () => {
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [cccdImage, setCccdImage] = useState<File | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(
+    booking?.customer.cccd_image_url || null
+  );
 
   const bookingId = Number(id); // Convert to number
 
@@ -188,7 +194,6 @@ const BookingManagement = () => {
       setLoading(true);
       setError(null);
       const response = await api.get(`/bookings/${bookingId}`);
-      console.log("Dữ liệu thô từ API /bookings:", response.data); // Debug
       if (response.status === 200) {
         const data =
           response.data.booking || response.data.data || response.data;
@@ -242,14 +247,14 @@ const BookingManagement = () => {
               total:
                 service.total ??
                 Number.parseFloat(service.price) * (service.quantity || 1),
-              icon: service.icon || Coffee, // Ensure icon is set
+              icon: service.icon || Coffee,
             })),
             room_type: {
               ...room.room_type,
               amenities: (room.room_type?.amenities || []).map(
                 (amenity: Amenity) => ({
                   ...amenity,
-                  icon: amenity.icon || Coffee, // Ensure icon is set
+                  icon: amenity.icon || Coffee,
                 })
               ),
             },
@@ -259,13 +264,14 @@ const BookingManagement = () => {
             total:
               service.total ??
               Number.parseFloat(service.price) * (service.quantity || 1),
-            icon: service.icon || Coffee, // Ensure icon is set
+            icon: service.icon || Coffee,
           })),
           creator: data.creator || { id: 0, name: "Unknown", email: "N/A" },
           promotions: data.promotions || [],
-          is_hourly: data.is_hourly ?? false, // Xử lý is_hourly với giá trị mặc định
+          is_hourly: data.is_hourly ?? false,
         };
         setBooking(bookingData);
+        setPreviewImage(bookingData.customer.cccd_image_url || null);
         setRoomServices(
           data.rooms.reduce(
             (acc: Record<number, Service[]>, room: Room) => ({
@@ -276,7 +282,7 @@ const BookingManagement = () => {
                   total:
                     service.total ??
                     Number.parseFloat(service.price) * (service.quantity || 1),
-                  icon: service.icon || Coffee, // Ensure icon is set
+                  icon: service.icon || Coffee,
                 })
               ),
             }),
@@ -328,7 +334,7 @@ const BookingManagement = () => {
           price: String(service.price ?? "0.00"),
           quantity: 1,
           category: service.category?.name || "Khác",
-          icon: iconMap[service.name] || Coffee, // Ensure icon is set
+          icon: iconMap[service.name] || Coffee,
           pivot: {
             booking_id: 0,
             service_id: service.id,
@@ -462,7 +468,7 @@ const BookingManagement = () => {
             room_id: roomId,
             quantity,
           },
-          icon: service.icon || Coffee, // Ensure icon is set
+          icon: service.icon || Coffee,
         };
         setRoomServices((prev) => ({
           ...prev,
@@ -695,6 +701,51 @@ const BookingManagement = () => {
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
     setSnackbarMessage("");
+  };
+
+  const handleImageUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCccdImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      const formData = new FormData();
+      formData.append("cccd_image", file);
+      try {
+        const response = await api.post(
+          `/customers/${booking?.customer.id}/upload-cccd`,
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+        if (response.status === 200) {
+          setSnackbarMessage("Tải ảnh CCCD thành công!");
+          setSnackbarOpen(true);
+          setBooking((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  customer: {
+                    ...prev.customer,
+                    cccd_image_url: response.data.cccd_image_url,
+                  },
+                }
+              : prev
+          );
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải ảnh CCCD:", error);
+        setSnackbarMessage("Lỗi khi tải ảnh CCCD. Vui lòng thử lại.");
+        setSnackbarOpen(true);
+      }
+    }
   };
 
   const RoomAmenities = ({ amenities = [] }: { amenities?: Amenity[] }) => {
@@ -1128,6 +1179,23 @@ const BookingManagement = () => {
                           {booking.customer.note}
                         </span>
                       )}
+                    </div>
+                    <div className="customer-image">
+                      {previewImage ? (
+                        <img
+                          src={previewImage}
+                          alt="CCCD"
+                          className="cccd-image"
+                        />
+                      ) : (
+                        <div className="no-image">Chưa có ảnh CCCD</div>
+                      )}
+                      <Input
+                        type="file"
+                        inputProps={{ accept: "image/*" }}
+                        onChange={handleImageUpload}
+                        sx={{ mt: 1 }}
+                      />
                     </div>
                   </div>
                   <hr className="separator" />
