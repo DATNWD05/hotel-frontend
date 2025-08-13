@@ -29,7 +29,9 @@ import {
   Step,
   StepLabel,
   Tooltip,
+  CssBaseline,
 } from "@mui/material"
+import { ThemeProvider, createTheme } from "@mui/material/styles"
 import { format, parseISO, isValid } from "date-fns"
 import AddIcon from "@mui/icons-material/Add"
 import DeleteIcon from "@mui/icons-material/Delete"
@@ -37,6 +39,7 @@ import MonetizationOnOutlinedIcon from "@mui/icons-material/MonetizationOnOutlin
 import LocalHotelOutlinedIcon from "@mui/icons-material/LocalHotelOutlined"
 import RoomServiceOutlinedIcon from "@mui/icons-material/RoomServiceOutlined"
 import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined"
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded"
 import numeral from "numeral"
 import { toast } from "react-toastify"
 import api from "../../api/axios"
@@ -56,6 +59,7 @@ interface CheckoutInfo {
   service_total: number
   check_out_at?: string
   room_details: { room_number: string; base_rate: number; total: number }[]
+
   // FE-only
   amenity_total?: number
   amenities_used?: AmenityRow[]
@@ -99,12 +103,12 @@ const dt = (s?: string) => {
 }
 const getStatusView = (status: string) => {
   const k = (status || "").toLowerCase()
-  if (k === "pending") return { text: "Chờ xác nhận", color: "#FFA500" }
-  if (k === "confirmed") return { text: "Đã xác nhận", color: "#388E3C" }
-  if (k === "checked-in") return { text: "Đã nhận phòng", color: "#1A73E8" }
-  if (k === "checked-out") return { text: "Đã trả phòng", color: "#757575" }
-  if (k === "cancelled") return { text: "Đã hủy", color: "#D32F2F" }
-  return { text: status || "Không xác định", color: "#757575" }
+  if (k === "pending") return { text: "Chờ xác nhận", color: "#f59e0b" }
+  if (k === "confirmed") return { text: "Đã xác nhận", color: "#22c55e" }
+  if (k === "checked-in") return { text: "Đã nhận phòng", color: "#0ea5e9" }
+  if (k === "checked-out") return { text: "Đã trả phòng", color: "#64748b" }
+  if (k === "cancelled") return { text: "Đã hủy", color: "#ef4444" }
+  return { text: status || "Không xác định", color: "#64748b" }
 }
 const clampNonNegative = (v: any) => {
   const n = Number(v)
@@ -128,6 +132,33 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 }) => {
   // Step 0: Rà soát tiện nghi | Step 1: Chọn phương thức thanh toán
   const [step, setStep] = useState<0 | 1>(0)
+
+  // Theming — modern, rounded, bold headings
+  const theme = useMemo(() => createTheme({
+    palette: {
+      mode: 'light',
+      primary: { main: '#0ea5e9' }, // sky-500
+      secondary: { main: '#22c55e' }, // green-500
+      background: { default: '#f6f8fb', paper: '#ffffff' },
+    },
+    shape: { borderRadius: 14 },
+    typography: {
+      fontFamily: "Inter, 'SF Pro Text','Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif",
+      fontWeightBold: 800,
+      h5: { fontWeight: 900 },
+      h6: { fontWeight: 800 },
+      button: { textTransform: 'none', fontWeight: 800 },
+      body2: { fontSize: 13.5 },
+    },
+    components: {
+      MuiButton: { styleOverrides: { root: { borderRadius: 12 } } },
+      MuiPaper: { styleOverrides: { root: { borderRadius: 16, boxShadow: '0 6px 24px rgba(15, 23, 42, 0.06)' } } },
+      MuiChip: { styleOverrides: { root: { borderRadius: 10 } } },
+      MuiDialog: { styleOverrides: { paper: { borderRadius: 18 } } },
+      MuiTableCell: { styleOverrides: { root: { fontSize: 13 } } },
+      MuiStepLabel: { styleOverrides: { label: { fontWeight: 700 } } },
+    },
+  }), [])
 
   // maps & options
   const [amenityOptionsByRoom, setAmenityOptionsByRoom] = useState<Record<number, AmenityOption[]>>({})
@@ -177,7 +208,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         setAmenityOptionsByRoom(map)
         setRoomOptions(opts)
 
-        // Prefill
+        // Prefill từ incurred (nếu có), else từ checkoutInfo.amenities_used, else 1 dòng rỗng
         const prefillFromIncurred: AmenityRow[] = incurred.flatMap((g: any) =>
           (g.items ?? []).map((x: any) => ({
             room_id: Number(g.room_id),
@@ -394,8 +425,8 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
     <Box
       sx={{
         p: 1,
-        mb: 1.5,
-        borderRadius: 2,
+        mb: 2,
+        borderRadius: 3,
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -422,7 +453,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
               sx={{
                 borderColor: getStatusView(checkoutInfo.status).color,
                 color: getStatusView(checkoutInfo.status).color,
-                fontWeight: 600,
+                fontWeight: 700,
               }}
               variant="outlined"
             />
@@ -433,7 +464,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         <Typography variant="caption" color="text.secondary" display="block">
           Tổng thanh toán
         </Typography>
-        <Typography variant="h6" fontWeight={800} color="primary">
+        <Typography variant="h5" fontWeight={900} color="primary">
           {toVND(grandTotal)}
         </Typography>
       </Box>
@@ -444,349 +475,357 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
   /** ====== Render ====== */
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth={false}
-      PaperProps={{ sx: { width: "1280px", maxWidth: "98vw", height: "90vh", borderRadius: 3 } }}
-    >
-      <DialogTitle sx={{ fontWeight: 800, fontSize: 18, py: 1.5, px: 2, borderBottom: "1px solid #eee" }}>
-        💸 Thanh toán & Trả phòng
-      </DialogTitle>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Dialog
+        open={open}
+        onClose={onClose}
+        fullWidth
+        maxWidth={false}
+        PaperProps={{ sx: { width: "1280px", maxWidth: "98vw", height: "90vh", borderRadius: 3, backdropFilter: 'blur(4px)' } }}
+      >
+        <DialogTitle sx={{ fontWeight: 900, fontSize: 18, py: 1.5, px: 2, borderBottom: "1px solid #eee" }}>
+          💸 Thanh toán & Trả phòng
+        </DialogTitle>
 
-      <DialogContent sx={{ p: 2, maxHeight: "85vh", overflow: "auto", bgcolor: "#fafafa" }}>
-        {HeaderBar}
+        <DialogContent sx={{ p: 2, maxHeight: "85vh", overflow: "auto", bgcolor: "#f7f7fb", backgroundImage: 'linear-gradient(180deg, #fafafa 0%, #f6f8fb 100%)' }}>
+          {HeaderBar}
 
-        {/* Stepper */}
-        <Box sx={{ px: 1, mb: 2 }}>
-          <Stepper activeStep={step} alternativeLabel>
-            {steps.map((label) => (
-              <Step key={label}>
-                <StepLabel>{label}</StepLabel>
-              </Step>
-            ))}
-          </Stepper>
-        </Box>
+          {/* Stepper */}
+          <Box sx={{ px: 1, mb: 2 }}>
+            <Stepper activeStep={step} alternativeLabel>
+              {steps.map((label) => (
+                <Step key={label}>
+                  <StepLabel>{label}</StepLabel>
+                </Step>
+              ))}
+            </Stepper>
+          </Box>
 
-        {step === 0 && (
-          <Grid container spacing={2} alignItems="stretch">
-            <Grid item xs={12} md={8.5}>
-              <Box display="grid" gap={2}>
-                {/* Đơn & phòng */}
-                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                  <SectionTitle icon={<AssignmentTurnedInOutlinedIcon />} title="Thông tin đơn" right={`${checkoutInfo?.nights || 0} đêm`} />
-                  <Grid container spacing={1.5}>
-                    <Grid item xs={6} sm={4}>
-                      <CompactInfoCard label="Đặt cọc" value={toVND(Number(checkoutInfo?.deposit_amount || 0))} />
-                    </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <CompactInfoCard label="Giảm giá" value={toVND(Number(checkoutInfo?.discount_amount || 0))} />
-                    </Grid>
-                    {checkoutInfo?.check_out_at && (
-                      <Grid item xs={12} sm={4}>
-                        <CompactInfoCard label="Trả phòng" value={dt(checkoutInfo.check_out_at)} />
+          {step === 0 && (
+            <Grid container spacing={2} alignItems="stretch">
+              <Grid item xs={12} md={8.5}>
+                <Box display="grid" gap={2}>
+                  {/* Đơn & phòng */}
+                  <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                    <SectionTitle icon={<AssignmentTurnedInOutlinedIcon />} title="Thông tin đơn" right={`${checkoutInfo?.nights || 0} đêm`} />
+                    <Grid container spacing={1.5}>
+                      <Grid item xs={6} sm={4}>
+                        <CompactInfoCard label="Đặt cọc" value={toVND(Number(checkoutInfo?.deposit_amount || 0))} />
                       </Grid>
-                    )}
-                  </Grid>
-                </Paper>
-
-                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                  <SectionTitle icon={<LocalHotelOutlinedIcon />} title="Chi tiết phòng" />
-                  <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.75, px: 1 }, tableLayout: "fixed" }}>
-                    <TableHead>
-                      <TableRow sx={{ bgcolor: "#f5f5f5" }}>
-                        <CompactTh sx={{ width: 180 }}>Phòng</CompactTh>
-                        <CompactTh align="right">Đơn giá/đêm</CompactTh>
-                        <CompactTh align="right">Thành tiền</CompactTh>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {checkoutInfo?.room_details.map((r, i) => (
-                        <TableRow key={i} hover>
-                          <CompactTd sx={{ whiteSpace: "nowrap" }}>
-                            <strong>{r.room_number}</strong>
-                          </CompactTd>
-                          <CompactTd align="right">{toVND(Number(r.base_rate || 0))}</CompactTd>
-                          <CompactTd align="right">{toVND(Number(r.total || 0))}</CompactTd>
-                        </TableRow>
-                      ))}
-                      <TableRow sx={{ bgcolor: "#f8f9fa" }}>
-                        <CompactTd>
-                          <strong>Tổng tiền phòng</strong>
-                        </CompactTd>
-                        <CompactTd />
-                        <CompactTd align="right">
-                          <strong>{toVND(Number(checkoutInfo?.room_total || 0))}</strong>
-                        </CompactTd>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </Paper>
-
-                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                  <SectionTitle icon={<RoomServiceOutlinedIcon />} title="Dịch vụ đã dùng" right={toVND(Number(checkoutInfo?.service_total || 0))} />
-                </Paper>
-
-                {/* Tiện nghi phát sinh */}
-                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                  <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.25}>
-                    <Typography variant="subtitle2" fontWeight={800} color="primary">
-                      🏨 Tiện nghi phát sinh
-                    </Typography>
-                    <Tooltip title="Thêm một dòng tiện nghi" arrow>
-                      <span>
-                        <Button
-                          size="small"
-                          startIcon={<AddIcon />}
-                          onClick={addRow}
-                          variant="contained"
-                          disabled={roomOptions.length === 0 || loadingOptions}
-                          sx={{ textTransform: "none", borderRadius: 2, fontWeight: 700 }}
-                        >
-                          Thêm
-                        </Button>
-                      </span>
-                    </Tooltip>
-                  </Box>
-
-                  <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.6, px: 0.75 }, tableLayout: "fixed" }}>
-                    <TableHead>
-                      <TableRow sx={{ bgcolor: "#f5f5f5" }}>
-                        <CompactTh sx={{ width: 160, fontSize: 12 }}>Phòng</CompactTh>
-                        <CompactTh sx={{ fontSize: 12 }}>Tiện nghi</CompactTh>
-                        <CompactTh align="right" sx={{ width: 110, fontSize: 12 }}>Giá</CompactTh>
-                        <CompactTh align="right" sx={{ width: 80, fontSize: 12 }}>SL</CompactTh>
-                        <CompactTh align="right" sx={{ width: 130, fontSize: 12 }}>Tiền</CompactTh>
-                        <CompactTh align="center" sx={{ width: 56 }} />
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {(amenitiesUsed?.length ?? 0) === 0 && (
-                        <TableRow>
-                          <CompactTd colSpan={6} align="center" sx={{ color: "text.secondary", py: 2 }}>
-                            {loadingOptions ? "Đang tải dữ liệu..." : "Chưa có tiện nghi"}
-                          </CompactTd>
-                        </TableRow>
+                      <Grid item xs={6} sm={4}>
+                        <CompactInfoCard label="Giảm giá" value={toVND(Number(checkoutInfo?.discount_amount || 0))} />
+                      </Grid>
+                      {checkoutInfo?.check_out_at && (
+                        <Grid item xs={12} sm={4}>
+                          <CompactInfoCard label="Trả phòng" value={dt(checkoutInfo.check_out_at)} />
+                        </Grid>
                       )}
+                    </Grid>
+                  </Paper>
 
-                      {amenitiesUsed?.map((row, idx) => {
-                        const roomAllowed = amenityOptionsByRoom[row.room_id] ?? []
-                        return (
-                          <TableRow key={idx} hover>
-                            <CompactTd>
-                              {roomOptions.length > 1 ? (
-                                <FormControl size="small" fullWidth>
-                                  <InputLabel>Phòng</InputLabel>
-                                  <Select
-                                    label="Phòng"
-                                    value={row.room_id || ""}
-                                    onChange={(e) => changeRowRoom(idx, Number(e.target.value))}
-                                  >
-                                    {roomOptions.map((r) => (
-                                      <MenuItem key={r.id} value={r.id}>
-                                        {r.label}
-                                      </MenuItem>
-                                    ))}
-                                  </Select>
-                                </FormControl>
-                              ) : (
-                                <Chip label={roomOptions[0]?.label ?? "-"} size="small" />
-                              )}
-                            </CompactTd>
-
+                  <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                    <SectionTitle icon={<LocalHotelOutlinedIcon />} title="Chi tiết phòng" />
+                    <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.75, px: 1 }, tableLayout: "fixed" }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                          <CompactTh sx={{ width: 180 }}>Phòng</CompactTh>
+                          <CompactTh align="right">Đơn giá/đêm</CompactTh>
+                          <CompactTh align="right">Thành tiền</CompactTh>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {checkoutInfo?.room_details.map((r, i) => (
+                          <TableRow key={i} hover>
                             <CompactTd sx={{ whiteSpace: "nowrap" }}>
-                              <Autocomplete
-                                options={roomAllowed}
-                                getOptionLabel={(o) => o.name}
-                                isOptionEqualToValue={(o, v) => o.id === v.id}
-                                value={row.amenity_id ? roomAllowed.find((a) => a.id === row.amenity_id) ?? null : null}
-                                onChange={(_, opt) => changeAmenity(idx, opt)}
-                                renderInput={(params) => (
-                                  <TextField
-                                    {...params}
-                                    placeholder="Chọn..."
-                                    size="small"
-                                    sx={{ "& .MuiInputBase-input": { fontSize: 12 } }}
-                                  />
-                                )}
-                                size="small"
-                                disabled={!row.room_id || loadingOptions}
-                                noOptionsText={loadingOptions ? "Đang tải..." : "Phòng này chưa có tiện nghi."}
-                              />
+                              <strong>{r.room_number}</strong>
                             </CompactTd>
+                            <CompactTd align="right">{toVND(Number(r.base_rate || 0))}</CompactTd>
+                            <CompactTd align="right">{toVND(Number(r.total || 0))}</CompactTd>
+                          </TableRow>
+                        ))}
+                        <TableRow sx={{ bgcolor: "#f8f9fa" }}>
+                          <CompactTd>
+                            <strong>Tổng tiền phòng</strong>
+                          </CompactTd>
+                          <CompactTd />
+                          <CompactTd align="right">
+                            <strong>{toVND(Number(checkoutInfo?.room_total || 0))}</strong>
+                          </CompactTd>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </Paper>
 
-                            <CompactTd align="right">
-                              <TextField
-                                type="number"
-                                size="small"
-                                inputProps={{ min: 0, style: { fontSize: 12, textAlign: "right", whiteSpace: "nowrap" } }}
-                                value={row.price}
-                                onChange={(e) => changePrice(idx, e.target.value)}
-                                sx={{ width: 110 }}
-                              />
-                            </CompactTd>
+                  <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                    <SectionTitle icon={<RoomServiceOutlinedIcon />} title="Dịch vụ đã dùng" right={toVND(Number(checkoutInfo?.service_total || 0))} />
+                  </Paper>
 
-                            <CompactTd align="right">
-                              <TextField
-                                type="number"
-                                size="small"
-                                inputProps={{ min: 1, style: { fontSize: 12, textAlign: "right", whiteSpace: "nowrap" } }}
-                                value={row.quantity}
-                                onChange={(e) => changeQty(idx, e.target.value)}
-                                sx={{ width: 80 }}
-                              />
-                            </CompactTd>
+                  {/* Tiện nghi phát sinh */}
+                  <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.25}>
+                      <Typography variant="subtitle2" fontWeight={800} color="primary">
+                        🏨 Tiện nghi phát sinh
+                      </Typography>
+                      <Tooltip title="Thêm một dòng tiện nghi" arrow>
+                        <span>
+                          <Button
+                            size="small"
+                            startIcon={<AddIcon />}
+                            onClick={addRow}
+                            variant="contained"
+                            disabled={roomOptions.length === 0 || loadingOptions}
+                            sx={{ textTransform: "none", borderRadius: 2, fontWeight: 700 }}
+                          >
+                            Thêm
+                          </Button>
+                        </span>
+                      </Tooltip>
+                    </Box>
 
-                            <CompactTd align="right" sx={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
-                              {toVND(Number(row.subtotal || 0))}
-                            </CompactTd>
-
-                            <CompactTd align="center">
-                              <Tooltip title="Xóa dòng" arrow>
-                                <IconButton size="small" onClick={() => removeRow(idx)} sx={{ p: 0.5 }}>
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
+                    <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.6, px: 0.75 }, tableLayout: "fixed" }}>
+                      <TableHead>
+                        <TableRow sx={{ bgcolor: "#f5f5f5" }}>
+                          <CompactTh sx={{ width: 160, fontSize: 12 }}>Phòng</CompactTh>
+                          <CompactTh sx={{ fontSize: 12 }}>Tiện nghi</CompactTh>
+                          <CompactTh align="right" sx={{ width: 110, fontSize: 12 }}>Giá</CompactTh>
+                          <CompactTh align="right" sx={{ width: 80, fontSize: 12 }}>SL</CompactTh>
+                          <CompactTh align="right" sx={{ width: 130, fontSize: 12 }}>Tiền</CompactTh>
+                          <CompactTh align="center" sx={{ width: 56 }} />
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {(amenitiesUsed?.length ?? 0) === 0 && (
+                          <TableRow>
+                            <CompactTd colSpan={6} align="center" sx={{ color: "text.secondary", py: 2 }}>
+                              {loadingOptions ? "Đang tải dữ liệu..." : "Chưa có tiện nghi"}
                             </CompactTd>
                           </TableRow>
-                        )
-                      })}
+                        )}
 
-                      <TableRow sx={{ bgcolor: "#f8f9fa" }}>
-                        <CompactTd colSpan={4}>
-                          <strong>Tạm tính tiện nghi</strong>
-                        </CompactTd>
-                        <CompactTd align="right">
-                          <strong>{toVND(amenityTotal)}</strong>
-                        </CompactTd>
-                        <CompactTd />
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </Paper>
-              </Box>
+                        {amenitiesUsed?.map((row, idx) => {
+                          const roomAllowed = amenityOptionsByRoom[row.room_id] ?? []
+                          return (
+                            <TableRow key={idx} hover>
+                              <CompactTd>
+                                {roomOptions.length > 1 ? (
+                                  <FormControl size="small" fullWidth>
+                                    <InputLabel>Phòng</InputLabel>
+                                    <Select
+                                      label="Phòng"
+                                      value={row.room_id || ""}
+                                      onChange={(e) => changeRowRoom(idx, Number(e.target.value))}
+                                    >
+                                      {roomOptions.map((r) => (
+                                        <MenuItem key={r.id} value={r.id}>
+                                          {r.label}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+                                ) : (
+                                  <Chip label={roomOptions[0]?.label ?? "-"} size="small" />
+                                )}
+                              </CompactTd>
+
+                              <CompactTd sx={{ whiteSpace: "nowrap" }}>
+                                <Autocomplete
+                                  options={roomAllowed}
+                                  getOptionLabel={(o) => o.name}
+                                  isOptionEqualToValue={(o, v) => o.id === v.id}
+                                  value={row.amenity_id ? roomAllowed.find((a) => a.id === row.amenity_id) ?? null : null}
+                                  onChange={(_, opt) => changeAmenity(idx, opt)}
+                                  renderInput={(params) => (
+                                    <TextField
+                                      {...params}
+                                      placeholder="Chọn..."
+                                      size="small"
+                                      sx={{ "& .MuiInputBase-input": { fontSize: 12 } }}
+                                    />
+                                  )}
+                                  size="small"
+                                  disabled={!row.room_id || loadingOptions}
+                                  noOptionsText={loadingOptions ? "Đang tải..." : "Phòng này chưa có tiện nghi."}
+                                />
+                              </CompactTd>
+
+                              <CompactTd align="right">
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  inputProps={{ min: 0, style: { fontSize: 12, textAlign: "right", whiteSpace: "nowrap" } }}
+                                  value={row.price}
+                                  onChange={(e) => changePrice(idx, e.target.value)}
+                                  sx={{ width: 110 }}
+                                />
+                              </CompactTd>
+
+                              <CompactTd align="right">
+                                <TextField
+                                  type="number"
+                                  size="small"
+                                  inputProps={{ min: 1, style: { fontSize: 12, textAlign: "right", whiteSpace: "nowrap" } }}
+                                  value={row.quantity}
+                                  onChange={(e) => changeQty(idx, e.target.value)}
+                                  sx={{ width: 80 }}
+                                />
+                              </CompactTd>
+
+                              <CompactTd align="right" sx={{ fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+                                {toVND(Number(row.subtotal || 0))}
+                              </CompactTd>
+
+                              <CompactTd align="center">
+                                <Tooltip title="Xóa dòng" arrow>
+                                  <IconButton size="small" onClick={() => removeRow(idx)} sx={{ p: 0.5 }}>
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </CompactTd>
+                            </TableRow>
+                          )
+                        })}
+
+                        <TableRow sx={{ bgcolor: "#f8f9fa" }}>
+                          <CompactTd colSpan={4}>
+                            <strong>Tạm tính tiện nghi</strong>
+                          </CompactTd>
+                          <CompactTd align="right">
+                            <strong>{toVND(amenityTotal)}</strong>
+                          </CompactTd>
+                          <CompactTd />
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                </Box>
+              </Grid>
+
+              {/* Summary card */}
+              <Grid item xs={12} md={3.5}>
+                <Box sx={{ position: { md: "sticky" }, top: 16 }}>
+                  <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: "#ffffff" }}>
+                    <SectionTitle icon={<MonetizationOnOutlinedIcon />} title="Tóm tắt thanh toán" />
+                    <Box sx={{ "& > *": { py: 0.5 } }}>
+                      <CompactSummaryRow label="Phòng + Dịch vụ" value={toVND(Number(checkoutInfo?.raw_total || 0))} />
+                      <CompactSummaryRow label="Tiện nghi" value={toVND(amenityTotal)} />
+                      <CompactSummaryRow label="Giảm giá" value={`- ${toVND(Number(checkoutInfo?.discount_amount || 0))}`} />
+                      <CompactSummaryRow label="Đặt cọc" value={`- ${toVND(Number(checkoutInfo?.deposit_amount || 0))}`} />
+                      <Divider sx={{ my: 1 }} />
+                      <CompactSummaryRow label="TỔNG CẦN THANH TOÁN" value={toVND(grandTotal)} strong highlight />
+                    </Box>
+                  </Paper>
+
+                  <Box mt={1} display="flex" alignItems="center" gap={1} color="success.main">
+                    <CheckCircleRoundedIcon fontSize="small" />
+                    <Typography variant="caption">Mọi thay đổi tiện nghi sẽ được lưu trước khi thanh toán</Typography>
+                  </Box>
+                </Box>
+              </Grid>
             </Grid>
+          )}
 
-            {/* Summary card */}
-            <Grid item xs={12} md={3.5}>
-              <Box sx={{ position: { md: "sticky" }, top: 16 }}>
-                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: "#ffffff" }}>
-                  <SectionTitle icon={<MonetizationOnOutlinedIcon />} title="Tóm tắt thanh toán" />
-                  <Box sx={{ "& > *": { py: 0.5 } }}>
-                    <CompactSummaryRow label="Phòng + Dịch vụ" value={toVND(Number(checkoutInfo?.raw_total || 0))} />
-                    <CompactSummaryRow label="Tiện nghi" value={toVND(amenityTotal)} />
-                    <CompactSummaryRow label="Giảm giá" value={`- ${toVND(Number(checkoutInfo?.discount_amount || 0))}`} />
-                    <CompactSummaryRow label="Đặt cọc" value={`- ${toVND(Number(checkoutInfo?.deposit_amount || 0))}`} />
-                    <Divider sx={{ my: 1 }} />
-                    <CompactSummaryRow label="TỔNG CẦN THANH TOÁN" value={toVND(grandTotal)} strong highlight />
+          {step === 1 && (
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={7}>
+                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, mb: 2 }}>
+                  <SectionTitle icon={<MonetizationOnOutlinedIcon />} title="Xác nhận tổng tiền" />
+                  <Box display="flex" alignItems="center" justifyContent="space-between">
+                    <Typography variant="body2" color="text.secondary">
+                      Phòng + Dịch vụ + Tiện nghi − Giảm giá − Đặt cọc
+                    </Typography>
+                    <Typography variant="h5" fontWeight={900} color="primary">
+                      {toVND(grandTotal)}
+                    </Typography>
                   </Box>
                 </Paper>
-              </Box>
-            </Grid>
-          </Grid>
-        )}
 
-        {step === 1 && (
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={7}>
-              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, mb: 2 }}>
-                <SectionTitle icon={<MonetizationOnOutlinedIcon />} title="Xác nhận tổng tiền" />
-                <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">
-                    Phòng + Dịch vụ + Tiện nghi − Giảm giá − Đặt cọc
+                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                  <Typography variant="subtitle2" fontWeight={800} color="primary" mb={1.25}>
+                    🔘 Chọn phương thức thanh toán
                   </Typography>
-                  <Typography variant="h5" fontWeight={900} color="primary">
-                    {toVND(grandTotal)}
-                  </Typography>
-                </Box>
-              </Paper>
+                  <Box display="flex" gap={1}>
+                    <Button
+                      variant={paymentMethod === "cash" ? "contained" : "outlined"}
+                      onClick={() => setPaymentMethod("cash")}
+                      disabled={isPaying || savingAmenities}
+                      sx={{ textTransform: "none", borderRadius: 2, fontWeight: 800 }}
+                    >
+                      Tiền mặt
+                    </Button>
+                    <Button
+                      variant={paymentMethod === "vnpay" ? "contained" : "outlined"}
+                      onClick={() => setPaymentMethod("vnpay")}
+                      disabled={isPaying || savingAmenities}
+                      sx={{ textTransform: "none", borderRadius: 2, fontWeight: 800 }}
+                    >
+                      VNPay
+                    </Button>
+                  </Box>
+                </Paper>
+              </Grid>
 
-              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                <Typography variant="subtitle2" fontWeight={800} color="primary" mb={1.25}>
-                  🔘 Chọn phương thức thanh toán
-                </Typography>
-                <Box display="flex" gap={1}>
-                  <Button
-                    variant={paymentMethod === "cash" ? "contained" : "outlined"}
-                    onClick={() => setPaymentMethod("cash")}
-                    disabled={isPaying || savingAmenities}
-                    sx={{ textTransform: "none", borderRadius: 2, fontWeight: 800 }}
-                  >
-                    Tiền mặt
-                  </Button>
-                  <Button
-                    variant={paymentMethod === "vnpay" ? "contained" : "outlined"}
-                    onClick={() => setPaymentMethod("vnpay")}
-                    disabled={isPaying || savingAmenities}
-                    sx={{ textTransform: "none", borderRadius: 2, fontWeight: 800 }}
-                  >
-                    VNPay
-                  </Button>
-                </Box>
-              </Paper>
+              <Grid item xs={12} md={5}>
+                <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                  <SectionTitle icon={<AssignmentTurnedInOutlinedIcon />} title="Tóm tắt đơn" />
+                  <Box display="grid" gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }} gap={1.25}>
+                    <CompactInfoCard label="Đặt cọc" value={toVND(Number(checkoutInfo?.deposit_amount || 0))} />
+                    <CompactInfoCard label="Giảm giá" value={toVND(Number(checkoutInfo?.discount_amount || 0))} />
+                    <CompactInfoCard label="Check-in" value={dt(checkoutInfo?.check_in_date)} />
+                    <CompactInfoCard label="Check-out" value={dt(checkoutInfo?.check_out_date)} />
+                  </Box>
+                </Paper>
+              </Grid>
             </Grid>
+          )}
+        </DialogContent>
 
-            <Grid item xs={12} md={5}>
-              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                <SectionTitle icon={<AssignmentTurnedInOutlinedIcon />} title="Tóm tắt đơn" />
-                <Box display="grid" gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }} gap={1.25}>
-                  <CompactInfoCard label="Đặt cọc" value={toVND(Number(checkoutInfo?.deposit_amount || 0))} />
-                  <CompactInfoCard label="Giảm giá" value={toVND(Number(checkoutInfo?.discount_amount || 0))} />
-                  <CompactInfoCard label="Check-in" value={dt(checkoutInfo?.check_in_date)} />
-                  <CompactInfoCard label="Check-out" value={dt(checkoutInfo?.check_out_date)} />
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
-        )}
-      </DialogContent>
-
-      <DialogActions sx={{ px: 2, py: 1.5, borderTop: "1px solid #eee", bgcolor: "#fff", position: "sticky", bottom: 0 }}>
-        <Button onClick={onClose} color="inherit" sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2 }}>
-          Đóng
-        </Button>
-
-        {checkoutInfo && step === 0 && (
-          <Button
-            variant="contained"
-            onClick={confirmStep}
-            disabled={loadingOptions}
-            sx={{ borderRadius: 2, fontWeight: 900, textTransform: "none" }}
-          >
-            Xác nhận & tiếp tục
+        <DialogActions sx={{ px: 2, py: 1.5, borderTop: "1px solid #eee", bgcolor: "#fff", position: "sticky", bottom: 0 }}>
+          <Button onClick={onClose} color="inherit" sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2 }}>
+            Đóng
           </Button>
-        )}
 
-        {checkoutInfo && step === 1 && (
-          <Box display="flex" gap={1}>
-            <Button
-              onClick={() => setStep(0)}
-              color="inherit"
-              sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2 }}
-              disabled={isPaying || savingAmenities}
-            >
-              Quay lại
-            </Button>
+          {checkoutInfo && step === 0 && (
             <Button
               variant="contained"
-              onClick={async () => {
-                if (!paymentMethod) {
-                  toast.error("Vui lòng chọn phương thức thanh toán")
-                  return
-                }
-                if (paymentMethod === "cash") await payCash()
-                else await payVNPay()
-              }}
-              disabled={isPaying || savingAmenities}
+              onClick={confirmStep}
+              disabled={loadingOptions}
               sx={{ borderRadius: 2, fontWeight: 900, textTransform: "none" }}
             >
-              {savingAmenities ? "Đang lưu..." : "Xác nhận thanh toán"}
+              Xác nhận & tiếp tục
             </Button>
-          </Box>
-        )}
-      </DialogActions>
-    </Dialog>
+          )}
+
+          {checkoutInfo && step === 1 && (
+            <Box display="flex" gap={1}>
+              <Button
+                onClick={() => setStep(0)}
+                color="inherit"
+                sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2 }}
+                disabled={isPaying || savingAmenities}
+              >
+                Quay lại
+              </Button>
+              <Button
+                variant="contained"
+                onClick={async () => {
+                  if (!paymentMethod) {
+                    toast.error("Vui lòng chọn phương thức thanh toán")
+                    return
+                  }
+                  if (paymentMethod === "cash") await payCash()
+                  else await payVNPay()
+                }}
+                disabled={isPaying || savingAmenities}
+                sx={{ borderRadius: 2, fontWeight: 900, textTransform: "none" }}
+              >
+                {savingAmenities ? "Đang lưu..." : "Xác nhận thanh toán"}
+              </Button>
+            </Box>
+          )}
+        </DialogActions>
+      </Dialog>
+    </ThemeProvider>
   )
 }
 
