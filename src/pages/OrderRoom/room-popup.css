@@ -1,0 +1,336 @@
+/* Thêm CSS cho layout compact */
+
+/* Compact info grid */
+.info-grid-compact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.info-row-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #3f51b5;
+}
+
+.info-icon-small {
+  font-size: 16px !important;
+  color: #3f51b5;
+  flex-shrink: 0;
+}
+
+.info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.info-label-small {
+  font-size: 11px;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 13px;
+  color: #333;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.info-value-bold {
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+}
+
+.info-value-price {
+  font-size: 13px;
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+/* Financial info section */
+.financial-info-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.section-title {
+  color: #3f51b5;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.financial-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.financial-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.financial-item.total {
+  grid-column: 1 / -1;
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+  font-weight: 600;
+}
+
+.financial-label {
+  font-size: 12px;
+  color: #666;
+}
+
+.financial-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+}
+
+.financial-value.discount {
+  color: #d32f2f;
+}
+
+/* Guest info grid */
+.guest-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.guest-primary-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guest-name-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.guest-icon {
+  font-size: 24px !important;
+  color: #3f51b5;
+}
+
+.guest-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.guest-gender {
+  font-size: 12px;
+  color: #666;
+}
+
+.guest-contact {
+  display: flex;
+  gap: 16px;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.contact-icon {
+  font-size: 14px !important;
+  color: #3f51b5;
+}
+
+.guest-secondary-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.info-item-small {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.info-item-small.full-width {
+  grid-column: 1 / -1;
+}
+
+.label-small {
+  font-size: 10px;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.value-small {
+  font-size: 12px;
+  color: #333;
+  font-weight: 500;
+}
+
+/* Compact amenities */
+.amenities-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.amenity-item-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #4caf50;
+}
+
+.amenity-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.amenity-icon-small {
+  font-size: 16px !important;
+  color: #4caf50;
+}
+
+.amenity-name-compact {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.amenity-details-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.amenity-price-compact {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.amenity-quantity-compact {
+  font-size: 11px;
+  color: #666;
+  background: #e0e0e0;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.amenity-status-compact {
+  font-size: 10px !important;
+  height: 20px !important;
+}
+
+.amenity-status-compact.active {
+  background-color: #c8e6c9 !important;
+  color: #2e7d32 !important;
+}
+
+/* Dialog adjustments */
+.room-details-dialog .MuiDialog-paper {
+  max-height: 90vh;
+}
+
+.dialog-content-enhanced {
+  padding: 0px 16px !important;
+}
+
+.info-card {
+  margin-bottom: 16px !important;
+}
+
+.card-header {
+  margin-bottom: 8px !important;
+}
+
+.card-divider {
+  margin: 8px 0 !important;
+}
+
+/* New two-column layout for booked rooms */
+.dialog-two-column-layout {
+  display: flex;
+  flex-wrap: wrap; /* Cho phép xuống dòng trên màn hình nhỏ */
+}
+
+.dialog-column {
+  flex: 1;
+  min-width: 0; /* Đảm bảo cột không vượt quá kích thước cha */
+}
+
+.dialog-column .info-card {
+  margin-bottom: 20px; /* Khoảng cách giữa các card trong cột */
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .info-grid-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .financial-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-secondary-info {
+    grid-template-columns: 1fr;
+  }
+
+  .amenities-grid-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-contact {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dialog-two-column-layout {
+    flex-direction: column; /* Chuyển sang một cột trên màn hình nhỏ */
+  }
+}
+
+.css-46bh2p-MuiCardContent-root {
+  padding: 0px 9px !important;
+}
