@@ -155,6 +155,15 @@ interface Booking {
   is_hourly: boolean;
 }
 
+const FILES_URL = import.meta.env.VITE_FILES_URL || "http://127.0.0.1:8000";
+
+const resolvePath = (p?: string) => {
+  if (!p) return null;
+  const path = p.replace(/^storage\/app\/public\//, "");
+  if (path.startsWith("storage/")) return `${FILES_URL}/${path}`;
+  return `${FILES_URL}/storage/${path}`;
+};
+
 const BookingManagement = () => {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -176,9 +185,7 @@ const BookingManagement = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [cccdImage, setCccdImage] = useState<File | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(
-    booking?.customer.cccd_image_url || null
-  );
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const bookingId = Number(id); // Convert to number
 
@@ -271,7 +278,8 @@ const BookingManagement = () => {
           is_hourly: data.is_hourly ?? false,
         };
         setBooking(bookingData);
-        setPreviewImage(bookingData.customer.cccd_image_url || null);
+        const resolvedUrl = resolvePath(bookingData.customer.cccd_image_url);
+        setPreviewImage(resolvedUrl ? `${resolvedUrl}?t=${Date.now()}` : null);
         setRoomServices(
           data.rooms.reduce(
             (acc: Record<number, Service[]>, room: Room) => ({
@@ -726,6 +734,7 @@ const BookingManagement = () => {
           }
         );
         if (response.status === 200) {
+          const resolvedUrl = resolvePath(response.data.cccd_image_url);
           setSnackbarMessage("Tải ảnh CCCD thành công!");
           setSnackbarOpen(true);
           setBooking((prev) =>
@@ -738,6 +747,9 @@ const BookingManagement = () => {
                   },
                 }
               : prev
+          );
+          setPreviewImage(
+            resolvedUrl ? `${resolvedUrl}?t=${Date.now()}` : null
           );
         }
       } catch (error) {

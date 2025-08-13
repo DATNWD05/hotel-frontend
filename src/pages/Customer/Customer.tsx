@@ -35,6 +35,15 @@ import api from "../../api/axios";
 import { SearchIcon } from "lucide-react";
 import { toast } from "react-toastify";
 
+const FILES_URL = import.meta.env.VITE_FILES_URL || "http://127.0.0.1:8000";
+const DEFAULT_AVATAR = "/default-avatar.png";
+
+const resolvePath = (p?: string) => {
+  if (!p) return DEFAULT_AVATAR;
+  const path = p.replace(/^storage\/app\/public\//, "");
+  return `${FILES_URL}/storage/${path}`;
+};
+
 interface Room {
   id: number;
   room_number: string;
@@ -133,7 +142,7 @@ interface Customer {
   address: string;
   note: string;
   bookings: Booking[];
-  cccd_image_url?: string; // Thêm trường cccd_image_url
+  cccd_image_url?: string;
 }
 
 interface ValidationErrors {
@@ -283,7 +292,9 @@ const Customer: React.FC = () => {
               gender: mapGenderToVietnamese(customer.gender || "other"),
               nationality: customer.nationality || "Không xác định",
               note: customer.note || "",
-              cccd_image_url: customer.cccd_image_url || "", // Thêm cccd_image_url
+              cccd_image_url: customer.cccd_image_url
+                ? resolvePath(customer.cccd_image_url)
+                : "",
               bookings: customer.bookings
                 ? customer.bookings.map((booking) => ({
                     id: Number(booking.id) || 0,
@@ -560,7 +571,7 @@ const Customer: React.FC = () => {
   };
 
   const handleOpenImageModal = (url: string) => {
-    setSelectedImageUrl(url);
+    setSelectedImageUrl(resolvePath(url));
     setOpenImageModal(true);
   };
 
@@ -1328,6 +1339,10 @@ const Customer: React.FC = () => {
                   maxWidth: "100%",
                   maxHeight: "70vh",
                   objectFit: "contain",
+                }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
+                  toast.error("Không thể tải ảnh CCCD");
                 }}
               />
             ) : (
