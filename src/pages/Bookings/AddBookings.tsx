@@ -18,6 +18,7 @@ import "../../css/AddBookings.css";
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import { log } from "console";
 
 interface Customer {
   cccd: string;
@@ -218,6 +219,7 @@ export default function HotelBooking() {
         });
 
         const roomsData = response.data.data || response.data;
+        console.log("Available rooms data:", roomsData);
 
         if (!Array.isArray(roomsData)) {
           throw new Error("Dữ liệu từ /available-rooms không hợp lệ");
