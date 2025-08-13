@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type React from "react";
+import React from "react";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -19,6 +19,7 @@ import {
 import { KeyboardArrowDown, KeyboardArrowUp } from "@mui/icons-material";
 import { format, parseISO, isValid } from "date-fns";
 import { toast } from "react-toastify";
+import axios from "axios"; // ⬅️ dùng để nhận diện lỗi Axios (422)
 import api from "../../api/axios";
 
 interface Room {
@@ -87,13 +88,21 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [roomDropdownOpen, setRoomDropdownOpen] = useState<boolean>(false);
 
+  // ⬇️ giữ lỗi từ backend (Laravel 422)
+  const [formErrors, setFormErrors] = React.useState<Record<string, string[]>>(
+    {}
+  );
+
+  const firstError = (key: string): string | undefined =>
+    formErrors?.[key]?.[0];
+
   const fetchAvailableRooms = async () => {
     try {
       setRoomsLoading(true);
       const { data } = await api.get("/rooms");
-      let roomsData = [];
+      let roomsData: any[] = [];
 
-      if (data.data) {
+      if (data?.data) {
         roomsData = data.data;
       } else if (Array.isArray(data)) {
         roomsData = data;
@@ -152,6 +161,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
 
       setSelectedRoomIds(currentRoomIds);
       setError(null);
+      setFormErrors({}); // clear lỗi cũ khi mở booking mới
     }
   }, [bookingInfo]);
 
@@ -169,7 +179,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     setSelectedRoomIds((prev) => prev.filter((id) => id !== roomIdToRemove));
   };
 
-  const isValidDate = (dateStr: string): boolean => {
+  const isValidDateStr = (dateStr: string): boolean => {
     return isValid(parseISO(dateStr)) && !isNaN(new Date(dateStr).getTime());
   };
 
@@ -181,57 +191,95 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const handleConfirm = async () => {
     if (!bookingInfo) return;
 
-    if (selectedRoomIds.length === 0) {
-      setError("Vui lòng chọn ít nhất một phòng hợp lệ");
-      toast.error("Vui lòng chọn ít nhất một phòng hợp lệ");
-      return;
-    }
-
-    if (!checkInDate || !checkOutDate) {
-      setError("Vui lòng nhập đầy đủ ngày nhận và trả phòng");
-      toast.error("Vui lòng nhập đầy đủ ngày nhận và trả phòng");
-      return;
-    }
-
-    if (!isValidDate(checkInDate) || !isValidDate(checkOutDate)) {
-      setError("Ngày nhận hoặc trả phòng không hợp lệ");
-      toast.error("Ngày nhận hoặc trả phòng không hợp lệ");
-      return;
-    }
-
-    if (!isValidDeposit(depositAmount)) {
-      setError("Số tiền đặt cọc không hợp lệ");
-      toast.error("Số tiền đặt cọc không hợp lệ");
-      return;
-    }
-
-    const checkIn = new Date(checkInDate);
-    const checkOut = new Date(checkOutDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (checkIn < today) {
-      setError("Ngày nhận phòng phải sau hoặc bằng hôm nay");
-      toast.error("Ngày nhận phòng phải sau hoặc bằng hôm nay");
-      return;
-    }
-
-    if (checkOut <= checkIn) {
-      setError("Ngày trả phòng phải sau ngày nhận phòng");
-      toast.error("Ngày trả phòng phải sau ngày nhận phòng");
-      return;
-    }
-
-    setLoading(true);
     setError(null);
+    setFormErrors({});
+    setLoading(true);
 
     try {
+      // so sánh thay đổi
+      const originalCheckIn = format(
+        parseISO(bookingInfo.check_in_date),
+        "yyyy-MM-dd"
+      );
+      const originalCheckOut = format(
+        parseISO(bookingInfo.check_out_date),
+        "yyyy-MM-dd"
+      );
+
+      const ciChanged = checkInDate !== originalCheckIn;
+      const coChanged = checkOutDate !== originalCheckOut;
+
+      const originalRoomIds = (
+        bookingInfo.rooms
+          ? bookingInfo.rooms.map((r) => r.id)
+          : [bookingInfo.room.id]
+      )
+        .slice()
+        .sort((a, b) => a - b);
+      const currentRoomIds = selectedRoomIds.slice().sort((a, b) => a - b);
+      const roomsChanged =
+        JSON.stringify(originalRoomIds) !== JSON.stringify(currentRoomIds);
+        const depositChanged =
+        Number.parseFloat(String(bookingInfo.deposit_amount)) !==
+        Number.parseFloat(String(depositAmount));
+
+      // không có gì đổi -> báo và dừng
+      if (!depositChanged && !roomsChanged && !ciChanged && !coChanged) {
+        toast.info("Không có thay đổi nào để cập nhật");
+        setLoading(false);
+        return;
+      }
+
+      // validate CÓ ĐIỀU KIỆN: chỉ check thứ gì đang thay đổi
+      if (roomsChanged && selectedRoomIds.length === 0) {
+        setError("Vui lòng chọn ít nhất một phòng hợp lệ");
+        toast.error("Vui lòng chọn ít nhất một phòng hợp lệ");
+        setLoading(false);
+        return;
+      }
+
+      if (ciChanged || coChanged) {
+        const isValidDateStr = (s: string) =>
+          isValid(parseISO(s)) && !isNaN(new Date(s).getTime());
+        if (!isValidDateStr(checkInDate) || !isValidDateStr(checkOutDate)) {
+          setError("Ngày nhận hoặc trả phòng không hợp lệ");
+          toast.error("Ngày nhận hoặc trả phòng không hợp lệ");
+          setLoading(false);
+          return;
+        }
+        const checkIn = new Date(checkInDate);
+        const checkOut = new Date(checkOutDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (checkIn < today) {
+          setError("Ngày nhận phòng phải sau hoặc bằng hôm nay");
+          toast.error("Ngày nhận phòng phải sau hoặc bằng hôm nay");
+          setLoading(false);
+          return;
+        }
+        if (checkOut <= checkIn) {
+          setError("Ngày trả phòng phải sau ngày nhận phòng");
+          toast.error("Ngày trả phòng phải sau ngày nhận phòng");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // build payload: CHỈ gửi field đã đổi
       const updateData: any = {
-        room_ids: selectedRoomIds,
-        check_in_date: checkInDate,
-        check_out_date: checkOutDate,
-        deposit_amount: depositAmount,
+        ...(depositChanged ? { deposit_amount: Number(depositAmount) } : {}),
+        ...(roomsChanged ? { room_ids: selectedRoomIds } : {}),
+        ...(ciChanged
+          ? { check_in_date: format(new Date(checkInDate), "yyyy-MM-dd") }
+          : {}),
+        ...(coChanged
+          ? { check_out_date: format(new Date(checkOutDate), "yyyy-MM-dd") }
+          : {}),
       };
+
+      // Nếu API cần DATETIME kèm giờ chuẩn khách sạn, mở 2 dòng này:
+      // if (ciChanged) updateData.check_in_at = `${updateData.check_in_date || originalCheckIn} 14:00`;
+      // if (coChanged) updateData.check_out_at = `${updateData.check_out_date || originalCheckOut} 12:00`;
 
       console.log("Payload gửi đi:", updateData);
 
@@ -239,27 +287,32 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         `/bookings/${bookingInfo.id}`,
         updateData,
         {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
 
       onConfirm(data.data);
       toast.success("Cập nhật đặt phòng thành công");
       onClose();
-    } catch (err) {
-      console.error("Error updating booking:", err);
-      setError("Cập nhật đặt phòng thất bại");
-      toast.error("Cập nhật đặt phòng thất bại");
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data as any;
+        console.error("Update booking failed:", err.response?.status, data);
+        setFormErrors(data?.errors ?? {});
+        const msg = data?.message || "Cập nhật đặt phòng thất bại";
+        setError(msg);
+        toast.error(msg);
+      } else {
+        console.error(err);
+        setError("Cập nhật đặt phòng thất bại");
+        toast.error("Cập nhật đặt phòng thất bại");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const getRoomDisplayName = (room: Room) => {
-    return `Phòng ${room.room_number}`;
-  };
+  const getRoomDisplayName = (room: Room) => `Phòng ${room.room_number}`;
 
   const getSelectedRoomsDisplay = () => {
     if (selectedRoomIds.length === 0) return "Chọn phòng";
@@ -277,7 +330,9 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       >
         🏡 Sửa Đặt Phòng
       </DialogTitle>
+
       <DialogContent dividers sx={{ px: 4, py: 3 }}>
+        {/* Thông báo lỗi tổng quát (server message) */}
         {error && (
           <Typography
             color="error"
@@ -306,7 +361,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               🛏️ Chọn phòng
             </Typography>
 
-            {/* Display selected rooms as chips */}
+            {/* Chips phòng đã chọn */}
             {selectedRoomIds.length > 0 && (
               <Box sx={{ mb: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {selectedRoomIds.map((roomId) => {
@@ -328,8 +383,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                 })}
               </Box>
             )}
-
-            {/* Custom Dropdown with Enhanced Styling */}
+            {/* Dropdown chọn phòng */}
             <ClickAwayListener onClickAway={() => setRoomDropdownOpen(false)}>
               <Box sx={{ position: "relative" }}>
                 <Box
@@ -364,7 +418,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                   )}
                 </Box>
 
-                {/* Enhanced Dropdown Menu */}
                 {roomDropdownOpen && (
                   <Paper
                     sx={{
@@ -454,6 +507,17 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               </Box>
             </ClickAwayListener>
 
+            {/* lỗi server cho room_ids */}
+            {firstError("room_ids") && (
+              <Typography
+                variant="caption"
+                color="error"
+                sx={{ mt: 1, display: "block" }}
+              >
+                {firstError("room_ids")}
+              </Typography>
+            )}
+
             <Typography
               variant="caption"
               color="primary"
@@ -470,7 +534,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               borderRadius: 2,
               border: "1px solid #ccc",
               backgroundColor: "#fdfdfd",
-            }}
+              }}
           >
             <Typography variant="h6" fontWeight={700} gutterBottom>
               📅 Ngày nhận phòng
@@ -481,11 +545,9 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               onChange={(e) => setCheckInDate(e.target.value)}
               fullWidth
               InputProps={{ style: { padding: "8px" } }}
-              inputProps={{
-                min: format(new Date(), "yyyy-MM-dd"),
-              }}
-              error={!!error && error.includes("ngày nhận")}
-              helperText={error && error.includes("ngày nhận") ? error : null}
+              inputProps={{ min: format(new Date(), "yyyy-MM-dd") }}
+              error={Boolean(firstError("check_in_date"))}
+              helperText={firstError("check_in_date") || null}
             />
           </Paper>
 
@@ -510,8 +572,8 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               inputProps={{
                 min: checkInDate || format(new Date(), "yyyy-MM-dd"),
               }}
-              error={!!error && error.includes("ngày trả")}
-              helperText={error && error.includes("ngày trả") ? error : null}
+              error={Boolean(firstError("check_out_date"))}
+              helperText={firstError("check_out_date") || null}
             />
           </Paper>
 
@@ -533,8 +595,8 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               onChange={(e) => setDepositAmount(e.target.value)}
               fullWidth
               InputProps={{ style: { padding: "8px" } }}
-              error={!!error && error.includes("đặt cọc")}
-              helperText={error && error.includes("đặt cọc") ? error : null}
+              error={Boolean(firstError("deposit_amount"))}
+              helperText={firstError("deposit_amount") || null}
             />
           </Paper>
         </Box>

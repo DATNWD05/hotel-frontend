@@ -29,8 +29,10 @@ import {
   ToggleButtonGroup,
   ThemeProvider,
   createTheme,
-  CssBaseline,
+  GlobalStyles,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import Popper from "@mui/material/Popper";
 import { format, parseISO, isValid, parse } from "date-fns";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -140,17 +142,10 @@ const parseAnyDate = (s?: string | number | null) => {
   return null;
 };
 
-const dt = (s?: string | number | null) => {
-  const d = parseAnyDate(s);
-  return d ? format(d, "dd/MM/yyyy HH:mm") : "N/A";
-};
-
-// Hiển thị dd/MM/yyyy HH:mm:ss (đẹp, nhất quán)
 const dtFull = (s?: string | number | null) => {
-  const d = parseAnyDate(s)
-  return d ? format(d, "dd/MM/yyyy HH:mm:ss") : "-"
-}
-
+  const d = parseAnyDate(s);
+  return d ? format(d, "dd/MM/yyyy HH:mm:ss") : "-";
+};
 
 const getStatusView = (status: string) => {
   const k = (status || "").toLowerCase();
@@ -161,10 +156,12 @@ const getStatusView = (status: string) => {
   if (k === "cancelled") return { text: "Đã hủy", color: "#C62828" };
   return { text: status || "Không xác định", color: "#757575" };
 };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const clampNonNegative = (v: any) => {
   const n = Number(v);
   return Number.isFinite(n) && n >= 0 ? n : 0;
 };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const clampPositiveInt = (v: any) => {
   const n = parseInt(`${v}`, 10);
   return Number.isFinite(n) && n >= 1 ? n : 1;
@@ -172,10 +169,9 @@ const clampPositiveInt = (v: any) => {
 
 const theme = createTheme({
   typography: {
-    // InterVariable có đủ weight nên 800/900 sẽ render đúng
     fontFamily:
       "'InterVariable', 'Inter', 'Roboto', 'Helvetica Neue', Arial, 'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol', system-ui, sans-serif",
-    fontSize: 13, // mặc định chữ nhỏ gọn
+    fontSize: 13,
     button: { textTransform: "none", fontWeight: 700 },
     subtitle2: { fontWeight: 700 },
     h5: { fontWeight: 800 },
@@ -189,20 +185,24 @@ const theme = createTheme({
           WebkitFontSmoothing: "antialiased",
           MozOsxFontSmoothing: "grayscale",
         },
-        "*": {
-          letterSpacing: 0.2, // tránh chữ bị dày khi render
-        },
+        "*": { letterSpacing: 0.2 },
       },
     },
-    // Đồng nhất font size trong bảng (tránh chỗ to chỗ nhỏ)
-    MuiTableCell: {
-      styleOverrides: { root: { fontSize: 12.5 } },
-    },
-    // Chip label thường bị mảnh -> làm đậm hơn tí
-    MuiChip: {
-      styleOverrides: { label: { fontWeight: 700 } },
-    },
+    MuiTableCell: { styleOverrides: { root: { fontSize: 12.5 } } },
+    MuiChip: { styleOverrides: { label: { fontWeight: 700 } } },
   },
+});
+
+/** ====== Popper “tĩnh” để dropdown không chạy vào ====== */
+const StaticPopper = styled(Popper)({
+  position: "static !important",
+  transform: "none !important",
+  left: "0 !important",
+  top: "auto !important",
+  width: "100% !important",
+  zIndex: "auto",
+  transition: "none !important",
+  animation: "none !important",
 });
 
 /** ====== Component ====== */
@@ -262,7 +262,9 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         const incurred = Array.isArray(data.incurred) ? data.incurred : [];
 
         const map: Record<number, AmenityOption[]> = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const opts: RoomOption[] = rooms.map((r: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           map[Number(r.id)] = (r.amenities ?? []).map((a: any) => ({
             id: Number(a.id),
             name: a.name,
@@ -347,6 +349,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
           ? res.data.data
           : [];
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mapped: ServiceRow[] = arr.map((x: any) => {
           const price = clampNonNegative(x.price ?? x.unit_price ?? 0);
           const quantity = clampPositiveInt(x.quantity ?? x.qty ?? 0);
@@ -534,73 +537,42 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
   /** Lưu tiện nghi phát sinh lên BE mới */
   const postAmenities = async (payload: AmenityPayload[]) => {
-  // Không gọi BE nếu không có gì để lưu
-  if (!checkoutInfo?.booking_id || !payload || payload.length === 0) {
-    return true
-  }
-  try {
-    setSavingAmenities(true)
-    await api.post(`/bookings/${checkoutInfo.booking_id}/amenities-incurred`, {
-      items: payload.map((it) => ({
-        room_id: Number(it.room_id),
-        amenity_id: Number(it.amenity_id),
-        price: Number(it.price),
-        quantity: Number(it.quantity),
-      })),
-    })
-    return true
-  } catch (e: any) {
-    // ---- Hiển thị lỗi validate 422 rõ ràng ----
-    const data = e?.response?.data
-    const errs =
-      (data?.errors && Object.values(data.errors).flat().join("\n")) ||
-      data?.message ||
-      "Lưu tiện nghi phát sinh thất bại."
-    console.error("save amenities failed:", e)
-    toast.error(errs)
-    return false
-  } finally {
-    setSavingAmenities(false)
-  }
-}
-
-
-  /** Thanh toán */
-  const payCash = async () => {
-    const payload: AmenityPayload[] = (amenitiesUsed ?? [])
-      .filter((a) => a.room_id && a.amenity_id && a.quantity > 0)
-      .map((a) => ({
-        room_id: a.room_id,
-        amenity_id: a.amenity_id,
-        price: clampNonNegative(a.price),
-        quantity: clampPositiveInt(a.quantity),
-      }));
-
-    const ok = await postAmenities(payload);
-    if (!ok) return;
-    onConfirmCheckout?.(payload);
-  };
-
-  const payVNPay = async () => {
-    if (!checkoutInfo) return;
-    const payload: AmenityPayload[] = (amenitiesUsed ?? [])
-      .filter((a) => a.room_id && a.amenity_id && a.quantity > 0)
-      .map((a) => ({
-        room_id: a.room_id,
-        amenity_id: a.amenity_id,
-        price: clampNonNegative(a.price),
-        quantity: clampPositiveInt(a.quantity),
-      }));
-
-    const ok = await postAmenities(payload);
-    if (!ok) return;
-    onVNPayCheckout?.(checkoutInfo.booking_id, payload);
+    // Không gọi BE nếu không có gì để lưu
+    if (!checkoutInfo?.booking_id || !payload || payload.length === 0) {
+      return true;
+    }
+    try {
+      setSavingAmenities(true);
+      await api.post(
+        `/bookings/${checkoutInfo.booking_id}/amenities-incurred`,
+        {
+          items: payload.map((it) => ({
+            room_id: Number(it.room_id),
+            amenity_id: Number(it.amenity_id),
+            price: Number(it.price),
+            quantity: Number(it.quantity),
+          })),
+        }
+      );
+      return true;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      const data = e?.response?.data;
+      const errs =
+        (data?.errors && Object.values(data.errors).flat().join("\n")) ||
+        data?.message ||
+        "Lưu tiện nghi phát sinh thất bại.";
+      console.error("save amenities failed:", e);
+      toast.error(errs);
+      return false;
+    } finally {
+      setSavingAmenities(false);
+    }
   };
 
   // ===== Dates for header (check-in -> check-out) =====
   const checkInRaw = checkoutInfo?.check_in_date;
-  const checkOutRaw =
-    checkoutInfo?.check_out_date ?? checkoutInfo?.check_out_at;
+  const checkOutRaw = checkoutInfo?.check_out_date ?? checkoutInfo?.check_out_at;
 
   const dateRangeText = useMemo(() => {
     const ci = parseAnyDate(checkInRaw);
@@ -646,18 +618,16 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
           />
         )}
         {checkoutInfo && (
-          <>
-            <Chip
-              label={getStatusView(checkoutInfo.status).text}
-              size="small"
-              sx={{
-                borderColor: getStatusView(checkoutInfo.status).color,
-                color: getStatusView(checkoutInfo.status).color,
-                fontWeight: 700,
-              }}
-              variant="outlined"
-            />
-          </>
+          <Chip
+            label={getStatusView(checkoutInfo.status).text}
+            size="small"
+            sx={{
+              borderColor: getStatusView(checkoutInfo.status).color,
+              color: getStatusView(checkoutInfo.status).color,
+              fontWeight: 700,
+            }}
+            variant="outlined"
+          />
         )}
       </Box>
       <Box textAlign="right">
@@ -665,7 +635,28 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
           Tổng thanh toán dự kiến
         </Typography>
         <Typography variant="h5" fontWeight={900} color="primary">
-          {toVND(grandTotal)}
+          {toVND(
+            Math.max(
+              0,
+              clampNonNegative(checkoutInfo?.room_total || 0) +
+                (serviceRows.length
+                  ? clampNonNegative(
+                      (serviceRows ?? []).reduce(
+                        (s, r) => s + clampNonNegative(r.subtotal || 0),
+                        0
+                      )
+                    )
+                  : clampNonNegative(checkoutInfo?.service_total || 0)) +
+                clampNonNegative(
+                  (amenitiesUsed ?? []).reduce(
+                    (s, a) => s + clampNonNegative(a.subtotal || 0),
+                    0
+                  )
+                ) -
+                clampNonNegative(checkoutInfo?.discount_amount || 0) -
+                clampNonNegative(checkoutInfo?.deposit_amount || 0)
+            )
+          )}
         </Typography>
       </Box>
     </Box>
@@ -674,18 +665,31 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   /** UI */
   return (
     <ThemeProvider theme={theme}>
+      {/* TẮT mọi transition của Autocomplete để chống “chạy vào” */}
+      <GlobalStyles
+        styles={{
+          ".MuiAutocomplete-popper, .MuiAutocomplete-listbox, .MuiAutocomplete-paper":
+            {
+              transition: "none !important",
+              animation: "none !important",
+            },
+        }}
+      />
+
       <Dialog
         open={open}
         onClose={onClose}
         fullWidth
         maxWidth={false}
+        keepMounted
+        scroll="paper"
         PaperProps={{
           sx: {
             width: "1400px",
             maxWidth: "98vw",
             height: "90vh",
             borderRadius: 3,
-            border: "0.75px solid #E5E7EB", // viền mỏng
+            border: "0.75px solid #E5E7EB",
           },
         }}
       >
@@ -836,7 +840,10 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                       >
                         Thành tiền
                       </TableCell>
-                      <TableCell sx={{ fontSize: 12, fontWeight: 800 }} align="right">
+                      <TableCell
+                        sx={{ fontSize: 12, fontWeight: 800 }}
+                        align="right"
+                      >
                         Thời gian
                       </TableCell>
                     </TableRow>
@@ -881,13 +888,14 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                           >
                             {toVND(s.subtotal)}
                           </TableCell>
-                          <TableCell align="right"
+                          <TableCell
+                            align="right"
                             sx={{
                               fontSize: 12,
-                              whiteSpace: "nowrap", // không xuống dòng
-                              fontVariantNumeric: "tabular-nums", // số đều chiều rộng, không rung
+                              whiteSpace: "nowrap",
+                              fontVariantNumeric: "tabular-nums",
                             }}
-                            title={s.created_at || ""} // tooltip xem raw
+                            title={s.created_at || ""}
                           >
                             {dtFull(s.created_at)}
                           </TableCell>
@@ -977,8 +985,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                     )}
 
                     {amenitiesUsed?.map((row, idx) => {
-                      const roomAllowed =
-                        amenityOptionsByRoom[row.room_id] ?? [];
+                      const roomAllowed = amenityOptionsByRoom[row.room_id] ?? [];
                       return (
                         <TableRow key={idx} hover>
                           <TableCell>
@@ -1009,6 +1016,8 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
                           <TableCell>
                             <Autocomplete
+                              disablePortal
+                              openOnFocus
                               options={roomAllowed}
                               getOptionLabel={(o) => o.name}
                               isOptionEqualToValue={(o, v) => o.id === v.id}
@@ -1020,6 +1029,24 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                                   : null
                               }
                               onChange={(_, opt) => changeAmenity(idx, opt)}
+                              // Popper "tĩnh" – list xuất hiện ngay trong cell
+                              components={{ Popper: StaticPopper }}
+                              componentsProps={{
+                                paper: {
+                                  sx: {
+                                    maxHeight: 260,
+                                    overflowY: "auto",
+                                    width: "100%",
+                                    boxShadow: "none",
+                                    border: "1px solid #e5e7eb",
+                                    mt: 0.5,
+                                  },
+                                  elevation: 0,
+                                },
+                              }}
+                              ListboxProps={{
+                                style: { maxHeight: 260, overflowY: "auto" },
+                              }}
                               renderInput={(params) => (
                                 <TextField
                                   {...params}
