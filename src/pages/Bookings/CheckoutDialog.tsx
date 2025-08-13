@@ -55,6 +55,7 @@ interface CheckoutInfo {
   room_details: { room_number: string; base_rate: number; total: number }[]
   amenity_total?: number
   amenities_used?: AmenityRow[]
+  services_used?: { name: string; price: number }[]
 }
 
 type AmenityOption = { id: number; name: string; price: number }
@@ -408,14 +409,6 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
           </Box>
         )}
       </Box>
-      <Box textAlign="right">
-        <Typography variant="caption" color="text.secondary">
-          Tổng thanh toán
-        </Typography>
-        <Typography variant="h6" fontWeight={700} color="#1A73E8">
-          {toVND(grandTotal)}
-        </Typography>
-      </Box>
     </Box>
   )
 
@@ -429,7 +422,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         sx: {
           width: { xs: "95vw", sm: "90vw", md: "1200px" },
           maxWidth: "98vw",
-          height: { xs: "80vh", sm: "70vh" },
+          height: { xs: "90vh", sm: "85vh" },
           borderRadius: 8,
           bgcolor: "white",
           overflow: "hidden",
@@ -461,7 +454,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
       <DialogContent
         id="checkout-dialog-content"
-        sx={{ p: 1, maxHeight: { xs: "60vh", sm: "50vh" }, overflowY: "auto", scrollBehavior: "smooth" }}
+        sx={{ p: 1, maxHeight: { xs: "70vh", sm: "65vh" }, overflowY: "auto", scrollBehavior: "smooth" }}
       >
         <Box display="flex" flexDirection="column" gap={1}>
           {HeaderBar}
@@ -469,21 +462,43 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
           <Grid container spacing={1} alignItems="stretch">
             <Grid item xs={12} md={8}>
               <Box display="grid" gap={1}>
-                <Paper elevation={1} sx={{ p: 1, borderRadius: 8, bgcolor: "white", maxHeight: 120, overflow: "hidden" }}>
-                  <SectionTitle icon={<AssignmentTurnedInOutlinedIcon sx={{ color: "#1A73E8" }} />} title="Thông tin đơn" right={`${checkoutInfo?.nights || 0} đêm`} />
-                  <Grid container spacing={0.5}>
-                    <Grid item xs={6} sm={4}>
-                      <CompactInfoCard label="Đặt cọc" value={toVND(Number(checkoutInfo?.deposit_amount || 0))} />
-                    </Grid>
-                    <Grid item xs={6} sm={4}>
-                      <CompactInfoCard label="Giảm giá" value={toVND(Number(checkoutInfo?.discount_amount || 0))} />
-                    </Grid>
-                    {checkoutInfo?.check_out_at && (
-                      <Grid item xs={12} sm={4}>
-                        <CompactInfoCard label="Trả phòng" value={dt(checkoutInfo.check_out_at)} />
-                      </Grid>
-                    )}
-                  </Grid>
+                <Paper elevation={1} sx={{ p: 1, borderRadius: 8, bgcolor: "white", maxHeight: 150, overflow: "auto" }}>
+                  <SectionTitle icon={<RoomServiceOutlinedIcon sx={{ color: "#1A73E8" }} />} title="Dịch vụ đã dùng" />
+                  <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.5, px: 1 }, tableLayout: "fixed" }}>
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "grey.100" }}>
+                        <CompactTh sx={{ width: 150 }}>Tên dịch vụ</CompactTh>
+                        <CompactTh align="right">Giá</CompactTh>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {checkoutInfo?.services_used?.map((s, i) => (
+                        <TableRow key={i} hover sx={{ "&:hover": { bgcolor: "grey.50" } }}>
+                          <CompactTd sx={{ whiteSpace: "nowrap" }}>
+                            <strong>{s.name}</strong>
+                          </CompactTd>
+                          <CompactTd align="right">{toVND(Number(s.price || 0))}</CompactTd>
+                        </TableRow>
+                      ))}
+                      {(checkoutInfo?.services_used?.length ?? 0) === 0 && (
+                        <TableRow>
+                          <CompactTd colSpan={2} align="center" sx={{ color: "text.secondary", py: 0.5 }}>
+                            Chưa có dịch vụ
+                          </CompactTd>
+                        </TableRow>
+                      )}
+                      {checkoutInfo?.service_total > 0 && (
+                        <TableRow sx={{ bgcolor: "grey.100" }}>
+                          <CompactTd>
+                            <strong>Tổng tiền dịch vụ</strong>
+                          </CompactTd>
+                          <CompactTd align="right">
+                            <strong>{toVND(Number(checkoutInfo?.service_total || 0))}</strong>
+                          </CompactTd>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </Paper>
 
                 <Paper elevation={1} sx={{ p: 1, borderRadius: 8, bgcolor: "white", maxHeight: 180, overflow: "auto" }}>
@@ -519,12 +534,6 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   </Table>
                 </Paper>
 
-                {checkoutInfo?.service_total > 0 && (
-                  <Paper elevation={1} sx={{ p: 1, borderRadius: 8, bgcolor: "white", maxHeight: 80, overflow: "hidden" }}>
-                    <SectionTitle icon={<RoomServiceOutlinedIcon sx={{ color: "#1A73E8" }} />} title="Dịch vụ đã dùng" right={toVND(Number(checkoutInfo?.service_total || 0))} />
-                  </Paper>
-                )}
-
                 <Paper elevation={1} sx={{ p: 1, borderRadius: 8, bgcolor: "white", maxHeight: 250, overflow: "auto" }}>
                   <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                     <Typography variant="h6" fontWeight={700} sx={{ color: "#1A73E8" }}>
@@ -555,12 +564,12 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.5, px: 1 }, tableLayout: "fixed" }}>
                     <TableHead>
                       <TableRow sx={{ bgcolor: "grey.100" }}>
-                        <CompactTh sx={{ width: 100, fontSize: 12 }}>Phòng</CompactTh>
-                        <CompactTh sx={{ fontSize: 12 }}>Tiện nghi</CompactTh>
-                        <CompactTh align="right" sx={{ width: 80, fontSize: 12 }}>Giá</CompactTh>
-                        <CompactTh align="right" sx={{ width: 50, fontSize: 12 }}>SL</CompactTh>
-                        <CompactTh align="right" sx={{ width: 90, fontSize: 12 }}>Tiền</CompactTh>
-                        <CompactTh align="center" sx={{ width: 40 }} />
+                        <CompactTh sx={ { width: 100, fontSize: 12 }}>Phòng</CompactTh>
+                        <CompactTh sx={ { fontSize: 12 }}>Tiện nghi</CompactTh>
+                        <CompactTh align="right" sx={ { width: 80, fontSize: 12 }}>Giá</CompactTh>
+                        <CompactTh align="right" sx={ { width: 50, fontSize: 12 }}>SL</CompactTh>
+                        <CompactTh align="right" sx={ { width: 90, fontSize: 12 }}>Tiền</CompactTh>
+                        <CompactTh align="center" sx={ { width: 40 }} />
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -673,11 +682,12 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
             <Grid item xs={12} md={4}>
               <Box sx={{ position: { md: "sticky" }, top: 8 }}>
-                <Paper elevation={2} sx={{ p: 1, borderRadius: 8, bgcolor: "white", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", maxHeight: 300, overflow: "auto" }}>
+                <Paper elevation={2} sx={{ p: 1, borderRadius: 8, bgcolor: "white", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", maxHeight: 350, overflow: "auto" }}>
                   <SectionTitle icon={<MonetizationOnOutlinedIcon sx={{ color: "#1A73E8" }} />} title="Tóm tắt thanh toán" />
                   <Box sx={{ "& > *": { py: 0.5 } }}>
-                    <CompactSummaryRow label="Phòng + Dịch vụ" value={toVND(Number(checkoutInfo?.raw_total || 0))} />
-                    <CompactSummaryRow label="Tiện nghi" value={toVND(amenityTotal)} />
+                    <CompactSummaryRow label="Tiền phòng" value={toVND(Number(checkoutInfo?.room_total || 0))} />
+                    <CompactSummaryRow label="Tiền dịch vụ" value={toVND(Number(checkoutInfo?.service_total || 0))} />
+                    <CompactSummaryRow label="Tiền tiện nghi" value={toVND(amenityTotal)} />
                     <CompactSummaryRow label="Giảm giá" value={`- ${toVND(Number(checkoutInfo?.discount_amount || 0))}`} />
                     <CompactSummaryRow label="Đặt cọc" value={`- ${toVND(Number(checkoutInfo?.deposit_amount || 0))}`} />
                     <Divider sx={{ my: 0.5, borderColor: "grey.300" }} />
