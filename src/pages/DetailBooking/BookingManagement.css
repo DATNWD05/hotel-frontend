@@ -787,3 +787,43 @@
   border-top: 1px solid #e5e7eb;
   margin: 1rem 0;
 }
+/* Thêm vào file BookingManagement.css */
+.cccd-upload-section {
+  margin: 16px 0;
+}
+
+.cccd-image-preview {
+  margin-bottom: 16px;
+}
+
+.cccd-image {
+  max-width: 200px;
+  max-height: 150px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.cccd-upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cccd-file-name {
+  font-size: 0.875rem;
+  color: #555;
+}
+
+.cccd-alert {
+  margin-top: 16px;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+@media (max-width: 600px) {
+  .cccd-image {
+    max-width: 150px;
+    max-height: 100px;
+  }
+}
