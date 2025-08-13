@@ -37,6 +37,8 @@ import {
   createTheme,
   CssBaseline,
   AlertTitle,
+  DialogContentText,
+  GlobalStyles,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -49,6 +51,8 @@ import {
   Refresh as RefreshIcon,
   Clear as ClearIcon,
   Warning as WarningIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -57,13 +61,6 @@ import { format, parseISO, isBefore, startOfDay } from "date-fns";
 import api from "../../api/axios";
 
 // ==================== TYPES & INTERFACES ====================
-interface Shift {
-  id: number;
-  name: string;
-  start_time: string; // "HH:mm"
-  end_time: string; // "HH:mm"
-}
-
 interface Employee {
   id: number;
   name: string;
@@ -152,39 +149,33 @@ class OvertimeApiService {
     }
   }
 
-  async createOvertimeRequests(
+  async createOrUpdateOvertimeRequests(
     data: CreateOvertimeRequest
   ): Promise<ApiResponse<CreateOvertimeResponse>> {
     try {
       const response = await api.post("/overtime-requests", data);
       return response.data;
     } catch (error: any) {
-      console.error("Create overtime requests error:", error);
+      console.error("Create/Update overtime requests error:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Không thể tạo đăng ký tăng ca"
+          "Không thể tạo/cập nhật đăng ký tăng ca"
       );
     }
   }
 
   async getEmployees(): Promise<ApiResponse<Employee[]>> {
     try {
-      // nếu backend có phân trang, xin thật nhiều để lấy hết
       const response = await api.get("/employees", {
         params: { per_page: 1000 },
       });
       const payload = response.data;
 
       let list: Employee[] = [];
-
-      // 1) Backend trả mảng thuần
       if (Array.isArray(payload)) list = payload;
-      // 2) Backend trả { success, data: [...] }
       else if (Array.isArray(payload?.data)) list = payload.data;
-      // 3) Backend trả kiểu phân trang { data: { data: [...] } }
       else if (Array.isArray(payload?.data?.data)) list = payload.data.data;
-      // 4) Một số API trả { employees: [...] }
       else if (Array.isArray(payload?.employees)) list = payload.employees;
 
       return { success: true, data: list };
@@ -197,6 +188,24 @@ class OvertimeApiService {
       );
     }
   }
+
+  async deleteByDate(work_date: string, employee_ids: number[]) {
+    try {
+      // BE route: DELETE /api/overtime-requests/by-date
+      const res = await api.delete("/overtime-requests/by-date", {
+        // axios: body cho DELETE phải nằm trong key "data"
+        data: { work_date, employee_ids },
+      });
+      return res.data;
+    } catch (error: any) {
+      console.error("Delete overtime by date error:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Không thể xóa đăng ký tăng ca"
+      );
+    }
+  }
 }
 
 const overtimeApi = new OvertimeApiService();
@@ -204,15 +213,9 @@ const overtimeApi = new OvertimeApiService();
 // ==================== THEME ====================
 const theme = createTheme({
   palette: {
-    primary: {
-      main: "#3b82f6",
-    },
-    secondary: {
-      main: "#8b5cf6",
-    },
-    background: {
-      default: "#f8fafc",
-    },
+    primary: { main: "#3b82f6" },
+    secondary: { main: "#8b5cf6" },
+    background: { default: "#f8fafc" },
   },
   typography: {
     fontFamily:
@@ -221,19 +224,12 @@ const theme = createTheme({
   components: {
     MuiCard: {
       styleOverrides: {
-        root: {
-          borderRadius: 12,
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-        },
+        root: { borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" },
       },
     },
     MuiButton: {
       styleOverrides: {
-        root: {
-          borderRadius: 8,
-          textTransform: "none",
-          fontWeight: 500,
-        },
+        root: { borderRadius: 8, textTransform: "none", fontWeight: 500 },
       },
     },
   },
@@ -293,6 +289,15 @@ const OvertimeManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Edit/Delete helpers
+  const [isEditing, setIsEditing] = useState(false);
+  const [, setEditingRow] = useState<OvertimeRequest | null>(null);
+
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<OvertimeRequest | null>(
+    null
+  );
+
   // Form state
   const [workDate, setWorkDate] = useState<Date | null>(new Date());
   const [selectedEmployee, setSelectedEmployee] = useState<number | "">("");
@@ -307,35 +312,24 @@ const OvertimeManagement: React.FC = () => {
   // Filter state
   const [filterDate, setFilterDate] = useState<Date | null>(null);
   const [filterEmployeeId, setFilterEmployeeId] = useState<number | "">("");
-  const [shiftDict, setShiftDict] = useState<Record<number, Shift>>({});
 
   // Notification state
   const [notification, setNotification] = useState<{
     open: boolean;
     message: string;
     severity: "success" | "error" | "warning" | "info";
-  }>({
-    open: false,
-    message: "",
-    severity: "info",
-  });
+  }>({ open: false, message: "", severity: "info" });
 
   // Error state for detailed error display
   const [submitErrors, setSubmitErrors] = useState<
-    Array<{
-      employee_id: number;
-      employee_name?: string;
-      reason: string;
-    }>
+    Array<{ employee_id: number; employee_name?: string; reason: string }>
   >([]);
 
-  // Memoized functions to fix useEffect dependencies
+  // Memoized functions
   const loadEmployees = useCallback(async () => {
     try {
       const response = await overtimeApi.getEmployees();
-      if (response.success && response.data) {
-        setEmployees(response.data);
-      }
+      if (response.success && response.data) setEmployees(response.data);
     } catch (error: any) {
       showNotification(error.message, "error");
     }
@@ -345,13 +339,8 @@ const OvertimeManagement: React.FC = () => {
     try {
       setLoading(true);
       const filters: { date?: string; employee_id?: number } = {};
-
-      if (filterDate) {
-        filters.date = format(filterDate, "yyyy-MM-dd");
-      }
-      if (filterEmployeeId) {
-        filters.employee_id = filterEmployeeId as number;
-      }
+      if (filterDate) filters.date = format(filterDate, "yyyy-MM-dd");
+      if (filterEmployeeId) filters.employee_id = filterEmployeeId as number;
 
       const response = await overtimeApi.getOvertimeRequests(filters);
       if (response.success && response.data) {
@@ -365,40 +354,11 @@ const OvertimeManagement: React.FC = () => {
     }
   }, [filterDate, filterEmployeeId]);
 
-  const loadShifts = useCallback(async () => {
-    try {
-      const res = await api.get("/shifts", { params: { per_page: 1000 } });
-      const raw = Array.isArray(res.data)
-        ? res.data
-        : Array.isArray(res.data?.data)
-        ? res.data.data
-        : Array.isArray(res.data?.data?.data)
-        ? res.data.data.data
-        : [];
-
-      const dict: Record<number, Shift> = {};
-      raw.forEach((s: any) => {
-        // đảm bảo field start_time/end_time tồn tại (backend nên trả)
-        dict[s.id] = {
-          id: s.id,
-          name: s.name,
-          start_time: s.start_time ?? s.startTime ?? "00:00",
-          end_time: s.end_time ?? s.endTime ?? "00:00",
-        };
-      });
-      setShiftDict(dict);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e: any) {
-      showNotification("Không thể tải danh mục ca", "error");
-    }
-  }, []);
-
   // Load initial data
   useEffect(() => {
     loadEmployees();
     loadOvertimeRequests();
-    loadShifts();
-  }, [loadEmployees, loadOvertimeRequests, loadShifts]);
+  }, [loadEmployees, loadOvertimeRequests]);
 
   const calculateStatistics = (requests: OvertimeRequest[]) => {
     const stats: Statistics = {
@@ -410,20 +370,14 @@ const OvertimeManagement: React.FC = () => {
     };
     setStatistics(stats);
   };
+
   const showNotification = (
     message: string,
     severity: "success" | "error" | "warning" | "info"
-  ) => {
-    setNotification({
-      open: true,
-      message,
-      severity,
-    });
-  };
+  ) => setNotification({ open: true, message, severity });
 
-  const handleCloseNotification = () => {
+  const handleCloseNotification = () =>
     setNotification((prev) => ({ ...prev, open: false }));
-  };
 
   const resetForm = () => {
     setWorkDate(new Date());
@@ -434,6 +388,8 @@ const OvertimeManagement: React.FC = () => {
     setEndTime("");
     setReason("");
     setSubmitErrors([]);
+    setIsEditing(false);
+    setEditingRow(null);
   };
 
   const validateForm = (): boolean => {
@@ -441,12 +397,10 @@ const OvertimeManagement: React.FC = () => {
       showNotification("Vui lòng chọn ngày làm việc", "error");
       return false;
     }
-
     if (!selectedEmployee) {
       showNotification("Vui lòng chọn nhân viên", "error");
       return false;
     }
-
     if (overtimeType === "custom") {
       if (!startTime || !endTime) {
         showNotification(
@@ -455,7 +409,6 @@ const OvertimeManagement: React.FC = () => {
         );
         return false;
       }
-
       if (startTime >= endTime) {
         showNotification(
           "Thời gian kết thúc phải sau thời gian bắt đầu",
@@ -464,164 +417,22 @@ const OvertimeManagement: React.FC = () => {
         return false;
       }
     }
-
     return true;
   };
 
-  // Tạo Date từ "yyyy-MM-dd" + "HH:mm"
+  // Helpers (chỉ còn dùng để prefill duration khi sửa)
   const toDateTime = (dateStr: string, hm: string) =>
     new Date(`${dateStr}T${hm}:00`);
-
-  // Số giờ giữa 2 thời điểm
   const hoursBetween = (start: Date, end: Date) =>
     (end.getTime() - start.getTime()) / 3_600_000;
 
-  // Kiểm tra overlap 2 khoảng thời gian
-  const isOverlap = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
-    Math.max(aStart.getTime(), bStart.getTime()) <
-    Math.min(aEnd.getTime(), bEnd.getTime());
-
-  // Lấy danh sách ca chính (có start/end) của 1 nhân viên trong 1 ngày
-  const getMainShiftsOfEmployee = async (employeeId: number, date: Date) => {
-    const dayStr = format(date, "yyyy-MM-dd");
-    const res = await api.get("/work-assignments", {
-      params: {
-        from_date: dayStr,
-        to_date: dayStr,
-        employee_id: employeeId,
-        per_page: 1000,
-      },
-    });
-
-    const items = Array.isArray(res.data?.data?.data)
-      ? res.data.data.data
-      : Array.isArray(res.data?.data)
-      ? res.data.data
-      : Array.isArray(res.data)
-      ? res.data
-      : [];
-
-    // map sang {start,end}
-    const blocks: Array<{ start: Date; end: Date; shift_id: number }> = [];
-    items.forEach((it: any) => {
-      const id = it.shift_id ?? it.shiftIds?.[0];
-      if (!id || !shiftDict[id]) return;
-      const s = shiftDict[id];
-      const start = toDateTime(dayStr, s.start_time);
-      const end = toDateTime(dayStr, s.end_time);
-      blocks.push({ start, end, shift_id: id });
-    });
-
-    // sort theo thời gian
-    blocks.sort((a, b) => a.start.getTime() - b.start.getTime());
-    return blocks;
-  };
-
-  const validateBusinessRules = async (): Promise<
-    { ok: true } | { ok: false; msg: string }
-  > => {
-    if (!workDate) return { ok: false, msg: "Vui lòng chọn ngày làm việc" };
-    if (!selectedEmployee) return { ok: false, msg: "Vui lòng chọn nhân viên" };
-
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const wd = new Date(workDate);
-    wd.setHours(0, 0, 0, 0);
-    if (wd.getTime() < todayStart.getTime()) {
-      return { ok: false, msg: "Không thể đăng ký tăng ca cho ngày đã qua" };
-    }
-
-    const dayStr = format(workDate, "yyyy-MM-dd");
-    const blocks = await getMainShiftsOfEmployee(
-      selectedEmployee as number,
-      workDate
-    );
-    const mainCount = blocks.length;
-
-    if (mainCount >= 2) {
-      return {
-        ok: false,
-        msg: "Không thể đăng ký: nhân viên đã làm đủ 2 ca chính trong ngày",
-      };
-    }
-
-    const maxHours = mainCount === 1 ? 4 : 6;
-
-    if (overtimeType === "after_shift") {
-      if (!duration || duration <= 0) {
-        return { ok: false, msg: "Vui lòng chọn số giờ tăng ca hợp lệ" };
-      }
-      if (duration > maxHours) {
-        return {
-          ok: false,
-          msg: `Số giờ tăng ca tối đa là ${maxHours} giờ cho nhân viên này`,
-        };
-      }
-
-      // Sau ca chính cuối cùng
-      const lastEnd = mainCount
-        ? blocks[blocks.length - 1].end
-        : toDateTime(dayStr, "00:00");
-      const otStart = lastEnd;
-      const otEnd = new Date(otStart.getTime() + duration * 3_600_000);
-
-      // Không cần overlap check vì bắt đầu sau ca chính; nhưng kiểm tra an toàn:
-      for (const b of blocks) {
-        if (isOverlap(otStart, otEnd, b.start, b.end)) {
-          return {
-            ok: false,
-            msg: "Thời gian tăng ca (sau ca) đang trùng ca chính",
-          };
-        }
-      }
-      return { ok: true };
-    }
-
-    // custom
-    if (!startTime || !endTime) {
-      return { ok: false, msg: "Vui lòng chọn thời gian bắt đầu và kết thúc" };
-    }
-    const otStart = toDateTime(dayStr, startTime);
-    const otEnd = toDateTime(dayStr, endTime);
-    if (otEnd <= otStart) {
-      return {
-        ok: false,
-        msg: "Thời gian kết thúc phải sau thời gian bắt đầu",
-      };
-    }
-    const hours = hoursBetween(otStart, otEnd);
-    if (hours > maxHours) {
-      return {
-        ok: false,
-        msg: `Số giờ tăng ca tối đa là ${maxHours} giờ cho nhân viên này`,
-      };
-    }
-
-    // Không trùng ca chính
-    for (const b of blocks) {
-      if (isOverlap(otStart, otEnd, b.start, b.end)) {
-        return { ok: false, msg: "Thời gian tăng ca bị trùng với ca chính" };
-      }
-    }
-
-    return { ok: true };
-  };
-
   const handleSubmit = async () => {
-    // validate form cơ bản
+    // Chỉ validate form cơ bản ở FE; mọi business rule giao cho BE
     if (!validateForm()) return;
-
-    // ✅ validate nghiệp vụ nâng cao
-    const v = await validateBusinessRules();
-    if (!v.ok) {
-      showNotification(v.msg, "error");
-      return;
-    }
 
     try {
       setSubmitting(true);
       setSubmitErrors([]);
-      // ... phần còn lại giữ nguyên
 
       const overtimeRequest: OvertimeRequestInput = {
         employee_id: selectedEmployee as number,
@@ -637,7 +448,7 @@ const OvertimeManagement: React.FC = () => {
         overtimeRequest.end_datetime = `${workDateStr} ${endTime}`;
       }
 
-      const response = await overtimeApi.createOvertimeRequests({
+      const response = await overtimeApi.createOrUpdateOvertimeRequests({
         work_date: format(workDate!, "yyyy-MM-dd"),
         overtime_requests: [overtimeRequest],
       });
@@ -647,7 +458,9 @@ const OvertimeManagement: React.FC = () => {
 
         if (created.length > 0 && errors.length === 0) {
           showNotification(
-            `Đăng ký tăng ca thành công cho ${created[0].employee_name}`,
+            isEditing
+              ? `Cập nhật tăng ca thành công cho ${created[0].employee_name}`
+              : `Đăng ký tăng ca thành công cho ${created[0].employee_name}`,
             "success"
           );
           setIsModalOpen(false);
@@ -655,13 +468,81 @@ const OvertimeManagement: React.FC = () => {
           loadOvertimeRequests();
         } else if (errors.length > 0) {
           setSubmitErrors(errors);
-          showNotification("Có lỗi xảy ra khi đăng ký tăng ca", "error");
+          showNotification("Có lỗi từ máy chủ khi xử lý tăng ca", "error");
         }
+      } else {
+        showNotification(response.message || "Xử lý thất bại", "error");
       }
     } catch (error: any) {
       showNotification(error.message, "error");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // === Edit ===
+  const openEditModal = (row: OvertimeRequest) => {
+    setIsEditing(true);
+    setEditingRow(row);
+
+    try {
+      const d = parseISO(row.work_date);
+      setWorkDate(d);
+    } catch {
+      setWorkDate(new Date(row.work_date));
+    }
+
+    setSelectedEmployee(row.employee_id);
+    setOvertimeType(row.overtime_type);
+    setReason(row.reason || "");
+
+    // Prefill time/duration
+    const startHM = safeFormatHM(row.start_datetime);
+    const endHM = safeFormatHM(row.end_datetime);
+
+    if (row.overtime_type === "custom") {
+      setStartTime(startHM);
+      setEndTime(endHM);
+    } else {
+      try {
+        const wdStr = format(parseISO(row.work_date), "yyyy-MM-dd");
+        const start = toDateTime(wdStr, startHM);
+        const end = toDateTime(wdStr, endHM);
+        const h = Math.round(hoursBetween(start, end));
+        setDuration(h > 0 ? h : 1);
+      } catch {
+        setDuration(1);
+      }
+      setStartTime("");
+      setEndTime("");
+    }
+
+    setIsModalOpen(true);
+  };
+
+  // === Delete ===
+  const askDelete = (row: OvertimeRequest) => {
+    setDeleteTarget(row);
+    setConfirmDeleteOpen(true);
+  };
+
+  const doDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await overtimeApi.deleteByDate(deleteTarget.work_date, [
+        deleteTarget.employee_id,
+      ]);
+      showNotification(
+        `Đã xóa tăng ca ngày ${formatDate(deleteTarget.work_date)} của ${
+          deleteTarget.employee?.name
+        }`,
+        "success"
+      );
+      setConfirmDeleteOpen(false);
+      setDeleteTarget(null);
+      loadOvertimeRequests();
+    } catch (e: any) {
+      showNotification(e.message, "error");
     }
   };
 
@@ -684,10 +565,35 @@ const OvertimeManagement: React.FC = () => {
       return dateString;
     }
   };
+  const safeFormatHM = (dateTimeString: string): string => {
+    try {
+      return format(parseISO(dateTimeString), "HH:mm");
+    } catch {
+      // trường hợp BE trả sẵn "HH:mm"
+      return dateTimeString.length === 5 ? dateTimeString : "00:00";
+    }
+  };
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <GlobalStyles
+        styles={{
+          ".MuiPickersPopper-root .MuiPaper-root": {
+            transition: "none !important",
+          },
+          ".MuiPickersPopper-root .MuiFade-root": {
+            transition: "none !important",
+          },
+          ".MuiPickersSlideTransition-root": {
+            transition: "none !important",
+          },
+          ".MuiPickersFadeTransitionGroup-root": {
+            transition: "none !important",
+          },
+        }}
+      />
+
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <Box sx={{ maxWidth: 1200, margin: "0 auto", p: 3 }}>
           {/* Header */}
@@ -723,7 +629,10 @@ const OvertimeManagement: React.FC = () => {
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={() => {
+                    resetForm();
+                    setIsModalOpen(true);
+                  }}
                   sx={{ backgroundColor: "#3b82f6" }}
                 >
                   Đăng ký tăng ca
@@ -880,6 +789,7 @@ const OvertimeManagement: React.FC = () => {
                         <TableCell>Thời gian</TableCell>
                         <TableCell>Lý do</TableCell>
                         <TableCell>Ngày tạo</TableCell>
+                        <TableCell align="right">Hành động</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -924,6 +834,31 @@ const OvertimeManagement: React.FC = () => {
                               {formatDate(request.created_at)}
                             </Typography>
                           </TableCell>
+                          <TableCell align="right">
+                            <Box
+                              display="flex"
+                              justifyContent="flex-end"
+                              gap={1.5}
+                            >
+                              <IconButton
+                                size="small"
+                                onClick={() => openEditModal(request)}
+                                color="primary"
+                                aria-label="Sửa"
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+
+                              <IconButton
+                                size="small"
+                                onClick={() => askDelete(request)}
+                                color="error"
+                                aria-label="Xóa"
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -933,7 +868,7 @@ const OvertimeManagement: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Registration Modal */}
+          {/* Registration / Edit Modal */}
           <Dialog
             open={isModalOpen}
             onClose={() => !submitting && setIsModalOpen(false)}
@@ -946,10 +881,11 @@ const OvertimeManagement: React.FC = () => {
                 justifyContent="space-between"
                 alignItems="center"
               >
-                Đăng ký tăng ca
+                {isEditing ? "Cập nhật đăng ký tăng ca" : "Đăng ký tăng ca"}
                 <IconButton
                   onClick={() => setIsModalOpen(false)}
                   disabled={submitting}
+                  aria-label="Đóng"
                 >
                   <CloseIcon />
                 </IconButton>
@@ -958,13 +894,14 @@ const OvertimeManagement: React.FC = () => {
 
             <DialogContent>
               <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-                Vui lòng điền đầy đủ thông tin để đăng ký tăng ca
+                {isEditing
+                  ? "Chỉnh sửa thông tin tăng ca cho nhân viên đã chọn."
+                  : "Vui lòng điền đầy đủ thông tin để đăng ký tăng ca."}
               </Typography>
 
-              {/* Display submit errors */}
               {submitErrors.length > 0 && (
                 <Alert severity="error" sx={{ mb: 3 }}>
-                  <AlertTitle>Lỗi đăng ký tăng ca</AlertTitle>
+                  <AlertTitle>Lỗi xử lý tăng ca</AlertTitle>
                   {submitErrors.map((error, index) => (
                     <Typography key={index} variant="body2">
                       • {error.employee_name ? `${error.employee_name}: ` : ""}
@@ -979,7 +916,8 @@ const OvertimeManagement: React.FC = () => {
                   label="Ngày làm việc *"
                   value={workDate}
                   onChange={setWorkDate}
-                  format="dd/MM/yyyy" // <-- Ngày - Tháng - Năm
+                  format="dd/MM/yyyy"
+                  reduceAnimations
                   disabled={submitting}
                   shouldDisableDate={(day) => {
                     if (!day) return false;
@@ -1121,6 +1059,7 @@ const OvertimeManagement: React.FC = () => {
                     </Grid>
                   </Grid>
                 )}
+
                 <TextField
                   fullWidth
                   label="Lý do tăng ca"
@@ -1141,6 +1080,9 @@ const OvertimeManagement: React.FC = () => {
                     <li>Nhân viên không có ca chính tối đa 6 giờ tăng ca</li>
                     <li>Thời gian tăng ca không được trùng với ca chính</li>
                   </ul>
+                  <Typography variant="caption" color="textSecondary">
+                    * Các quy tắc trên được kiểm tra và phản hồi bởi máy chủ.
+                  </Typography>
                 </Alert>
               </Box>
             </DialogContent>
@@ -1163,9 +1105,37 @@ const OvertimeManagement: React.FC = () => {
                     <CircularProgress size={20} sx={{ mr: 1 }} />
                     Đang xử lý...
                   </>
+                ) : isEditing ? (
+                  "Cập nhật"
                 ) : (
                   "Đăng ký"
                 )}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Confirm Delete */}
+          <Dialog
+            open={confirmDeleteOpen}
+            onClose={() => setConfirmDeleteOpen(false)}
+            maxWidth="xs"
+            fullWidth
+          >
+            <DialogTitle>Xóa đăng ký tăng ca</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                Bạn có chắc muốn xóa tăng ca của{" "}
+                <strong>{deleteTarget?.employee?.name}</strong> vào ngày{" "}
+                <strong>
+                  {deleteTarget ? formatDate(deleteTarget.work_date) : ""}
+                </strong>
+                ?
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setConfirmDeleteOpen(false)}>Hủy</Button>
+              <Button color="error" variant="contained" onClick={doDelete}>
+                Xóa
               </Button>
             </DialogActions>
           </Dialog>
