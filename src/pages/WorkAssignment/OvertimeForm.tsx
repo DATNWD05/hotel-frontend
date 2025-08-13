@@ -148,7 +148,6 @@ class OvertimeApiService {
       );
     }
   }
-
   async createOrUpdateOvertimeRequests(
     data: CreateOvertimeRequest
   ): Promise<ApiResponse<CreateOvertimeResponse>> {
@@ -189,16 +188,12 @@ class OvertimeApiService {
     }
   }
 
-  async deleteByDate(work_date: string, employee_ids: number[]) {
+  async deleteById(id: number): Promise<ApiResponse<null>> {
     try {
-      // BE route: DELETE /api/overtime-requests/by-date
-      const res = await api.delete("/overtime-requests/by-date", {
-        // axios: body cho DELETE phải nằm trong key "data"
-        data: { work_date, employee_ids },
-      });
+      const res = await api.delete(`/overtime-requests/${id}`);
       return res.data;
     } catch (error: any) {
-      console.error("Delete overtime by date error:", error);
+      console.error("Delete overtime by id error:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||
@@ -310,7 +305,7 @@ const OvertimeManagement: React.FC = () => {
   const [reason, setReason] = useState<string>("");
 
   // Filter state
-  const [filterDate, setFilterDate] = useState<Date | null>(null);
+  const [filterDate, setFilterDate] = useState<Date | null>(new Date());
   const [filterEmployeeId, setFilterEmployeeId] = useState<number | "">("");
 
   // Notification state
@@ -529,25 +524,30 @@ const OvertimeManagement: React.FC = () => {
   const doDelete = async () => {
     if (!deleteTarget) return;
     try {
-      await overtimeApi.deleteByDate(deleteTarget.work_date, [
-        deleteTarget.employee_id,
-      ]);
-      showNotification(
-        `Đã xóa tăng ca ngày ${formatDate(deleteTarget.work_date)} của ${
-          deleteTarget.employee?.name
-        }`,
-        "success"
-      );
-      setConfirmDeleteOpen(false);
-      setDeleteTarget(null);
-      loadOvertimeRequests();
+      const res = await overtimeApi.deleteById(deleteTarget.id);
+
+      if (res?.success) {
+        showNotification(
+          res.message ||
+            `Đã xóa đăng ký tăng ca ngày ${formatDate(
+              deleteTarget.work_date
+            )} của ${deleteTarget.employee?.name}`,
+          "success"
+        );
+        setConfirmDeleteOpen(false);
+        setDeleteTarget(null);
+        // Có thể xoá lạc quan khỏi state thay vì reload; ở đây mình reload cho chắc
+        loadOvertimeRequests();
+      } else {
+        showNotification(res?.message || "Không xóa được bản ghi", "warning");
+      }
     } catch (e: any) {
       showNotification(e.message, "error");
     }
   };
 
   const clearFilters = () => {
-    setFilterDate(null);
+    setFilterDate(new Date()); // luôn trở lại hôm nay
     setFilterEmployeeId("");
   };
 
