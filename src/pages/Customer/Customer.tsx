@@ -40,7 +40,7 @@ const DEFAULT_AVATAR = "/default-avatar.png";
 
 const resolvePath = (p?: string) => {
   if (!p) return DEFAULT_AVATAR;
-  const path = p.replace(/^storage\/app\/public\//, "");
+  const path = p.replace(/^public\//, "");
   return `${FILES_URL}/storage/${path}`;
 };
 
@@ -142,7 +142,7 @@ interface Customer {
   address: string;
   note: string;
   bookings: Booking[];
-  cccd_image_url?: string;
+  cccd_image_path?: string;
 }
 
 interface ValidationErrors {
@@ -292,9 +292,7 @@ const Customer: React.FC = () => {
               gender: mapGenderToVietnamese(customer.gender || "other"),
               nationality: customer.nationality || "Không xác định",
               note: customer.note || "",
-              cccd_image_url: customer.cccd_image_url
-                ? resolvePath(customer.cccd_image_url)
-                : "",
+              cccd_image_path: customer.cccd_image_path || "",
               bookings: customer.bookings
                 ? customer.bookings.map((booking) => ({
                     id: Number(booking.id) || 0,
@@ -570,8 +568,8 @@ const Customer: React.FC = () => {
     navigate(`/listbookings/detail/${bookingId}`);
   };
 
-  const handleOpenImageModal = (url: string) => {
-    setSelectedImageUrl(resolvePath(url));
+  const handleOpenImageModal = (path: string) => {
+    setSelectedImageUrl(resolvePath(path));
     setOpenImageModal(true);
   };
 
@@ -1147,12 +1145,12 @@ const Customer: React.FC = () => {
                                           <TableRow>
                                             <TableCell>
                                               <strong>Ảnh CCCD:</strong>{" "}
-                                              {customer.cccd_image_url ? (
+                                              {customer.cccd_image_path ? (
                                                 <a
                                                   href="#"
                                                   onClick={() =>
                                                     handleOpenImageModal(
-                                                      customer.cccd_image_url!
+                                                      customer.cccd_image_path!
                                                     )
                                                   }
                                                   style={{

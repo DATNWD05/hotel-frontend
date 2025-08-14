@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   CalendarDays,
   Clock,
@@ -45,8 +45,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Chip,
-  Input,
 } from "@mui/material";
 import { useParams, useNavigate } from "react-router-dom";
 import { format, parseISO, isValid } from "date-fns";
@@ -65,7 +63,7 @@ interface Customer {
   nationality: string;
   address: string;
   note: string | null;
-  cccd_image_url?: string; // Thêm trường cho URL ảnh CCCD
+  cccd_image_path?: string | null; // Thêm trường này
 }
 
 interface RoomType {
@@ -152,17 +150,7 @@ interface Booking {
   creator: Creator;
   services: Service[];
   promotions: Promotion[];
-  is_hourly: boolean;
 }
-
-const FILES_URL = import.meta.env.VITE_FILES_URL || "http://127.0.0.1:8000";
-
-const resolvePath = (p?: string) => {
-  if (!p) return null;
-  const path = p.replace(/^storage\/app\/public\//, "");
-  if (path.startsWith("storage/")) return `${FILES_URL}/${path}`;
-  return `${FILES_URL}/storage/${path}`;
-};
 
 const BookingManagement = () => {
   const [booking, setBooking] = useState<Booking | null>(null);
@@ -184,10 +172,21 @@ const BookingManagement = () => {
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [cccdImage, setCccdImage] = useState<File | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const bookingId = Number(id); // Convert to number
+
+  const [cccdImageFile, setCccdImageFile] = useState<File | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isImageLoading, setIsImageLoading] = useState(true);
+
+  // Utility function to resolve image path
+  const resolveImagePath = (path?: string) => {
+    if (!path) return "/placeholder-image.jpg"; // Fallback nếu không có ảnh
+    // Loại bỏ tiền tố 'storage/app/public/' nếu có trong path từ API
+    const cleanedPath = path.replace(/^storage\/app\/public\//, "");
+    return `${import.meta.env.VITE_API_BASE_URL}/storage/${cleanedPath}`; // Đảm bảo khớp với cấu trúc server
+  };
 
   // Fetch booking details
   const fetchBookingDetail = async () => {
@@ -201,6 +200,7 @@ const BookingManagement = () => {
       setLoading(true);
       setError(null);
       const response = await api.get(`/bookings/${bookingId}`);
+      console.log("Full API response:", JSON.stringify(response.data, null, 2)); // Debug toàn bộ phản hồi
       if (response.status === 200) {
         const data =
           response.data.booking || response.data.data || response.data;
@@ -245,7 +245,10 @@ const BookingManagement = () => {
           ].includes(data.status)
             ? data.status
             : "Cancelled",
-          customer: data.customer || null,
+          customer: {
+            ...data.customer,
+            cccd_image_path: data.customer?.cccd_image_path || null,
+          },
           rooms: data.rooms.map((room: Room) => ({
             ...room,
             id: Number(room.id),
@@ -254,14 +257,14 @@ const BookingManagement = () => {
               total:
                 service.total ??
                 Number.parseFloat(service.price) * (service.quantity || 1),
-              icon: service.icon || Coffee,
+              icon: service.icon || Coffee, // Ensure icon is set
             })),
             room_type: {
               ...room.room_type,
               amenities: (room.room_type?.amenities || []).map(
                 (amenity: Amenity) => ({
                   ...amenity,
-                  icon: amenity.icon || Coffee,
+                  icon: amenity.icon || Coffee, // Ensure icon is set
                 })
               ),
             },
@@ -271,15 +274,12 @@ const BookingManagement = () => {
             total:
               service.total ??
               Number.parseFloat(service.price) * (service.quantity || 1),
-            icon: service.icon || Coffee,
+            icon: service.icon || Coffee, // Ensure icon is set
           })),
           creator: data.creator || { id: 0, name: "Unknown", email: "N/A" },
           promotions: data.promotions || [],
-          is_hourly: data.is_hourly ?? false,
         };
         setBooking(bookingData);
-        const resolvedUrl = resolvePath(bookingData.customer.cccd_image_url);
-        setPreviewImage(resolvedUrl ? `${resolvedUrl}?t=${Date.now()}` : null);
         setRoomServices(
           data.rooms.reduce(
             (acc: Record<number, Service[]>, room: Room) => ({
@@ -290,7 +290,7 @@ const BookingManagement = () => {
                   total:
                     service.total ??
                     Number.parseFloat(service.price) * (service.quantity || 1),
-                  icon: service.icon || Coffee,
+                  icon: service.icon || Coffee, // Ensure icon is set
                 })
               ),
             }),
@@ -342,7 +342,7 @@ const BookingManagement = () => {
           price: String(service.price ?? "0.00"),
           quantity: 1,
           category: service.category?.name || "Khác",
-          icon: iconMap[service.name] || Coffee,
+          icon: iconMap[service.name] || Coffee, // Ensure icon is set
           pivot: {
             booking_id: 0,
             service_id: service.id,
@@ -383,23 +383,38 @@ const BookingManagement = () => {
     fetchAvailablePromotions();
   }, [bookingId]);
 
-  const formatCurrency = (amount: string | number) => {
+  useEffect(() => {
+    if (booking?.customer.cccd_image_path) {
+      setIsImageLoading(false);
+    } else {
+      setIsImageLoading(true);
+    }
+  }, [booking]);
+
+  const formatCurrency = useCallback((amount: string) => {
     return new Intl.NumberFormat("vi-VN", {
       style: "currency",
       currency: "VND",
-    }).format(Number.parseFloat(String(amount)));
+    }).format(Number.parseFloat(amount));
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("vi-VN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   };
 
-  const formatDateTime = (dateTimeString: string, isHourly: boolean) => {
-    try {
-      const parsedDate = parseISO(dateTimeString);
-      if (!isValid(parsedDate)) throw new Error("Invalid date");
-      return isHourly
-        ? format(parsedDate, "dd/MM/yyyy HH:mm")
-        : format(parsedDate, "dd/MM/yyyy");
-    } catch {
-      return "N/A";
-    }
+  const formatDateTime = (dateTimeString: string) => {
+    return new Date(dateTimeString).toLocaleString("vi-VN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -476,7 +491,7 @@ const BookingManagement = () => {
             room_id: roomId,
             quantity,
           },
-          icon: service.icon || Coffee,
+          icon: service.icon || Coffee, // Ensure icon is set
         };
         setRoomServices((prev) => ({
           ...prev,
@@ -690,74 +705,85 @@ const BookingManagement = () => {
     }
   };
 
+  const handleUploadCCCD = async () => {
+    if (!cccdImageFile) {
+      setSnackbarMessage("Vui lòng chọn file ảnh CCCD.");
+      setSnackbarOpen(true);
+      return;
+    }
+
+    if (["Checked-out", "Cancelled"].includes(booking?.status || "")) {
+      setSnackbarMessage(
+        "Không thể upload ảnh cho đơn đặt phòng đã hoàn tất hoặc hủy."
+      );
+      setSnackbarOpen(true);
+      return;
+    }
+
+    setUploadLoading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("customer.cccd_image", cccdImageFile);
+
+      const response = await api.put(`/bookings/${bookingId}`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.status === 200) {
+        const newCccdImagePath = response.data.data?.customer?.cccd_image_path; // Debug giá trị
+        console.log("New CCCD image path from API:", newCccdImagePath);
+
+        setBooking((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            customer: {
+              ...prev.customer,
+              cccd_image_path:
+                newCccdImagePath || prev.customer.cccd_image_path,
+            },
+          };
+        });
+        setCccdImageFile(null);
+        setSnackbarMessage("Upload ảnh CCCD thành công!");
+        setSnackbarOpen(true);
+        await fetchBookingDetail(); // Đồng bộ lại dữ liệu
+      }
+    } catch (error) {
+      console.error("Lỗi khi upload ảnh CCCD:", error);
+      setUploadError("Lỗi khi upload ảnh. Vui lòng thử lại.");
+      setSnackbarMessage("Lỗi khi upload ảnh CCCD.");
+      setSnackbarOpen(true);
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
   const calculateAllServicesTotal = () => {
-    if (!booking) return 0;
-    return booking.services.reduce(
-      (total, service) => total + (service.total || 0),
-      0
-    );
+    return Object.values(roomServices).reduce((total, services) => {
+      return (
+        total +
+        services.reduce(
+          (roomTotal, service) => roomTotal + (service.total || 0),
+          0
+        )
+      );
+    }, 0);
   };
 
   const calculateGrandTotal = () => {
-    if (!booking) return 0;
-    const roomTotal = Number.parseFloat(booking.raw_total || "0");
+    const roomTotal = Number.parseFloat(booking?.total_amount || "0");
     const servicesTotal = calculateAllServicesTotal();
-    const discount = Number.parseFloat(booking.discount_amount || "0");
-    return roomTotal + servicesTotal - discount;
+    return roomTotal + servicesTotal;
   };
 
   const handleSnackbarClose = () => {
     setSnackbarOpen(false);
     setSnackbarMessage("");
-  };
-
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setCccdImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      const formData = new FormData();
-      formData.append("cccd_image", file);
-      try {
-        const response = await api.post(
-          `/customers/${booking?.customer.id}/upload-cccd`,
-          formData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
-        if (response.status === 200) {
-          const resolvedUrl = resolvePath(response.data.cccd_image_url);
-          setSnackbarMessage("Tải ảnh CCCD thành công!");
-          setSnackbarOpen(true);
-          setBooking((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  customer: {
-                    ...prev.customer,
-                    cccd_image_url: response.data.cccd_image_url,
-                  },
-                }
-              : prev
-          );
-          setPreviewImage(
-            resolvedUrl ? `${resolvedUrl}?t=${Date.now()}` : null
-          );
-        }
-      } catch (error) {
-        console.error("Lỗi khi tải ảnh CCCD:", error);
-        setSnackbarMessage("Lỗi khi tải ảnh CCCD. Vui lòng thử lại.");
-        setSnackbarOpen(true);
-      }
-    }
   };
 
   const RoomAmenities = ({ amenities = [] }: { amenities?: Amenity[] }) => {
@@ -789,7 +815,7 @@ const BookingManagement = () => {
   }: {
     services: Service[];
     onAddService: (service: Service, quantity: number, note: string) => void;
-    formatCurrency: (amount: string | number) => string;
+    formatCurrency: (amount: string) => string;
   }) => {
     const [selectedService, setSelectedService] = useState<Service | null>(
       null
@@ -955,7 +981,7 @@ const BookingManagement = () => {
     availableServices: Service[];
     onAddService: (service: Service, quantity: number, note: string) => void;
     onRemoveService: (serviceId: number) => void;
-    formatCurrency: (amount: string | number) => string;
+    formatCurrency: (amount: string) => string;
   }) => {
     const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
 
@@ -992,9 +1018,7 @@ const BookingManagement = () => {
             </h3>
             <div className="room-price">
               <p className="price">{formatCurrency(room.pivot.rate)}</p>
-              <p className="price-unit">
-                {booking?.is_hourly ? "/ giờ" : "/ đêm"}
-              </p>
+              <p className="price-unit">/ đêm</p>
             </div>
           </div>
           <div className="room-description">
@@ -1087,7 +1111,7 @@ const BookingManagement = () => {
                   </div>
                   <div className="service-item-actions">
                     <span className="service-total">
-                      {formatCurrency(service.total || 0)}
+                      {formatCurrency((service.total || 0).toString())}
                     </span>
                     <button
                       title="Xóa dịch vụ"
@@ -1102,7 +1126,7 @@ const BookingManagement = () => {
               <div className="services-total">
                 <span>Tổng dịch vụ phòng {room.room_number}:</span>
                 <span className="total-amount">
-                  {formatCurrency(calculateRoomServicesTotal())}
+                  {formatCurrency(calculateRoomServicesTotal().toString())}
                 </span>
               </div>
             </div>
@@ -1156,12 +1180,6 @@ const BookingManagement = () => {
                     <AlertCircle className="icon-small" /> Chưa thanh toán cọc
                   </span>
                 )}
-                <Chip
-                  label={booking.is_hourly ? "Theo giờ" : "Theo ngày"}
-                  color={booking.is_hourly ? "warning" : "primary"}
-                  size="small"
-                  sx={{ fontWeight: "bold", ml: 1 }}
-                />
               </div>
             </div>
           </div>
@@ -1192,23 +1210,6 @@ const BookingManagement = () => {
                         </span>
                       )}
                     </div>
-                    <div className="customer-image">
-                      {previewImage ? (
-                        <img
-                          src={previewImage}
-                          alt="CCCD"
-                          className="cccd-image"
-                        />
-                      ) : (
-                        <div className="no-image">Chưa có ảnh CCCD</div>
-                      )}
-                      <Input
-                        type="file"
-                        inputProps={{ accept: "image/*" }}
-                        onChange={handleImageUpload}
-                        sx={{ mt: 1 }}
-                      />
-                    </div>
                   </div>
                   <hr className="separator" />
                   <div className="customer-details">
@@ -1224,11 +1225,7 @@ const BookingManagement = () => {
                       <div className="detail-item">
                         <CalendarDays className="icon-small" />
                         <span>
-                          Sinh:{" "}
-                          {formatDateTime(
-                            booking.customer.date_of_birth,
-                            false
-                          )}
+                          Sinh: {formatDate(booking.customer.date_of_birth)}
                         </span>
                       </div>
                     </div>
@@ -1248,6 +1245,65 @@ const BookingManagement = () => {
                   <div className="customer-address">
                     <MapPin className="icon-small" />
                     <span>{booking.customer.address}</span>
+                  </div>
+                  <div className="customer-cccd-image">
+                    <h4 className="section-title">
+                      <Shield className="icon-small" /> Ảnh CCCD
+                    </h4>
+                    {isImageLoading ? (
+                      <p>Loading image...</p>
+                    ) : booking.customer.cccd_image_path ? (
+                      <div className="cccd-image-preview">
+                        <img
+                          src={resolveImagePath(
+                            booking.customer.cccd_image_path
+                          )}
+                          alt="Ảnh CCCD"
+                          style={{
+                            maxWidth: "100%",
+                            height: "auto",
+                            borderRadius: "8px",
+                          }}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "/placeholder-image.jpg";
+                          }}
+                          onLoad={() => setIsImageLoading(false)}
+                        />
+                        <p className="cccd-image-note">
+                          Ảnh hiện tại. Bạn có thể upload ảnh mới để thay thế.
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="empty-state-text">
+                        Chưa có ảnh CCCD. Upload khi khách đến nhận phòng.
+                      </p>
+                    )}
+                    <div className="upload-section">
+                      <input
+                        title="sd"
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg"
+                        onChange={(e) =>
+                          setCccdImageFile(e.target.files?.[0] || null)
+                        }
+                        style={{ marginBottom: "10px" }}
+                      />
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleUploadCCCD}
+                        disabled={uploadLoading || !cccdImageFile}
+                        startIcon={
+                          uploadLoading ? <CircularProgress size={20} /> : null
+                        }
+                      >
+                        {uploadLoading ? "Đang upload..." : "Upload ảnh CCCD"}
+                      </Button>
+                      {uploadError && (
+                        <Typography color="error">{uploadError}</Typography>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1304,24 +1360,13 @@ const BookingManagement = () => {
                   <div className="timeline-item">
                     <div className="timeline-dot timeline-dot-blue"></div>
                     <div>
-                      <p className="timeline-title">
-                        {booking.is_hourly
-                          ? "Thời gian nhận phòng"
-                          : "Ngày nhận phòng"}
-                      </p>
+                      <p className="timeline-title">Ngày nhận phòng</p>
                       <p className="timeline-text">
-                        {formatDateTime(
-                          booking.check_in_date,
-                          booking.is_hourly
-                        )}
+                        {formatDate(booking.check_in_date)}
                       </p>
                       {booking.check_in_at && (
                         <p className="timeline-status">
-                          ✓ Đã nhận:{" "}
-                          {formatDateTime(
-                            booking.check_in_at,
-                            booking.is_hourly
-                          )}
+                          ✓ Đã nhận: {formatDateTime(booking.check_in_at)}
                         </p>
                       )}
                     </div>
@@ -1330,24 +1375,13 @@ const BookingManagement = () => {
                   <div className="timeline-item">
                     <div className="timeline-dot timeline-dot-green"></div>
                     <div>
-                      <p className="timeline-title">
-                        {booking.is_hourly
-                          ? "Thời gian trả phòng"
-                          : "Ngày trả phòng"}
-                      </p>
+                      <p className="timeline-title">Ngày trả phòng</p>
                       <p className="timeline-text">
-                        {formatDateTime(
-                          booking.check_out_date,
-                          booking.is_hourly
-                        )}
+                        {formatDate(booking.check_out_date)}
                       </p>
                       {booking.check_out_at && (
                         <p className="timeline-status">
-                          ✓ Đã trả:{" "}
-                          {formatDateTime(
-                            booking.check_out_at,
-                            booking.is_hourly
-                          )}
+                          ✓ Đã trả: {formatDateTime(booking.check_out_at)}
                         </p>
                       )}
                     </div>
@@ -1361,19 +1395,18 @@ const BookingManagement = () => {
                 </h2>
                 <div className="payment-details">
                   <div className="payment-row">
-                    <span>
-                      Tổng tiền phòng (
-                      {booking.is_hourly ? "theo giờ" : "theo ngày"}):
-                    </span>
+                    <span>Tổng tiền phòng:</span>
                     <span className="payment-amount">
                       {formatCurrency(booking.raw_total)}
                     </span>
                   </div>
-                  {booking.services.length > 0 && (
+                  {Object.keys(roomServices).some(
+                    (roomId) => roomServices[Number(roomId)]?.length > 0
+                  ) && (
                     <div className="payment-row">
-                      <span>Tổng tiền dịch vụ:</span>
+                      <span>Tổng dịch vụ:</span>
                       <span className="payment-amount">
-                        {formatCurrency(calculateAllServicesTotal())}
+                        {formatCurrency(calculateAllServicesTotal().toString())}
                       </span>
                     </div>
                   )}
@@ -1389,7 +1422,7 @@ const BookingManagement = () => {
                   <div className="payment-row payment-total">
                     <span>Tổng cộng:</span>
                     <span className="payment-amount payment-amount-large">
-                      {formatCurrency(calculateGrandTotal())}
+                      {formatCurrency(calculateGrandTotal().toString())}
                     </span>
                   </div>
                   <hr className="separator" />
