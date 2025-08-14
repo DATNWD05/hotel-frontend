@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type React from "react";
+import React from "react";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -19,6 +19,7 @@ import {
 import { KeyboardArrowDown } from "@mui/icons-material";
 import { format, parseISO, isValid } from "date-fns";
 import { toast } from "react-toastify";
+import axios from "axios"; // ⬅️ dùng để nhận diện lỗi Axios (422)
 import api from "../../api/axios";
 
 interface Room {
@@ -118,6 +119,14 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     if (opts.kind === "out") return isDateOnly ? `${value}T12:00` : value;
     return value;
   };
+
+  // ⬇️ giữ lỗi từ backend (Laravel 422)
+  const [formErrors, setFormErrors] = React.useState<Record<string, string[]>>(
+    {}
+  );
+
+  const firstError = (key: string): string | undefined =>
+    formErrors?.[key]?.[0];
 
   const fetchAvailableRooms = async () => {
     try {
@@ -225,6 +234,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         : [bookingInfo.room.id];
       setSelectedRoomIds(currentRoomIds);
       setError(null);
+      setFormErrors({}); // clear lỗi cũ khi mở booking mới
     }
   }, [bookingInfo]);
 
@@ -305,8 +315,80 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
 
     setLoading(true);
     setError(null);
+    setFormErrors({});
+    setLoading(true);
 
     try {
+      // so sánh thay đổi
+      const originalCheckIn = format(
+        parseISO(bookingInfo.check_in_date),
+        "yyyy-MM-dd"
+      );
+      const originalCheckOut = format(
+        parseISO(bookingInfo.check_out_date),
+        "yyyy-MM-dd"
+      );
+
+      const ciChanged = checkInDate !== originalCheckIn;
+      const coChanged = checkOutDate !== originalCheckOut;
+
+      const originalRoomIds = (
+        bookingInfo.rooms
+          ? bookingInfo.rooms.map((r) => r.id)
+          : [bookingInfo.room.id]
+      )
+        .slice()
+        .sort((a, b) => a - b);
+      const currentRoomIds = selectedRoomIds.slice().sort((a, b) => a - b);
+      const roomsChanged =
+        JSON.stringify(originalRoomIds) !== JSON.stringify(currentRoomIds);
+        const depositChanged =
+        Number.parseFloat(String(bookingInfo.deposit_amount)) !==
+        Number.parseFloat(String(depositAmount));
+
+      // không có gì đổi -> báo và dừng
+      if (!depositChanged && !roomsChanged && !ciChanged && !coChanged) {
+        toast.info("Không có thay đổi nào để cập nhật");
+        setLoading(false);
+        return;
+      }
+
+      // validate CÓ ĐIỀU KIỆN: chỉ check thứ gì đang thay đổi
+      if (roomsChanged && selectedRoomIds.length === 0) {
+        setError("Vui lòng chọn ít nhất một phòng hợp lệ");
+        toast.error("Vui lòng chọn ít nhất một phòng hợp lệ");
+        setLoading(false);
+        return;
+      }
+
+      if (ciChanged || coChanged) {
+        const isValidDateStr = (s: string) =>
+          isValid(parseISO(s)) && !isNaN(new Date(s).getTime());
+        if (!isValidDateStr(checkInDate) || !isValidDateStr(checkOutDate)) {
+          setError("Ngày nhận hoặc trả phòng không hợp lệ");
+          toast.error("Ngày nhận hoặc trả phòng không hợp lệ");
+          setLoading(false);
+          return;
+        }
+        const checkIn = new Date(checkInDate);
+        const checkOut = new Date(checkOutDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (checkIn < today) {
+          setError("Ngày nhận phòng phải sau hoặc bằng hôm nay");
+          toast.error("Ngày nhận phòng phải sau hoặc bằng hôm nay");
+          setLoading(false);
+          return;
+        }
+        if (checkOut <= checkIn) {
+          setError("Ngày trả phòng phải sau ngày nhận phòng");
+          toast.error("Ngày trả phòng phải sau ngày nhận phòng");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // build payload: CHỈ gửi field đã đổi
       const updateData: any = {
         room_ids: selectedRoomIds,
         check_in_date: ciForApi,
