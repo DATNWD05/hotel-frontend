@@ -24,12 +24,14 @@ import api from "../../api/axios";
 interface Room {
   id: number;
   room_number: string;
-  room_type: {
+  room_type?: {
     id: number;
     name: string;
     base_rate: string;
   };
-  status: string;
+  room_type_id?: number;
+  status?: string; // "available" | "booked"
+  // available?: boolean; // nếu muốn giữ theo BE
 }
 
 interface Customer {
@@ -99,38 +101,88 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const [roomDropdownOpen, setRoomDropdownOpen] = useState<boolean>(false);
   const [isHourly, setIsHourly] = useState<boolean>(false);
 
+  // utils nhỏ để chuẩn hoá
+  const toApiDate = (
+    value: string,
+    opts: { hourly: boolean; kind: "in" | "out" }
+  ) => {
+    if (!value) return value;
+    // hourly: FE đã là "yyyy-MM-ddTHH:mm" rồi, giữ nguyên
+    if (opts.hourly) return value;
+
+    // daily:
+    // - check-in: nên gắn 14:00 để không thua now nếu là hôm nay
+    // - check-out: bắt buộc 12:00 theo BE
+    const isDateOnly = value.length === 10; // "yyyy-MM-dd"
+    if (opts.kind === "in") return isDateOnly ? `${value}T14:00` : value;
+    if (opts.kind === "out") return isDateOnly ? `${value}T12:00` : value;
+    return value;
+  };
+
   const fetchAvailableRooms = async () => {
     try {
       setRoomsLoading(true);
+
+      // Nếu booking đã bắt đầu trong quá khứ, kẹp check_in_date = max(now, check_in_date cũ)
+      const now = new Date();
+      const pad = (n: number) => n.toString().padStart(2, "0");
+      const toLocalDate = (d: Date) =>
+        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const toLocalDT = (d: Date) =>
+        `${toLocalDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+      const ciIsPast =
+        checkInDate && new Date(checkInDate).getTime() < now.getTime();
+      const effectiveCheckIn = ciIsPast
+        ? isHourly
+          ? toLocalDT(now)
+          : toLocalDate(now)
+        : checkInDate;
+
       const { data } = await api.post("/available-rooms", {
-        check_in_date: checkInDate,
+        check_in_date: effectiveCheckIn,
         check_out_date: checkOutDate,
         is_hourly: isHourly,
+        // room_type_id: ... // nếu bạn muốn lọc theo loại phòng
       });
-      const roomsData = Array.isArray(data) ? data : data.data || [];
 
-      const availableRoomsFiltered = roomsData.filter(
-        (room: Room) => room.status === "available"
-      );
+      const raw = Array.isArray(data) ? data : data?.data || [];
 
+      // Chuẩn hoá dữ liệu để khớp interface Room của FE
+      const normalized: Room[] = raw.map((r: any) => ({
+        id: r.id,
+        room_number: r.room_number,
+        // BE chỉ trả room_type_id -> giữ lại để sau này có thể dùng
+        room_type_id: r.room_type_id,
+        // FE mong đợi room_type có name/base_rate -> để undefined, khi render sẽ fallback
+        room_type: r.room_type
+          ? {
+              id: r.room_type.id,
+              name: r.room_type.name,
+              base_rate: String(
+                r.room_type.base_rate ?? r.room_type.hourly_rate ?? 0
+              ),
+            }
+          : undefined,
+        // FE đang trông chờ "status" -> map từ available (true -> "available")
+        status: r.available ? "available" : "booked",
+        // giữ lại available nếu cần
+        // available: r.available ?? true,
+      }));
+
+      // Thêm các phòng đang thuộc booking hiện tại (để vẫn chọn/sửa được)
+      const merged = [...normalized];
       if (bookingInfo) {
         const currentRooms = bookingInfo.rooms || [bookingInfo.room];
-        currentRooms.forEach((currentRoom) => {
-          const existsInAvailable = availableRoomsFiltered.some(
-            (room: Room) => room.id === currentRoom.id
-          );
-          if (!existsInAvailable) {
-            availableRoomsFiltered.push({
-              id: currentRoom.id,
-              room_number: currentRoom.room_number,
-              room_type: currentRoom.room_type,
-              status: "booked",
-            });
+        currentRooms.forEach((cr) => {
+          if (!merged.some((x) => x.id === cr.id)) {
+            merged.push({ ...cr, status: "booked" } as Room);
           }
         });
       }
 
-      setAvailableRooms(availableRoomsFiltered);
+      setAvailableRooms(merged);
+      setError(null);
     } catch (err) {
       console.error("Error fetching rooms:", err);
       setError("Không thể tải danh sách phòng. Vui lòng thử lại.");
@@ -188,74 +240,65 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     setSelectedRoomIds((prev) => prev.filter((id) => id !== roomIdToRemove));
   };
 
-  const isValidDate = (dateStr: string): boolean => {
-    return isValid(parseISO(dateStr)) && !isNaN(new Date(dateStr).getTime());
-  };
-
-  const isValidDeposit = (amount: string): boolean => {
-    const num = Number.parseFloat(amount);
-    return !isNaN(num) && num >= 0;
-  };
 
   const handleConfirm = async () => {
     if (!bookingInfo) return;
 
+    // Validate cơ bản
     if (selectedRoomIds.length === 0) {
       setError("Vui lòng chọn ít nhất một phòng hợp lệ");
       toast.error("Vui lòng chọn ít nhất một phòng hợp lệ");
       return;
     }
-
     if (!checkInDate || !checkOutDate) {
       setError("Vui lòng nhập đầy đủ ngày nhận và trả phòng");
       toast.error("Vui lòng nhập đầy đủ ngày nhận và trả phòng");
       return;
     }
-
-    if (!isValidDate(checkInDate) || !isValidDate(checkOutDate)) {
+    if (!isValid(parseISO(checkInDate)) || !isValid(parseISO(checkOutDate))) {
       setError("Ngày nhận hoặc trả phòng không hợp lệ");
       toast.error("Ngày nhận hoặc trả phòng không hợp lệ");
       return;
     }
-
-    if (!isValidDeposit(depositAmount)) {
+    if (depositAmount !== "" && Number.isNaN(Number(depositAmount))) {
       setError("Số tiền đặt cọc không hợp lệ");
       toast.error("Số tiền đặt cọc không hợp lệ");
       return;
     }
 
-    const checkIn = new Date(checkInDate);
-    const checkOut = new Date(checkOutDate);
+    // Chuẩn hoá theo rule BE
+    const ciForApi = toApiDate(checkInDate, { hourly: isHourly, kind: "in" });
+    const coForApi = toApiDate(checkOutDate, { hourly: isHourly, kind: "out" });
+
+    // Re-validate với giá trị đã chuẩn hoá
+    const ci = new Date(ciForApi);
+    const co = new Date(coForApi);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    if (checkIn < today) {
+    if (ci < today) {
       setError("Ngày nhận phòng phải sau hoặc bằng hôm nay");
       toast.error("Ngày nhận phòng phải sau hoặc bằng hôm nay");
       return;
     }
-
-    if (checkOut <= checkIn) {
+    if (co <= ci) {
       setError("Ngày trả phòng phải sau ngày nhận phòng");
       toast.error("Ngày trả phòng phải sau ngày nhận phòng");
       return;
     }
-
     if (isHourly) {
-      const hoursDiff =
-        (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+      const hoursDiff = (co.getTime() - ci.getTime()) / (1000 * 60 * 60);
       if (hoursDiff < 1) {
-        setError(
-          "Thời gian trả phòng phải sau thời gian nhận phòng ít nhất 1 giờ"
-        );
-        toast.error(
-          "Thời gian trả phòng phải sau thời gian nhận phòng ít nhất 1 giờ"
-        );
+        const msg =
+          "Thời gian trả phòng phải sau thời gian nhận phòng ít nhất 1 giờ";
+        setError(msg);
+        toast.error(msg);
         return;
       }
-      if (checkIn.getHours() >= 20) {
-        setError("Booking theo giờ không được bắt đầu sau 20:00");
-        toast.error("Booking theo giờ không được bắt đầu sau 20:00");
+      if (ci.getHours() >= 20) {
+        const msg = "Booking theo giờ không được bắt đầu sau 20:00";
+        setError(msg);
+        toast.error(msg);
         return;
       }
     }
@@ -266,11 +309,13 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     try {
       const updateData: any = {
         room_ids: selectedRoomIds,
-        check_in_date: checkInDate,
-        check_out_date: checkOutDate,
-        deposit_amount: depositAmount,
+        check_in_date: ciForApi,
+        check_out_date: coForApi,
         is_hourly: isHourly,
       };
+      // Chỉ gửi deposit khi có giá trị
+      if (depositAmount !== "")
+        updateData.deposit_amount = Number(depositAmount);
 
       const { data } = await api.put(
         `/bookings/${bookingInfo.id}`,
@@ -283,17 +328,23 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       onConfirm(data.data);
       toast.success("Cập nhật đặt phòng thành công");
       onClose();
-    } catch (err) {
-      console.error("Error updating booking:", err);
-      setError("Cập nhật đặt phòng thất bại");
-      toast.error("Cập nhật đặt phòng thất bại");
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Cập nhật đặt phòng thất bại";
+      console.error("Error updating booking:", err?.response || err);
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   const getRoomDisplayName = (room: Room) => {
-    return `Phòng ${room.room_number} - ${room.room_type.name}`;
+    const typeName =
+      room.room_type?.name ?? `Loại #${room.room_type_id ?? "?"}`;
+    return `Phòng ${room.room_number} - ${typeName}`;
   };
 
   const getSelectedRoomsDisplay = () => {
@@ -365,6 +416,56 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                 >
                   Theo giờ
                 </Button>
+              </Box>
+            </Paper>
+
+            {/* Thời gian */}
+            <Paper
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: "1px solid #ccc",
+                backgroundColor: "#fdfdfd",
+              }}
+            >
+              <Typography variant="h6" fontWeight={700} gutterBottom>
+                📅 Thời gian
+              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: { xs: "column", md: "row" },
+                  gap: 2,
+                }}
+              >
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>{isHourly ? "Thời gian nhận:" : "Ngày nhận:"}</b>{" "}
+                    {checkInDate ? formatDate(checkInDate, isHourly) : "N/A"}
+                  </Typography>
+                  <TextField
+                    type={isHourly ? "datetime-local" : "date"}
+                    value={checkInDate}
+                    onChange={(e) => setCheckInDate(e.target.value)}
+                    fullWidth
+                    size="small"
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <b>{isHourly ? "Thời gian trả:" : "Ngày trả:"}</b>{" "}
+                    {checkOutDate ? formatDate(checkOutDate, isHourly) : "N/A"}
+                  </Typography>
+                  <TextField
+                    type={isHourly ? "datetime-local" : "date"}
+                    value={checkOutDate}
+                    onChange={(e) => setCheckOutDate(e.target.value)}
+                    fullWidth
+                    size="small"
+                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                  />
+                </Box>
               </Box>
             </Paper>
 
@@ -484,10 +585,14 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                                 </Typography>
                                 <Typography variant="body2" color="#6b7280">
                                   <b>Giá:</b>{" "}
-                                  {Number.parseInt(
-                                    room.room_type.base_rate
-                                  ).toLocaleString()}{" "}
-                                  VNĐ
+                                  {(() => {
+                                    const rate = Number.parseInt(
+                                      room.room_type?.base_rate ?? "0"
+                                    );
+                                    return rate > 0
+                                      ? `${rate.toLocaleString()} VNĐ`
+                                      : "—";
+                                  })()}
                                 </Typography>
                                 <Typography variant="body2" color="#6b7280">
                                   <b>Trạng thái:</b>{" "}
@@ -506,56 +611,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   <b>Đã chọn:</b> {selectedRoomIds.length} phòng
                 </Typography>
-              </Box>
-            </Paper>
-
-            {/* Thời gian */}
-            <Paper
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                border: "1px solid #ccc",
-                backgroundColor: "#fdfdfd",
-              }}
-            >
-              <Typography variant="h6" fontWeight={700} gutterBottom>
-                📅 Thời gian
-              </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", md: "row" },
-                  gap: 2,
-                }}
-              >
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>{isHourly ? "Thời gian nhận:" : "Ngày nhận:"}</b>{" "}
-                    {checkInDate ? formatDate(checkInDate, isHourly) : "N/A"}
-                  </Typography>
-                  <TextField
-                    type={isHourly ? "datetime-local" : "date"}
-                    value={checkInDate}
-                    onChange={(e) => setCheckInDate(e.target.value)}
-                    fullWidth
-                    size="small"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-                  />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <b>{isHourly ? "Thời gian trả:" : "Ngày trả:"}</b>{" "}
-                    {checkOutDate ? formatDate(checkOutDate, isHourly) : "N/A"}
-                  </Typography>
-                  <TextField
-                    type={isHourly ? "datetime-local" : "date"}
-                    value={checkOutDate}
-                    onChange={(e) => setCheckOutDate(e.target.value)}
-                    fullWidth
-                    size="small"
-                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
-                  />
-                </Box>
               </Box>
             </Paper>
 
