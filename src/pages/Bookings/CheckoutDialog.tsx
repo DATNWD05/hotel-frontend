@@ -33,7 +33,14 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import Popper from "@mui/material/Popper";
-import { format, parseISO, isValid, parse } from "date-fns";
+import {
+  format,
+  parseISO,
+  isValid,
+  parse,
+  startOfDay,
+  differenceInCalendarDays,
+} from "date-fns";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import LocalAtmIcon from "@mui/icons-material/LocalAtm";
@@ -107,17 +114,23 @@ interface CheckoutDialogProps {
 
 /** ====== Helpers ====== */
 const toVND = (n: number) => `${numeral(n || 0).format("0,0")} VNĐ`;
-// Parse nhiều định dạng
+// Parse nhiều định dạng: ISO, "YYYY-MM-DD HH:mm:ss", "YYYY-MM-DD", epoch(ms|s)
 const parseAnyDate = (s?: string | number | null) => {
   if (s == null || s === "") return null;
+
+  // epoch số
   if (typeof s === "number" || /^\d+$/.test(String(s))) {
     const n = Number(s);
     return new Date(n > 1e12 ? n : n * 1000);
   }
+
   const str = String(s).trim();
+
+  // ISO-ish
   const maybeIso = str.includes(" ") && !str.includes("T") ? str.replace(" ", "T") : str;
   let d = parseISO(maybeIso);
   if (isValid(d)) return d;
+
   const fmts = ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd", "dd/MM/yyyy HH:mm", "dd/MM/yyyy"];
   for (const f of fmts) {
     d = parse(str, f, new Date());
@@ -243,9 +256,14 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
             id: Number(a.id),
             name: a.name,
             price: clampNonNegative(a.price),
-            // LẤY SỐ LƯỢNG SẴN CÓ CỦA TIỆN NGHI TRONG PHÒNG (vd: 2 điều hòa)
+            // >>> Ưu tiên pivot.quantity/pivot.qty rồi mới tới các field khác
             maxQty: clampPositiveInt(
-              a?.max_qty ?? a?.quantity ?? a?.default_quantity ?? a?.count ?? 1
+              a?.pivot?.quantity ??
+                a?.pivot?.qty ??
+                a?.max_qty ??
+                a?.quantity ??
+                a?.default_quantity ??
+                1
             ),
           }));
           return { id: Number(r.id), label: r.room_number };
@@ -301,7 +319,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         setAmenitiesUsed([]);
         toast.error("Không tải được tiện nghi theo phòng.");
       } finally {
-        setLoadingOptions(false);
+        if (mounted) setLoadingOptions(false);
       }
     };
 
@@ -396,6 +414,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
       return;
     }
 
+    // nếu tất cả tiện nghi của phòng đầu đều hết slot → không cho thêm
     const opts = amenityOptionsByRoom[defaultRoomId] || [];
     const anyRemaining = opts.some((opt) => {
       const max = clampPositiveInt(opt.maxQty ?? 1);
@@ -411,7 +430,14 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
     setAmenitiesUsed((prev) => [
       ...(prev ?? []),
-      { room_id: defaultRoomId, amenity_id: 0, name: "", price: 0, quantity: 1, subtotal: 0 },
+      {
+        room_id: defaultRoomId,
+        amenity_id: 0,
+        name: "",
+        price: 0,
+        quantity: 1,
+        subtotal: 0,
+      },
     ]);
   };
 
@@ -425,22 +451,28 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
       const stillValid = allowed.some((a) => a.id === old?.amenity_id);
 
       if (!stillValid) {
+        // amenity hiện tại không thuộc phòng mới → reset
         next[i] = { room_id, amenity_id: 0, name: "", price: 0, quantity: 1, subtotal: 0 };
         return next;
       }
 
-      // vẫn còn hợp lệ → hiệu chỉnh theo remaining (nhưng giữ số đã nhập nếu <= remaining)
+      // amenity hợp lệ trong phòng mới → giới hạn lại quantity theo remaining
       const maxQty = getMaxQty(room_id, old.amenity_id);
       const usedElsewhere = getUsedElsewhere(next, i, room_id, old.amenity_id);
       const remaining = Math.max(0, maxQty - usedElsewhere);
       const qty = Math.min(clampPositiveInt(old?.quantity ?? 1), Math.max(1, remaining));
 
-      next[i] = { ...old, room_id, quantity: qty, subtotal: clampNonNegative(old.price) * qty };
+      next[i] = {
+        ...old,
+        room_id,
+        quantity: qty,
+        subtotal: clampNonNegative(old.price) * qty,
+      };
       return next;
     });
   };
 
-  // >>> THAY ĐỔI CHÍNH: khi chọn tiện nghi, quantity mặc định = remaining (số lượng có sẵn/còn lại)
+  /** CHÍNH SỬA: khi chọn amenity, SL mặc định = remaining */
   const changeAmenity = (i: number, opt: AmenityOption | null) => {
     setAmenitiesUsed((prev) => {
       const next = [...(prev ?? [])];
@@ -458,10 +490,10 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
       if (remaining <= 0) {
         toast.error(`Tiện nghi "${opt.name}" cho phòng này đã đạt giới hạn (${maxQty}).`);
-        return next; // từ chối chọn
+        return next;
       }
 
-      // mặc định gán số lượng = remaining (vd phòng có 2 điều hòa → mặc định 2)
+      // >>> mặc định đặt số lượng bằng phần còn lại
       const qty = Math.max(1, remaining);
 
       next[i] = {
@@ -525,6 +557,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
       const price = clampNonNegative(r.price);
       const qty = clampPositiveInt(r.quantity);
 
+      // Khi gộp, vẫn phải tôn trọng maxQty tổng
       const maxQty = getMaxQty(r.room_id, r.amenity_id);
       const usedElsewhere = valid.reduce((s, rr, ii) => {
         if (ii === idx) return s;
@@ -557,7 +590,9 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
   /** Lưu tiện nghi phát sinh lên BE mới */
   const postAmenities = async (payload: AmenityPayload[]) => {
-    if (!checkoutInfo?.booking_id || !payload || payload.length === 0) return true;
+    if (!checkoutInfo?.booking_id || !payload || payload.length === 0) {
+      return true;
+    }
     try {
       setSavingAmenities(true);
       await api.post(`/bookings/${checkoutInfo.booking_id}/amenities-incurred`, {
@@ -587,13 +622,20 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   const checkInRaw = checkoutInfo?.check_in_date;
   const checkOutRaw = checkoutInfo?.check_out_date ?? checkoutInfo?.check_out_at;
 
-  const dateRangeText = useMemo(() => {
+const dateRangeText = useMemo(() => {
     const ci = parseAnyDate(checkInRaw);
     const co = parseAnyDate(checkOutRaw);
     if (!ci || !co) return null;
-    const nights = checkoutInfo?.nights ? ` (${checkoutInfo.nights} đêm)` : "";
+
+    // Tính theo calendar days để luôn ra số nguyên (VD: 20→23 = 3 đêm)
+    const nightsNum = Math.max(
+      0,
+      differenceInCalendarDays(startOfDay(co), startOfDay(ci))
+    );
+    const nights = ` (${nightsNum} đêm)`;
+
     return `${format(ci, "dd/MM/yyyy")} → ${format(co, "dd/MM/yyyy")}${nights}`;
-  }, [checkInRaw, checkOutRaw, checkoutInfo?.nights]);
+  }, [checkInRaw, checkOutRaw]);
 
   /** (Tuỳ chọn) khoá nút Thêm nếu không còn sức chứa */
   const canAddMore = useMemo(() => {
@@ -662,7 +704,9 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
               0,
               clampNonNegative(checkoutInfo?.room_total || 0) +
                 (serviceRows.length
-                  ? clampNonNegative((serviceRows ?? []).reduce((s, r) => s + clampNonNegative(r.subtotal || 0), 0))
+                  ? clampNonNegative(
+                      (serviceRows ?? []).reduce((s, r) => s + clampNonNegative(r.subtotal || 0), 0)
+                    )
                   : clampNonNegative(checkoutInfo?.service_total || 0)) +
                 clampNonNegative((amenitiesUsed ?? []).reduce((s, a) => s + clampNonNegative(a.subtotal || 0), 0)) -
                 clampNonNegative(checkoutInfo?.discount_amount || 0) -
@@ -677,6 +721,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   /** UI */
   return (
     <ThemeProvider theme={theme}>
+      {/* TẮT mọi transition của Autocomplete để chống “chạy vào” */}
       <GlobalStyles
         styles={{
           ".MuiAutocomplete-popper, .MuiAutocomplete-listbox, .MuiAutocomplete-paper": {
@@ -873,7 +918,6 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
                     {amenitiesUsed?.map((row, idx) => {
                       const roomAllowed = amenityOptionsByRoom[row.room_id] ?? [];
-                      const currentMax = row.amenity_id ? getMaxQty(row.room_id, row.amenity_id) : undefined;
                       const currentRemaining =
                         row.amenity_id
                           ? Math.max(
@@ -915,11 +959,15 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                               isOptionEqualToValue={(o, v) => o.id === v.id}
                               value={row.amenity_id ? roomAllowed.find((a) => a.id === row.amenity_id) ?? null : null}
                               onChange={(_, opt) => changeAmenity(idx, opt)}
-                              // Hiển thị kèm số lượng sẵn có (×N)
-                              renderOption={(props, option) => (
+                              // Hiển thị "×N" trong danh sách
+                              renderOption={(props, opt) => (
                                 <li {...props}>
-                                  {option.name}
-                                  {typeof option.maxQty === "number" ? ` × ${option.maxQty}` : ""}
+                                  <Box sx={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                                    <span>{opt.name}</span>
+                                    <Typography variant="caption" color="text.secondary">
+                                      × {opt.maxQty ?? 1}
+                                    </Typography>
+                                  </Box>
                                 </li>
                               )}
                               components={{ Popper: StaticPopper }}
@@ -968,16 +1016,14 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                               size="small"
                               inputProps={{
                                 min: 1,
-                                ...(currentRemaining !== undefined ? { max: Math.max(1, currentRemaining) } : {}),
+                                ...(currentRemaining ? { max: Math.max(1, currentRemaining) } : {}),
                                 style: { fontSize: 12, textAlign: "right" },
                               }}
                               value={row.quantity}
                               onChange={(e) => changeQty(idx, e.target.value)}
                               sx={{ width: 70 }}
                               title={
-                                currentRemaining !== undefined && currentMax !== undefined
-                                  ? `Tối đa trong phòng: ${currentMax} | Còn lại: ${currentRemaining}`
-                                  : undefined
+                                currentRemaining !== undefined ? `Tối đa còn lại: ${currentRemaining}` : undefined
                               }
                             />
                           </TableCell>
@@ -1011,6 +1057,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
             {/* RIGHT – receipt & actions */}
             <Grid item xs={12} md={4}>
+              {/* Step chips */}
               <Box display="flex" gap={0.75} mb={1}>
                 <Chip
                   label="1. Rà soát"
@@ -1028,6 +1075,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                 />
               </Box>
 
+              {/* Payment selector (only step 1) */}
               {step === 1 && (
                 <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2.5, mb: 1.25 }}>
                   <Typography variant="subtitle2" fontWeight={900} color="primary" mb={1}>
@@ -1049,6 +1097,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                 </Paper>
               )}
 
+              {/* Receipt */}
               <Paper
                 variant="outlined"
                 sx={{
@@ -1065,8 +1114,14 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   <SummaryRow label="Tiền phòng" value={toVND(Number(checkoutInfo?.room_total || 0))} />
                   <SummaryRow label="Dịch vụ" value={toVND(serviceDisplayTotal)} />
                   <SummaryRow label="Tiện nghi" value={toVND(amenityTotal)} />
-                  <SummaryRow label="Giảm giá" value={`- ${toVND(Number(checkoutInfo?.discount_amount || 0))}`} />
-                  <SummaryRow label="Đặt cọc" value={`- ${toVND(Number(checkoutInfo?.deposit_amount || 0))}`} />
+                  <SummaryRow
+                    label="Giảm giá"
+                    value={`- ${toVND(Number(checkoutInfo?.discount_amount || 0))}`}
+                  />
+                  <SummaryRow
+                    label="Đặt cọc"
+                    value={`- ${toVND(Number(checkoutInfo?.deposit_amount || 0))}`}
+                  />
                   <Divider sx={{ my: 1 }} />
                   <SummaryRow label="TỔNG CẦN THANH TOÁN" value={toVND(grandTotal)} strong />
                 </Box>
