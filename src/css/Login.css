@@ -84,6 +84,7 @@ input:focus {
   font-weight: bold;
   cursor: pointer;
   transition: background 0.3s ease;
+  align-items: center;
 }
 
 .btn-primary:hover {
