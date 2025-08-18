@@ -65,7 +65,7 @@ interface CheckoutInfo {
   amenities_used?: AmenityRow[];
 }
 
-type AmenityOption = { id: number; name: string; price: number };
+type AmenityOption = { id: number; name: string; price: number; maxQty?: number };
 type RoomOption = { id: number; label: string };
 
 type AmenityRow = {
@@ -102,39 +102,23 @@ interface CheckoutDialogProps {
   setPaymentMethod: (method: "cash" | "vnpay" | null) => void;
   isPaying: boolean;
   onConfirmCheckout: (amenitiesUsed?: AmenityPayload[]) => void;
-  onVNPayCheckout: (
-    bookingId: number,
-    amenitiesUsed?: AmenityPayload[]
-  ) => void;
+  onVNPayCheckout: (bookingId: number, amenitiesUsed?: AmenityPayload[]) => void;
 }
 
 /** ====== Helpers ====== */
 const toVND = (n: number) => `${numeral(n || 0).format("0,0")} VNĐ`;
-// Parse nhiều định dạng: ISO, "YYYY-MM-DD HH:mm:ss", "YYYY-MM-DD", epoch(ms|s)
+// Parse nhiều định dạng
 const parseAnyDate = (s?: string | number | null) => {
   if (s == null || s === "") return null;
-
-  // epoch số
   if (typeof s === "number" || /^\d+$/.test(String(s))) {
     const n = Number(s);
     return new Date(n > 1e12 ? n : n * 1000);
   }
-
   const str = String(s).trim();
-
-  // ISO-ish: nếu là "YYYY-MM-DD HH:mm:ss" thì đổi ' ' -> 'T' cho parseISO
-  const maybeIso =
-    str.includes(" ") && !str.includes("T") ? str.replace(" ", "T") : str;
+  const maybeIso = str.includes(" ") && !str.includes("T") ? str.replace(" ", "T") : str;
   let d = parseISO(maybeIso);
   if (isValid(d)) return d;
-
-  // Thử các format MySQL/phổ biến
-  const fmts = [
-    "yyyy-MM-dd HH:mm:ss",
-    "yyyy-MM-dd",
-    "dd/MM/yyyy HH:mm",
-    "dd/MM/yyyy",
-  ];
+  const fmts = ["yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd", "dd/MM/yyyy HH:mm", "dd/MM/yyyy"];
   for (const f of fmts) {
     d = parse(str, f, new Date());
     if (isValid(d)) return d;
@@ -181,10 +165,7 @@ const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         "html, body, #__next, #root": { height: "100%" },
-        body: {
-          WebkitFontSmoothing: "antialiased",
-          MozOsxFontSmoothing: "grayscale",
-        },
+        body: { WebkitFontSmoothing: "antialiased", MozOsxFontSmoothing: "grayscale" },
         "*": { letterSpacing: 0.2 },
       },
     },
@@ -205,7 +186,6 @@ const StaticPopper = styled(Popper)({
   animation: "none !important",
 });
 
-/** ====== Component ====== */
 const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   open,
   onClose,
@@ -220,9 +200,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   const [step, setStep] = useState<0 | 1>(0);
 
   // maps & options
-  const [amenityOptionsByRoom, setAmenityOptionsByRoom] = useState<
-    Record<number, AmenityOption[]>
-  >({});
+  const [amenityOptionsByRoom, setAmenityOptionsByRoom] = useState<Record<number, AmenityOption[]>>({});
   const [roomOptions, setRoomOptions] = useState<RoomOption[]>([]);
   const [amenitiesUsed, setAmenitiesUsed] = useState<AmenityRow[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -253,22 +231,22 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
     const fetchOptions = async () => {
       setLoadingOptions(true);
       try {
-        const res = await api.get(
-          `/bookings/${checkoutInfo.booking_id}/amenities-options`
-        );
+        const res = await api.get(`/bookings/${checkoutInfo.booking_id}/amenities-options`);
         const data = res?.data ?? {};
 
         const rooms = Array.isArray(data.rooms) ? data.rooms : [];
         const incurred = Array.isArray(data.incurred) ? data.incurred : [];
 
         const map: Record<number, AmenityOption[]> = {};
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const opts: RoomOption[] = rooms.map((r: any) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           map[Number(r.id)] = (r.amenities ?? []).map((a: any) => ({
             id: Number(a.id),
             name: a.name,
             price: clampNonNegative(a.price),
+            // LẤY SỐ LƯỢNG SẴN CÓ CỦA TIỆN NGHI TRONG PHÒNG (vd: 2 điều hòa)
+            maxQty: clampPositiveInt(
+              a?.max_qty ?? a?.quantity ?? a?.default_quantity ?? a?.count ?? 1
+            ),
           }));
           return { id: Number(r.id), label: r.room_number };
         });
@@ -277,7 +255,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         setAmenityOptionsByRoom(map);
         setRoomOptions(opts);
 
-        // Prefill rows
+        // Prefill rows (nếu BE trả về incurred)
         const prefillFromIncurred: AmenityRow[] = incurred.flatMap((g: any) =>
           (g.items ?? []).map((x: any) => ({
             room_id: Number(g.room_id),
@@ -323,7 +301,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         setAmenitiesUsed([]);
         toast.error("Không tải được tiện nghi theo phòng.");
       } finally {
-        if (mounted) setLoadingOptions(false);
+        setLoadingOptions(false);
       }
     };
 
@@ -340,16 +318,9 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
     setLoadingServices(true);
     (async () => {
       try {
-        const res = await api.get(
-          `/bookings/${checkoutInfo.booking_id}/services-used`
-        );
-        const arr = Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res?.data?.data)
-          ? res.data.data
-          : [];
+        const res = await api.get(`/bookings/${checkoutInfo.booking_id}/services-used`);
+        const arr = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mapped: ServiceRow[] = arr.map((x: any) => {
           const price = clampNonNegative(x.price ?? x.unit_price ?? 0);
           const quantity = clampPositiveInt(x.quantity ?? x.qty ?? 0);
@@ -373,22 +344,33 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
     })();
   }, [open, checkoutInfo?.booking_id]);
 
+  /** ===== Giới hạn số lượng tiện nghi theo (room, amenity) ===== */
+  const getMaxQty = (room_id: number, amenity_id: number) => {
+    if (!room_id || !amenity_id) return 1;
+    const opts = amenityOptionsByRoom[room_id] || [];
+    const found = opts.find((o) => o.id === amenity_id);
+    return clampPositiveInt(found?.maxQty ?? 1);
+  };
+
+  // tổng số lượng đã dùng ở các dòng khác cùng (room, amenity)
+  const getUsedElsewhere = (rows: AmenityRow[], idx: number, room_id: number, amenity_id: number) => {
+    return rows.reduce((sum, r, i) => {
+      if (i === idx) return sum;
+      if (r.room_id === room_id && r.amenity_id === amenity_id) {
+        return sum + clampPositiveInt(r.quantity);
+      }
+      return sum;
+    }, 0);
+  };
+
   /** Tổng tiện nghi + dịch vụ + tổng cuối cùng */
   const amenityTotal = useMemo(
-    () =>
-      (amenitiesUsed ?? []).reduce(
-        (s, a) => s + clampNonNegative(a.subtotal || 0),
-        0
-      ),
+    () => (amenitiesUsed ?? []).reduce((s, a) => s + clampNonNegative(a.subtotal || 0), 0),
     [amenitiesUsed]
   );
 
   const serviceSubtotal = useMemo(
-    () =>
-      (serviceRows ?? []).reduce(
-        (s, r) => s + clampNonNegative(r.subtotal || 0),
-        0
-      ),
+    () => (serviceRows ?? []).reduce((s, r) => s + clampNonNegative(r.subtotal || 0), 0),
     [serviceRows]
   );
 
@@ -399,9 +381,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   const grandTotal = useMemo(() => {
     if (!checkoutInfo) return 0;
     const room = clampNonNegative(checkoutInfo.room_total || 0);
-    const service = serviceRows.length
-      ? clampNonNegative(serviceSubtotal)
-      : clampNonNegative(checkoutInfo.service_total || 0);
+    const service = serviceRows.length ? clampNonNegative(serviceSubtotal) : clampNonNegative(checkoutInfo.service_total || 0);
     const discount = clampNonNegative(checkoutInfo.discount_amount || 0);
     const deposit = clampNonNegative(checkoutInfo.deposit_amount || 0);
     const amenity = clampNonNegative(amenityTotal || 0);
@@ -411,22 +391,31 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   /** Thao tác dòng tiện nghi */
   const addRow = () => {
     const defaultRoomId = roomOptions[0]?.id;
-    if (!defaultRoomId) return;
+    if (!defaultRoomId) {
+      toast.error("Chưa có phòng để thêm tiện nghi.");
+      return;
+    }
+
+    const opts = amenityOptionsByRoom[defaultRoomId] || [];
+    const anyRemaining = opts.some((opt) => {
+      const max = clampPositiveInt(opt.maxQty ?? 1);
+      const used = (amenitiesUsed || [])
+        .filter((r) => r.room_id === defaultRoomId && r.amenity_id === opt.id)
+        .reduce((s, r) => s + clampPositiveInt(r.quantity), 0);
+      return max - used > 0;
+    });
+    if (!anyRemaining) {
+      toast.warn("Tất cả tiện nghi ở phòng mặc định đã đạt giới hạn.");
+      return;
+    }
+
     setAmenitiesUsed((prev) => [
       ...(prev ?? []),
-      {
-        room_id: defaultRoomId,
-        amenity_id: 0,
-        name: "",
-        price: 0,
-        quantity: 1,
-        subtotal: 0,
-      },
+      { room_id: defaultRoomId, amenity_id: 0, name: "", price: 0, quantity: 1, subtotal: 0 },
     ]);
   };
 
-  const removeRow = (i: number) =>
-    setAmenitiesUsed((prev) => (prev ?? []).filter((_, idx) => idx !== i));
+  const removeRow = (i: number) => setAmenitiesUsed((prev) => (prev ?? []).filter((_, idx) => idx !== i));
 
   const changeRowRoom = (i: number, room_id: number) => {
     setAmenitiesUsed((prev) => {
@@ -434,45 +423,55 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
       const old = next[i];
       const allowed = amenityOptionsByRoom[room_id] || [];
       const stillValid = allowed.some((a) => a.id === old?.amenity_id);
-      next[i] = {
-        room_id,
-        amenity_id: stillValid ? old.amenity_id : 0,
-        name: stillValid ? old.name : "",
-        price: stillValid ? old.price : 0,
-        quantity: clampPositiveInt(old?.quantity ?? 1),
-        subtotal: stillValid
-          ? clampNonNegative(old.price) * clampPositiveInt(old.quantity)
-          : 0,
-      };
+
+      if (!stillValid) {
+        next[i] = { room_id, amenity_id: 0, name: "", price: 0, quantity: 1, subtotal: 0 };
+        return next;
+      }
+
+      // vẫn còn hợp lệ → hiệu chỉnh theo remaining (nhưng giữ số đã nhập nếu <= remaining)
+      const maxQty = getMaxQty(room_id, old.amenity_id);
+      const usedElsewhere = getUsedElsewhere(next, i, room_id, old.amenity_id);
+      const remaining = Math.max(0, maxQty - usedElsewhere);
+      const qty = Math.min(clampPositiveInt(old?.quantity ?? 1), Math.max(1, remaining));
+
+      next[i] = { ...old, room_id, quantity: qty, subtotal: clampNonNegative(old.price) * qty };
       return next;
     });
   };
 
+  // >>> THAY ĐỔI CHÍNH: khi chọn tiện nghi, quantity mặc định = remaining (số lượng có sẵn/còn lại)
   const changeAmenity = (i: number, opt: AmenityOption | null) => {
     setAmenitiesUsed((prev) => {
       const next = [...(prev ?? [])];
       const row = next[i];
       if (!row) return next;
+
       if (!opt) {
-        next[i] = {
-          ...row,
-          amenity_id: 0,
-          name: "",
-          price: 0,
-          subtotal: 0,
-          quantity: 1,
-        };
-      } else {
-        const qty = clampPositiveInt(row.quantity ?? 1);
-        next[i] = {
-          ...row,
-          amenity_id: opt.id,
-          name: opt.name,
-          price: opt.price,
-          subtotal: opt.price * qty,
-          quantity: qty,
-        };
+        next[i] = { ...row, amenity_id: 0, name: "", price: 0, subtotal: 0, quantity: 1 };
+        return next;
       }
+
+      const maxQty = getMaxQty(row.room_id, opt.id);
+      const used = getUsedElsewhere(next, i, row.room_id, opt.id);
+      const remaining = Math.max(0, maxQty - used);
+
+      if (remaining <= 0) {
+        toast.error(`Tiện nghi "${opt.name}" cho phòng này đã đạt giới hạn (${maxQty}).`);
+        return next; // từ chối chọn
+      }
+
+      // mặc định gán số lượng = remaining (vd phòng có 2 điều hòa → mặc định 2)
+      const qty = Math.max(1, remaining);
+
+      next[i] = {
+        ...row,
+        amenity_id: opt.id,
+        name: opt.name,
+        price: opt.price,
+        quantity: qty,
+        subtotal: opt.price * qty,
+      };
       return next;
     });
   };
@@ -489,37 +488,58 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   };
 
   const changeQty = (i: number, v: string) => {
-    const quantity = clampPositiveInt(v);
     setAmenitiesUsed((prev) => {
       const next = [...(prev ?? [])];
       const row = next[i];
-      const price = clampNonNegative(row?.price ?? 0);
-      next[i] = { ...row, quantity, subtotal: price * quantity };
+      if (!row) return next;
+
+      const desired = clampPositiveInt(v);
+
+      if (!row.room_id || !row.amenity_id) {
+        const price = clampNonNegative(row.price ?? 0);
+        next[i] = { ...row, quantity: desired, subtotal: price * desired };
+        return next;
+      }
+
+      const maxQty = getMaxQty(row.room_id, row.amenity_id);
+      const usedElsewhere = getUsedElsewhere(next, i, row.room_id, row.amenity_id);
+      const remaining = Math.max(0, maxQty - usedElsewhere);
+      const qty = Math.min(desired, Math.max(1, remaining));
+
+      if (desired > remaining) {
+        toast.warn(`Số lượng vượt giới hạn. Tối đa còn lại: ${remaining}.`);
+      }
+
+      const price = clampNonNegative(row.price ?? 0);
+      next[i] = { ...row, quantity: qty, subtotal: price * qty };
       return next;
     });
   };
 
   /** Gộp theo (room_id, amenity_id) trước khi thanh toán */
   const sanitizeAmenities = (rows: AmenityRow[]) => {
-    const valid = rows.filter(
-      (r) => r.room_id && r.amenity_id && clampPositiveInt(r.quantity) >= 1
-    );
+    const valid = rows.filter((r) => r.room_id && r.amenity_id && clampPositiveInt(r.quantity) >= 1);
     const map = new Map<string, AmenityRow>();
-    valid.forEach((r) => {
+    valid.forEach((r, idx) => {
       const key = `${r.room_id}-${r.amenity_id}`;
       const price = clampNonNegative(r.price);
       const qty = clampPositiveInt(r.quantity);
-      const prev = map.get(key);
-      if (prev) {
-        const newQty = prev.quantity + qty;
-        map.set(key, {
-          ...prev,
-          quantity: newQty,
-          subtotal: price * newQty,
-          price,
-        });
+
+      const maxQty = getMaxQty(r.room_id, r.amenity_id);
+      const usedElsewhere = valid.reduce((s, rr, ii) => {
+        if (ii === idx) return s;
+        if (rr.room_id === r.room_id && rr.amenity_id === r.amenity_id) return s + clampPositiveInt(rr.quantity);
+        return s;
+      }, 0);
+      const remaining = Math.max(0, maxQty - usedElsewhere);
+      const capped = Math.min(qty, remaining);
+
+      if (map.has(key)) {
+        const prev = map.get(key)!;
+        const newQty = Math.min(prev.quantity + capped, maxQty);
+        map.set(key, { ...prev, quantity: newQty, subtotal: price * newQty, price });
       } else {
-        map.set(key, { ...r, price, quantity: qty, subtotal: price * qty });
+        map.set(key, { ...r, quantity: capped, subtotal: price * capped, price });
       }
     });
     return Array.from(map.values());
@@ -537,25 +557,18 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
   /** Lưu tiện nghi phát sinh lên BE mới */
   const postAmenities = async (payload: AmenityPayload[]) => {
-    // Không gọi BE nếu không có gì để lưu
-    if (!checkoutInfo?.booking_id || !payload || payload.length === 0) {
-      return true;
-    }
+    if (!checkoutInfo?.booking_id || !payload || payload.length === 0) return true;
     try {
       setSavingAmenities(true);
-      await api.post(
-        `/bookings/${checkoutInfo.booking_id}/amenities-incurred`,
-        {
-          items: payload.map((it) => ({
-            room_id: Number(it.room_id),
-            amenity_id: Number(it.amenity_id),
-            price: Number(it.price),
-            quantity: Number(it.quantity),
-          })),
-        }
-      );
+      await api.post(`/bookings/${checkoutInfo.booking_id}/amenities-incurred`, {
+        items: payload.map((it) => ({
+          room_id: Number(it.room_id),
+          amenity_id: Number(it.amenity_id),
+          price: Number(it.price),
+          quantity: Number(it.quantity),
+        })),
+      });
       return true;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       const data = e?.response?.data;
       const errs =
@@ -582,6 +595,21 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
     return `${format(ci, "dd/MM/yyyy")} → ${format(co, "dd/MM/yyyy")}${nights}`;
   }, [checkInRaw, checkOutRaw, checkoutInfo?.nights]);
 
+  /** (Tuỳ chọn) khoá nút Thêm nếu không còn sức chứa */
+  const canAddMore = useMemo(() => {
+    if (!roomOptions.length) return false;
+    return roomOptions.some((room) => {
+      const opts = amenityOptionsByRoom[room.id] || [];
+      return opts.some((opt) => {
+        const max = clampPositiveInt(opt.maxQty ?? 1);
+        const used = (amenitiesUsed || [])
+          .filter((r) => r.room_id === room.id && r.amenity_id === opt.id)
+          .reduce((s, r) => s + clampPositiveInt(r.quantity), 0);
+        return max - used > 0;
+      });
+    });
+  }, [roomOptions, amenityOptionsByRoom, amenitiesUsed]);
+
   /** Header */
   const header = (
     <Box
@@ -592,8 +620,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        background:
-          "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(16,185,129,0.12) 100%)",
+        background: "linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(16,185,129,0.12) 100%)",
         border: "1px solid rgba(108,117,125,0.15)",
         boxShadow: "0 10px 26px rgba(0,0,0,0.06)",
         position: "sticky",
@@ -603,12 +630,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
       }}
     >
       <Box display="flex" gap={1} alignItems="center" flexWrap="wrap">
-        <Chip
-          label={`#${checkoutInfo?.booking_id ?? "-"}`}
-          size="small"
-          color="primary"
-          variant="filled"
-        />
+        <Chip label={`#${checkoutInfo?.booking_id ?? "-"}`} size="small" color="primary" variant="filled" />
         {dateRangeText && (
           <Chip
             label={dateRangeText}
@@ -640,19 +662,9 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
               0,
               clampNonNegative(checkoutInfo?.room_total || 0) +
                 (serviceRows.length
-                  ? clampNonNegative(
-                      (serviceRows ?? []).reduce(
-                        (s, r) => s + clampNonNegative(r.subtotal || 0),
-                        0
-                      )
-                    )
+                  ? clampNonNegative((serviceRows ?? []).reduce((s, r) => s + clampNonNegative(r.subtotal || 0), 0))
                   : clampNonNegative(checkoutInfo?.service_total || 0)) +
-                clampNonNegative(
-                  (amenitiesUsed ?? []).reduce(
-                    (s, a) => s + clampNonNegative(a.subtotal || 0),
-                    0
-                  )
-                ) -
+                clampNonNegative((amenitiesUsed ?? []).reduce((s, a) => s + clampNonNegative(a.subtotal || 0), 0)) -
                 clampNonNegative(checkoutInfo?.discount_amount || 0) -
                 clampNonNegative(checkoutInfo?.deposit_amount || 0)
             )
@@ -665,14 +677,12 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   /** UI */
   return (
     <ThemeProvider theme={theme}>
-      {/* TẮT mọi transition của Autocomplete để chống “chạy vào” */}
       <GlobalStyles
         styles={{
-          ".MuiAutocomplete-popper, .MuiAutocomplete-listbox, .MuiAutocomplete-paper":
-            {
-              transition: "none !important",
-              animation: "none !important",
-            },
+          ".MuiAutocomplete-popper, .MuiAutocomplete-listbox, .MuiAutocomplete-paper": {
+            transition: "none !important",
+            animation: "none !important",
+          },
         }}
       />
 
@@ -684,35 +694,13 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         keepMounted
         scroll="paper"
         PaperProps={{
-          sx: {
-            width: "1400px",
-            maxWidth: "98vw",
-            height: "90vh",
-            borderRadius: 3,
-            border: "0.75px solid #E5E7EB",
-          },
+          sx: { width: "1400px", maxWidth: "98vw", height: "90vh", borderRadius: 3, border: "0.75px solid #E5E7EB" },
         }}
       >
         <DialogTitle
-          sx={{
-            fontWeight: 900,
-            fontSize: 20,
-            py: 1.25,
-            px: 2,
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-          }}
+          sx={{ fontWeight: 900, fontSize: 20, py: 1.25, px: 2, display: "flex", alignItems: "center", gap: 1 }}
         >
-          <Box
-            component="span"
-            sx={{
-              width: 10,
-              height: 10,
-              bgcolor: "primary.main",
-              borderRadius: "50%",
-            }}
-          />
+          <Box component="span" sx={{ width: 10, height: 10, bgcolor: "primary.main", borderRadius: "50%" }} />
           Thanh toán & Trả phòng – Hobilo
         </DialogTitle>
 
@@ -723,37 +711,18 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
             {/* LEFT – editable content */}
             <Grid item xs={12} md={8}>
               {/* Rooms */}
-              <Paper
-                variant="outlined"
-                sx={{ p: 1.25, borderRadius: 2.5, mb: 1.25 }}
-              >
-                <Typography
-                  variant="subtitle2"
-                  fontWeight={900}
-                  color="primary"
-                  mb={1}
-                >
+              <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2.5, mb: 1.25 }}>
+                <Typography variant="subtitle2" fontWeight={900} color="primary" mb={1}>
                   🛏️ Chi tiết phòng
                 </Typography>
-                <Table
-                  size="small"
-                  sx={{ "& .MuiTableCell-root": { py: 0.6, px: 1 } }}
-                >
+                <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.6, px: 1 } }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "#f6f7fb" }}>
-                      <TableCell sx={{ fontWeight: 800, fontSize: 12 }}>
-                        Phòng
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontWeight: 800, fontSize: 12 }}
-                      >
+                      <TableCell sx={{ fontWeight: 800, fontSize: 12 }}>Phòng</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 800, fontSize: 12 }}>
                         Đơn giá/đêm
                       </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontWeight: 800, fontSize: 12 }}
-                      >
+                      <TableCell align="right" sx={{ fontWeight: 800, fontSize: 12 }}>
                         Thành tiền
                       </TableCell>
                     </TableRow>
@@ -778,31 +747,17 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                       </TableCell>
                       <TableCell />
                       <TableCell align="right" sx={{ fontSize: 12 }}>
-                        <strong>
-                          {toVND(Number(checkoutInfo?.room_total || 0))}
-                        </strong>
+                        <strong>{toVND(Number(checkoutInfo?.room_total || 0))}</strong>
                       </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
               </Paper>
 
-              {/* Services used (danh sách) */}
-              <Paper
-                variant="outlined"
-                sx={{ p: 1.25, borderRadius: 2.5, mb: 1.25 }}
-              >
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  mb={1}
-                >
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight={900}
-                    color="primary"
-                  >
+              {/* Services used */}
+              <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2.5, mb: 1.25 }}>
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                  <Typography variant="subtitle2" fontWeight={900} color="primary">
                     🍽️ Dịch vụ đã dùng
                   </Typography>
                   <Typography variant="h6" fontWeight={700}>
@@ -810,40 +765,21 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   </Typography>
                 </Box>
 
-                <Table
-                  size="small"
-                  sx={{ "& .MuiTableCell-root": { py: 0.55, px: 0.8 } }}
-                >
+                <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.55, px: 0.8 } }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "#f6f7fb" }}>
-                      <TableCell sx={{ fontSize: 12, fontWeight: 800 }}>
-                        Dịch vụ
-                      </TableCell>
-                      <TableCell sx={{ fontSize: 12, fontWeight: 800 }}>
-                        Phòng
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontSize: 12, fontWeight: 800 }}
-                      >
+                      <TableCell sx={{ fontSize: 12, fontWeight: 800 }}>Dịch vụ</TableCell>
+                      <TableCell sx={{ fontSize: 12, fontWeight: 800 }}>Phòng</TableCell>
+                      <TableCell align="right" sx={{ fontSize: 12, fontWeight: 800 }}>
                         Đơn giá
                       </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontSize: 12, fontWeight: 800 }}
-                      >
+                      <TableCell align="right" sx={{ fontSize: 12, fontWeight: 800 }}>
                         SL
                       </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontSize: 12, fontWeight: 800 }}
-                      >
+                      <TableCell align="right" sx={{ fontSize: 12, fontWeight: 800 }}>
                         Thành tiền
                       </TableCell>
-                      <TableCell
-                        sx={{ fontSize: 12, fontWeight: 800 }}
-                        align="right"
-                      >
+                      <TableCell sx={{ fontSize: 12, fontWeight: 800 }} align="right">
                         Thời gian
                       </TableCell>
                     </TableRow>
@@ -851,21 +787,13 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   <TableBody>
                     {loadingServices ? (
                       <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          align="center"
-                          sx={{ color: "text.secondary", py: 2 }}
-                        >
+                        <TableCell colSpan={6} align="center" sx={{ color: "text.secondary", py: 2 }}>
                           Đang tải dữ liệu...
                         </TableCell>
                       </TableRow>
                     ) : serviceRows.length === 0 ? (
                       <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          align="center"
-                          sx={{ color: "text.secondary", py: 2 }}
-                        >
+                        <TableCell colSpan={6} align="center" sx={{ color: "text.secondary", py: 2 }}>
                           Không có dữ liệu dịch vụ
                         </TableCell>
                       </TableRow>
@@ -873,28 +801,19 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                       serviceRows.map((s, i) => (
                         <TableRow key={i} hover>
                           <TableCell sx={{ fontSize: 12 }}>{s.name}</TableCell>
-                          <TableCell sx={{ fontSize: 12 }}>
-                            {s.room_number || "-"}
-                          </TableCell>
+                          <TableCell sx={{ fontSize: 12 }}>{s.room_number || "-"}</TableCell>
                           <TableCell align="right" sx={{ fontSize: 12 }}>
                             {toVND(s.price)}
                           </TableCell>
                           <TableCell align="right" sx={{ fontSize: 12 }}>
                             {s.quantity}
                           </TableCell>
-                          <TableCell
-                            align="right"
-                            sx={{ fontSize: 12, fontWeight: 800 }}
-                          >
+                          <TableCell align="right" sx={{ fontSize: 12, fontWeight: 800 }}>
                             {toVND(s.subtotal)}
                           </TableCell>
                           <TableCell
                             align="right"
-                            sx={{
-                              fontSize: 12,
-                              whiteSpace: "nowrap",
-                              fontVariantNumeric: "tabular-nums",
-                            }}
+                            sx={{ fontSize: 12, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}
                             title={s.created_at || ""}
                           >
                             {dtFull(s.created_at)}
@@ -908,17 +827,8 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
               {/* Amenities editor */}
               <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2.5 }}>
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  mb={1}
-                >
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight={900}
-                    color="primary"
-                  >
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                  <Typography variant="subtitle2" fontWeight={900} color="primary">
                     🏨 Tiện nghi phát sinh
                   </Typography>
                   <Button
@@ -927,43 +837,26 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                     onClick={addRow}
                     variant="contained"
                     color="info"
-                    disabled={roomOptions.length === 0 || loadingOptions}
+                    disabled={roomOptions.length === 0 || loadingOptions || !canAddMore}
                     sx={{ textTransform: "none", borderRadius: 2 }}
+                    title={!canAddMore ? "Không còn tiện nghi nào có thể thêm" : undefined}
                   >
                     Thêm
                   </Button>
                 </Box>
 
-                <Table
-                  size="small"
-                  sx={{ "& .MuiTableCell-root": { py: 0.5, px: 0.75 } }}
-                >
+                <Table size="small" sx={{ "& .MuiTableCell-root": { py: 0.5, px: 0.75 } }}>
                   <TableHead>
                     <TableRow sx={{ bgcolor: "#f6f7fb" }}>
-                      <TableCell
-                        sx={{ fontSize: 12, fontWeight: 800, width: 160 }}
-                      >
-                        Phòng
-                      </TableCell>
-                      <TableCell sx={{ fontSize: 12, fontWeight: 800 }}>
-                        Tiện nghi
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontSize: 12, fontWeight: 800, width: 90 }}
-                      >
+                      <TableCell sx={{ fontSize: 12, fontWeight: 800, width: 160 }}>Phòng</TableCell>
+                      <TableCell sx={{ fontSize: 12, fontWeight: 800 }}>Tiện nghi</TableCell>
+                      <TableCell align="right" sx={{ fontSize: 12, fontWeight: 800, width: 90 }}>
                         Giá
                       </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontSize: 12, fontWeight: 800, width: 70 }}
-                      >
+                      <TableCell align="right" sx={{ fontSize: 12, fontWeight: 800, width: 70 }}>
                         SL
                       </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ fontSize: 12, fontWeight: 800, width: 110 }}
-                      >
+                      <TableCell align="right" sx={{ fontSize: 12, fontWeight: 800, width: 110 }}>
                         Tiền
                       </TableCell>
                       <TableCell align="center" sx={{ width: 50 }} />
@@ -972,20 +865,24 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                   <TableBody>
                     {(amenitiesUsed?.length ?? 0) === 0 && (
                       <TableRow>
-                        <TableCell
-                          colSpan={6}
-                          align="center"
-                          sx={{ color: "text.secondary", py: 2 }}
-                        >
-                          {loadingOptions
-                            ? "Đang tải dữ liệu..."
-                            : "Chưa có tiện nghi"}
+                        <TableCell colSpan={6} align="center" sx={{ color: "text.secondary", py: 2 }}>
+                          {loadingOptions ? "Đang tải dữ liệu..." : "Chưa có tiện nghi"}
                         </TableCell>
                       </TableRow>
                     )}
 
                     {amenitiesUsed?.map((row, idx) => {
                       const roomAllowed = amenityOptionsByRoom[row.room_id] ?? [];
+                      const currentMax = row.amenity_id ? getMaxQty(row.room_id, row.amenity_id) : undefined;
+                      const currentRemaining =
+                        row.amenity_id
+                          ? Math.max(
+                              0,
+                              getMaxQty(row.room_id, row.amenity_id) -
+                                getUsedElsewhere(amenitiesUsed, idx, row.room_id, row.amenity_id)
+                            )
+                          : undefined;
+
                       return (
                         <TableRow key={idx} hover>
                           <TableCell>
@@ -995,9 +892,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                                 <Select
                                   label="Phòng"
                                   value={row.room_id || ""}
-                                  onChange={(e) =>
-                                    changeRowRoom(idx, Number(e.target.value))
-                                  }
+                                  onChange={(e) => changeRowRoom(idx, Number(e.target.value))}
                                 >
                                   {roomOptions.map((r) => (
                                     <MenuItem key={r.id} value={r.id}>
@@ -1007,10 +902,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                                 </Select>
                               </FormControl>
                             ) : (
-                              <Chip
-                                label={roomOptions[0]?.label ?? "-"}
-                                size="small"
-                              />
+                              <Chip label={roomOptions[0]?.label ?? "-"} size="small" />
                             )}
                           </TableCell>
 
@@ -1021,15 +913,15 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                               options={roomAllowed}
                               getOptionLabel={(o) => o.name}
                               isOptionEqualToValue={(o, v) => o.id === v.id}
-                              value={
-                                row.amenity_id
-                                  ? roomAllowed.find(
-                                      (a) => a.id === row.amenity_id
-                                    ) ?? null
-                                  : null
-                              }
+                              value={row.amenity_id ? roomAllowed.find((a) => a.id === row.amenity_id) ?? null : null}
                               onChange={(_, opt) => changeAmenity(idx, opt)}
-                              // Popper "tĩnh" – list xuất hiện ngay trong cell
+                              // Hiển thị kèm số lượng sẵn có (×N)
+                              renderOption={(props, option) => (
+                                <li {...props}>
+                                  {option.name}
+                                  {typeof option.maxQty === "number" ? ` × ${option.maxQty}` : ""}
+                                </li>
+                              )}
                               components={{ Popper: StaticPopper }}
                               componentsProps={{
                                 paper: {
@@ -1044,26 +936,18 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                                   elevation: 0,
                                 },
                               }}
-                              ListboxProps={{
-                                style: { maxHeight: 260, overflowY: "auto" },
-                              }}
+                              ListboxProps={{ style: { maxHeight: 260, overflowY: "auto" } }}
                               renderInput={(params) => (
                                 <TextField
                                   {...params}
                                   placeholder="Chọn..."
                                   size="small"
-                                  sx={{
-                                    "& .MuiInputBase-input": { fontSize: 12 },
-                                  }}
+                                  sx={{ "& .MuiInputBase-input": { fontSize: 12 } }}
                                 />
                               )}
                               size="small"
                               disabled={!row.room_id || loadingOptions}
-                              noOptionsText={
-                                loadingOptions
-                                  ? "Đang tải..."
-                                  : "Phòng này chưa có tiện nghi."
-                              }
+                              noOptionsText={loadingOptions ? "Đang tải..." : "Phòng này chưa có tiện nghi."}
                             />
                           </TableCell>
 
@@ -1071,10 +955,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                             <TextField
                               type="number"
                               size="small"
-                              inputProps={{
-                                min: 0,
-                                style: { fontSize: 12, textAlign: "right" },
-                              }}
+                              inputProps={{ min: 0, style: { fontSize: 12, textAlign: "right" } }}
                               value={row.price}
                               onChange={(e) => changePrice(idx, e.target.value)}
                               sx={{ width: 90 }}
@@ -1087,27 +968,26 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                               size="small"
                               inputProps={{
                                 min: 1,
+                                ...(currentRemaining !== undefined ? { max: Math.max(1, currentRemaining) } : {}),
                                 style: { fontSize: 12, textAlign: "right" },
                               }}
                               value={row.quantity}
                               onChange={(e) => changeQty(idx, e.target.value)}
                               sx={{ width: 70 }}
+                              title={
+                                currentRemaining !== undefined && currentMax !== undefined
+                                  ? `Tối đa trong phòng: ${currentMax} | Còn lại: ${currentRemaining}`
+                                  : undefined
+                              }
                             />
                           </TableCell>
 
-                          <TableCell
-                            align="right"
-                            sx={{ fontSize: 12, fontWeight: 800 }}
-                          >
+                          <TableCell align="right" sx={{ fontSize: 12, fontWeight: 800 }}>
                             {toVND(Number(row.subtotal || 0))}
                           </TableCell>
 
                           <TableCell align="center">
-                            <IconButton
-                              size="small"
-                              onClick={() => removeRow(idx)}
-                              sx={{ p: 0.5 }}
-                            >
+                            <IconButton size="small" onClick={() => removeRow(idx)} sx={{ p: 0.5 }}>
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </TableCell>
@@ -1131,7 +1011,6 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 
             {/* RIGHT – receipt & actions */}
             <Grid item xs={12} md={4}>
-              {/* Step chips */}
               <Box display="flex" gap={0.75} mb={1}>
                 <Chip
                   label="1. Rà soát"
@@ -1149,18 +1028,9 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                 />
               </Box>
 
-              {/* Payment selector (only step 1) */}
               {step === 1 && (
-                <Paper
-                  variant="outlined"
-                  sx={{ p: 1.25, borderRadius: 2.5, mb: 1.25 }}
-                >
-                  <Typography
-                    variant="subtitle2"
-                    fontWeight={900}
-                    color="primary"
-                    mb={1}
-                  >
+                <Paper variant="outlined" sx={{ p: 1.25, borderRadius: 2.5, mb: 1.25 }}>
+                  <Typography variant="subtitle2" fontWeight={900} color="primary" mb={1}>
                     🔘 Chọn phương thức
                   </Typography>
                   <ToggleButtonGroup
@@ -1169,77 +1039,36 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                     onChange={(_, v) => setPaymentMethod(v)}
                     sx={{ display: "grid", gridTemplateColumns: "1fr", gap: 1 }}
                   >
-                    <ToggleButton
-                      value="cash"
-                      sx={{
-                        justifyContent: "flex-start",
-                        borderRadius: 2,
-                        p: 1.25,
-                      }}
-                    >
+                    <ToggleButton value="cash" sx={{ justifyContent: "flex-start", borderRadius: 2, p: 1.25 }}>
                       <LocalAtmIcon sx={{ mr: 1 }} /> Tiền mặt – tại quầy
                     </ToggleButton>
-                    <ToggleButton
-                      value="vnpay"
-                      sx={{
-                        justifyContent: "flex-start",
-                        borderRadius: 2,
-                        p: 1.25,
-                      }}
-                    >
+                    <ToggleButton value="vnpay" sx={{ justifyContent: "flex-start", borderRadius: 2, p: 1.25 }}>
                       <QrCode2Icon sx={{ mr: 1 }} /> VNPay – Quét QR / thẻ
                     </ToggleButton>
                   </ToggleButtonGroup>
                 </Paper>
               )}
 
-              {/* Receipt */}
               <Paper
                 variant="outlined"
                 sx={{
                   p: 1.25,
                   borderRadius: 2.5,
-                  background:
-                    "linear-gradient(180deg, rgba(248,249,250,0.85) 0%, rgba(255,255,255,0.9) 100%)",
+                  background: "linear-gradient(180deg, rgba(248,249,250,0.85) 0%, rgba(255,255,255,0.9) 100%)",
                   backdropFilter: "blur(6px)",
                 }}
               >
-                <Typography
-                  variant="subtitle2"
-                  fontWeight={900}
-                  color="primary"
-                  mb={1}
-                >
+                <Typography variant="subtitle2" fontWeight={900} color="primary" mb={1}>
                   💳 Tóm tắt thanh toán
                 </Typography>
                 <Box sx={{ "& > *": { py: 0.35 } }}>
-                  <SummaryRow
-                    label="Tiền phòng"
-                    value={toVND(Number(checkoutInfo?.room_total || 0))}
-                  />
-                  <SummaryRow
-                    label="Dịch vụ"
-                    value={toVND(serviceDisplayTotal)}
-                  />
+                  <SummaryRow label="Tiền phòng" value={toVND(Number(checkoutInfo?.room_total || 0))} />
+                  <SummaryRow label="Dịch vụ" value={toVND(serviceDisplayTotal)} />
                   <SummaryRow label="Tiện nghi" value={toVND(amenityTotal)} />
-                  <SummaryRow
-                    label="Giảm giá"
-                    value={`- ${toVND(
-                      Number(checkoutInfo?.discount_amount || 0)
-                    )}`}
-                  />
-                  <SummaryRow
-                    label="Đặt cọc"
-                    value={`- ${toVND(
-                      Number(checkoutInfo?.deposit_amount || 0)
-                    )}`}
-                  />
+                  <SummaryRow label="Giảm giá" value={`- ${toVND(Number(checkoutInfo?.discount_amount || 0))}`} />
+                  <SummaryRow label="Đặt cọc" value={`- ${toVND(Number(checkoutInfo?.deposit_amount || 0))}`} />
                   <Divider sx={{ my: 1 }} />
-                  <SummaryRow
-                    label="TỔNG CẦN THANH TOÁN"
-                    value={toVND(grandTotal)}
-                    strong
-                  />
+                  <SummaryRow label="TỔNG CẦN THANH TOÁN" value={toVND(grandTotal)} strong />
                 </Box>
               </Paper>
             </Grid>
@@ -1247,11 +1076,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         </DialogContent>
 
         <DialogActions sx={{ px: 2, py: 1.25 }}>
-          <Button
-            onClick={onClose}
-            color="inherit"
-            sx={{ fontWeight: 800, textTransform: "none", borderRadius: 2 }}
-          >
+          <Button onClick={onClose} color="inherit" sx={{ fontWeight: 800, textTransform: "none", borderRadius: 2 }}>
             Đóng
           </Button>
 
@@ -1283,10 +1108,29 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                     price: clampNonNegative(a.price),
                     quantity: clampPositiveInt(a.quantity),
                   }));
-                const ok = await postAmenities(payload);
+
+                // đảm bảo payload cũng không vượt max tổng thể
+                const sanitized = sanitizeAmenities(
+                  payload.map((p) => ({
+                    room_id: p.room_id,
+                    amenity_id: p.amenity_id,
+                    name: "",
+                    price: p.price,
+                    quantity: p.quantity,
+                    subtotal: p.price * p.quantity,
+                  }))
+                );
+                const finalPayload: AmenityPayload[] = sanitized.map((s) => ({
+                  room_id: s.room_id,
+                  amenity_id: s.amenity_id,
+                  price: s.price,
+                  quantity: s.quantity,
+                }));
+
+                const ok = await postAmenities(finalPayload);
                 if (!ok) return;
-                if (paymentMethod === "cash") onConfirmCheckout?.(payload);
-                else onVNPayCheckout?.(checkoutInfo!.booking_id, payload);
+                if (paymentMethod === "cash") onConfirmCheckout?.(finalPayload);
+                else onVNPayCheckout?.(checkoutInfo!.booking_id, finalPayload);
               }}
               disabled={isPaying || savingAmenities}
               sx={{ borderRadius: 2, fontWeight: 900, textTransform: "none" }}
@@ -1301,22 +1145,12 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
 };
 
 /** ====== tiny atoms ====== */
-const SummaryRow: React.FC<{
-  label: string;
-  value: string;
-  strong?: boolean;
-}> = ({ label, value, strong }) => (
+const SummaryRow: React.FC<{ label: string; value: string; strong?: boolean }> = ({ label, value, strong }) => (
   <Box display="flex" alignItems="center" justifyContent="space-between">
-    <Typography
-      variant="body2"
-      sx={{ fontWeight: strong ? 900 : 600, fontSize: strong ? 13 : 12 }}
-    >
+    <Typography variant="body2" sx={{ fontWeight: strong ? 900 : 600, fontSize: strong ? 13 : 12 }}>
       {label}
     </Typography>
-    <Typography
-      variant="body2"
-      sx={{ fontWeight: strong ? 900 : 700, fontSize: strong ? 13 : 12 }}
-    >
+    <Typography variant="body2" sx={{ fontWeight: strong ? 900 : 700, fontSize: strong ? 13 : 12 }}>
       {value}
     </Typography>
   </Box>
