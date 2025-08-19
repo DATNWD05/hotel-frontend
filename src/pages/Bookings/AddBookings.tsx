@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import {
   User,
   Hotel,
@@ -13,6 +13,7 @@ import {
   AlertCircle,
   ChevronDown,
   AlertTriangle,
+  Upload,
 } from "lucide-react";
 import "../../css/AddBookings.css";
 import api from "../../api/axios";
@@ -30,6 +31,7 @@ interface Customer {
   nationality: string;
   address: string;
   note: string;
+  cccdImage: File | null; // Thêm trường cho file ảnh CCCD
 }
 
 interface Room {
@@ -74,6 +76,7 @@ interface ValidationErrors {
     phone?: string;
     dateOfBirth?: string;
     address?: string;
+    cccdImage?: string; // Thêm lỗi cho ảnh CCCD
   };
   booking: {
     checkInDate?: string;
@@ -114,6 +117,7 @@ export default function HotelBooking() {
       nationality: "Vietnamese",
       address: "",
       note: "",
+      cccdImage: null, // Khởi tạo trường ảnh CCCD
     },
     rooms: [{ id: "1", type: "", number: "", price: 0, roomId: 0, guests: 0 }],
     checkInDate: "",
@@ -211,7 +215,6 @@ export default function HotelBooking() {
           "YYYY-MM-DD HH:mm:ss"
         );
 
-        // Gửi dữ liệu POST trực tiếp trong body
         const response = await api.post("/available-rooms", {
           check_in_date: formattedCheckIn,
           check_out_date: formattedCheckOut,
@@ -225,7 +228,6 @@ export default function HotelBooking() {
           throw new Error("Dữ liệu từ /available-rooms không hợp lệ");
         }
 
-        // Tạo object group theo room_type_id
         const groupedRooms = roomsData.reduce(
           (acc: { [key: string]: RoomNumber[] }, room: RoomNumber) => {
             const typeId = room.room_type_id.toString();
@@ -238,7 +240,6 @@ export default function HotelBooking() {
 
         setRoomNumbers(groupedRooms);
 
-        // Cập nhật bookingData dựa trên dữ liệu mới fetch về
         setBookingData((prev) => ({
           ...prev,
           rooms: prev.rooms.map((room) => {
@@ -376,12 +377,15 @@ export default function HotelBooking() {
     return true;
   };
 
-  const validateCustomerField = (field: keyof Customer, value: string) => {
+  const validateCustomerField = (
+    field: keyof Customer,
+    value: string | File | null
+  ) => {
     const errors = { ...validationErrors };
 
     switch (field) {
       case "cccd": {
-        const trimmed = value.trim();
+        const trimmed = (value as string).trim();
         if (!trimmed) {
           errors.customer.cccd = "Vui lòng nhập số CCCD/CMND";
         } else if (!/^\d{9}$/.test(trimmed) && !/^\d{12}$/.test(trimmed)) {
@@ -394,44 +398,44 @@ export default function HotelBooking() {
         break;
       }
       case "name":
-        if (!value.trim()) {
+        if (!(value as string).trim()) {
           errors.customer.name = "Vui lòng nhập họ và tên";
-        } else if (value.trim().length < 2) {
+        } else if ((value as string).trim().length < 2) {
           errors.customer.name = "Họ và tên phải có ít nhất 2 ký tự";
         } else {
           delete errors.customer.name;
         }
         break;
       case "gender":
-        if (!value) {
+        if (!(value as string)) {
           errors.customer.gender = "Vui lòng chọn giới tính";
         } else {
           delete errors.customer.gender;
         }
         break;
       case "email":
-        if (!value.trim()) {
+        if (!(value as string).trim()) {
           errors.customer.email = "Vui lòng nhập email";
-        } else if (!validateEmail(value)) {
+        } else if (!validateEmail(value as string)) {
           errors.customer.email = "Email không hợp lệ";
         } else {
           delete errors.customer.email;
         }
         break;
       case "phone":
-        if (!value.trim()) {
+        if (!(value as string).trim()) {
           errors.customer.phone = "Vui lòng nhập số điện thoại";
-        } else if (!validatePhone(value)) {
+        } else if (!validatePhone(value as string)) {
           errors.customer.phone = "Số điện thoại không hợp lệ (10-11 chữ số)";
         } else {
           delete errors.customer.phone;
         }
         break;
       case "dateOfBirth":
-        if (!value) {
+        if (!(value as string)) {
           errors.customer.dateOfBirth = "Vui lòng chọn ngày sinh";
         } else {
-          const birthDate = new Date(value);
+          const birthDate = new Date(value as string);
           const today = new Date();
           const age = today.getFullYear() - birthDate.getFullYear();
           if (age < 18) {
@@ -442,12 +446,29 @@ export default function HotelBooking() {
         }
         break;
       case "address":
-        if (!value.trim()) {
+        if (!(value as string).trim()) {
           errors.customer.address = "Vui lòng nhập địa chỉ";
-        } else if (value.trim().length < 10) {
+        } else if ((value as string).trim().length < 10) {
           errors.customer.address = "Vui lòng nhập đầy đủ địa chỉ";
         } else {
           delete errors.customer.address;
+        }
+        break;
+      case "cccdImage":
+        if (value) {
+          const file = value as File;
+          const validTypes = ["image/jpeg", "image/png", "image/jpg"];
+          if (!validTypes.includes(file.type)) {
+            errors.customer.cccdImage =
+              "Ảnh CCCD phải có định dạng JPEG, PNG hoặc JPG";
+          } else if (file.size > 5 * 1024 * 1024) {
+            errors.customer.cccdImage =
+              "Kích thước ảnh không được vượt quá 5MB";
+          } else {
+            delete errors.customer.cccdImage;
+          }
+        } else {
+          delete errors.customer.cccdImage; // Ảnh CCCD không bắt buộc
         }
         break;
     }
@@ -642,14 +663,26 @@ export default function HotelBooking() {
     return Math.max(0, subtotal - discount);
   };
 
-  const handleCustomerChange = (field: keyof Customer, value: string) => {
+  const handleCustomerChange = (
+    field: keyof Customer,
+    value: string | File | null
+  ) => {
     setBookingData((prev) => ({
       ...prev,
       customer: { ...prev.customer, [field]: value },
     }));
 
     markFieldAsTouched(`customer.${field}`);
-    validateCustomerField(field, value);
+    if (field === "cccdImage") {
+      validateCustomerField(field, value as File | null);
+    } else {
+      validateCustomerField(field, value as string);
+    }
+  };
+
+  const handleCccdImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    handleCustomerChange("cccdImage", file);
   };
 
   const getFilteredRoomTypes = (guests: number) => {
@@ -820,6 +853,7 @@ export default function HotelBooking() {
             nationality: data.nationality || "Vietnamese",
             address: data.address || "",
             note: data.note || "",
+            cccdImage: null, // Không load ảnh từ server
           },
         }));
       }
@@ -838,11 +872,18 @@ export default function HotelBooking() {
 
     Object.keys(bookingData.customer).forEach((key) => {
       const field = key as keyof Customer;
-      if (field !== "note" && field !== "nationality") {
+      if (
+        field !== "note" &&
+        field !== "nationality" &&
+        field !== "cccdImage"
+      ) {
         validateCustomerField(field, bookingData.customer[field]);
         markFieldAsTouched(`customer.${field}`);
       }
     });
+
+    validateCustomerField("cccdImage", bookingData.customer.cccdImage);
+    markFieldAsTouched("customer.cccdImage");
 
     validateBookingField("checkInDate", bookingData.checkInDate);
     validateBookingField("checkOutDate", bookingData.checkOutDate);
@@ -927,27 +968,46 @@ export default function HotelBooking() {
         );
       }
 
-      const apiData: any = {
-        customer: {
-          cccd: bookingData.customer.cccd.trim(),
-          name: bookingData.customer.name.trim(),
-          gender: bookingData.customer.gender,
-          email: bookingData.customer.email.trim(),
-          phone: bookingData.customer.phone.trim(),
-          date_of_birth: bookingData.customer.dateOfBirth,
-          nationality: bookingData.customer.nationality.trim(),
-          address: bookingData.customer.address.trim(),
-          note: bookingData.customer.note.trim() || null,
-        },
-        room_ids: validRoomIds,
-        check_in_date: formattedCheckIn,
-        check_out_date: formattedCheckOut,
-        deposit_amount: bookingData.depositAmount || 0,
-        is_hourly: bookingData.is_hourly,
-        promotion_code: bookingData.promotion_code || undefined,
-      };
+      const formData = new FormData();
+      formData.append("customer[cccd]", bookingData.customer.cccd.trim());
+      formData.append("customer[name]", bookingData.customer.name.trim());
+      formData.append("customer[gender]", bookingData.customer.gender);
+      formData.append("customer[email]", bookingData.customer.email.trim());
+      formData.append("customer[phone]", bookingData.customer.phone.trim());
+      formData.append(
+        "customer[date_of_birth]",
+        bookingData.customer.dateOfBirth
+      );
+      formData.append(
+        "customer[nationality]",
+        bookingData.customer.nationality.trim()
+      );
+      formData.append("customer[address]", bookingData.customer.address.trim());
+      if (bookingData.customer.note.trim()) {
+        formData.append("customer[note]", bookingData.customer.note.trim());
+      }
+      if (bookingData.customer.cccdImage) {
+        formData.append("customer[cccd_image]", bookingData.customer.cccdImage);
+      }
+      validRoomIds.forEach((id, index) => {
+        formData.append(`room_ids[${index}]`, id.toString());
+      });
+      formData.append("check_in_date", formattedCheckIn);
+      formData.append("check_out_date", formattedCheckOut);
+      formData.append(
+        "deposit_amount",
+        (bookingData.depositAmount || 0).toString()
+      );
+      formData.append("is_hourly", bookingData.is_hourly ? "1" : "0");
+      if (bookingData.promotion_code) {
+        formData.append("promotion_code", bookingData.promotion_code);
+      }
 
-      const bookingRes = await api.post("/bookings", apiData);
+      const bookingRes = await api.post("/bookings", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
       const bookingResponseData = bookingRes.data;
 
       if (
@@ -985,6 +1045,9 @@ export default function HotelBooking() {
         } else if (errorMsg.includes("promotion")) {
           errorMsg =
             "Mã khuyến mãi không hợp lệ hoặc đã hết lượt sử dụng. Vui lòng chọn mã khác.";
+        } else if (errorMsg.includes("cccd_image")) {
+          errorMsg =
+            "Lỗi khi upload ảnh CCCD: Vui lòng kiểm tra định dạng hoặc kích thước file.";
         }
       } else if (error.message) {
         errorMsg = error.message;
@@ -1289,32 +1352,70 @@ export default function HotelBooking() {
                       </div>
                     </div>
 
-                    <div className="mb-4 form-group">
-                      <label htmlFor="address" className="form-label required">
-                        Địa chỉ
-                      </label>
-                      <div className="form-input-icon">
-                        <MapPin className="icon" />
-                        <input
-                          id="address"
-                          type="text"
-                          placeholder="Nhập địa chỉ đầy đủ"
-                          className={`form-input ${
-                            validationErrors.customer.address ? "error" : ""
-                          }`}
-                          value={bookingData.customer.address}
-                          onChange={(e) =>
-                            handleCustomerChange("address", e.target.value)
-                          }
-                          onBlur={() => markFieldAsTouched("customer.address")}
-                        />
-                      </div>
-                      {touchedFields["customer.address"] &&
-                        validationErrors.customer.address && (
-                          <ErrorMessage
-                            message={validationErrors.customer.address}
+                    <div className="mb-4 form-grid form-grid-2">
+                      <div className="form-group">
+                        <label
+                          htmlFor="address"
+                          className="form-label required"
+                        >
+                          Địa chỉ
+                        </label>
+                        <div className="form-input-icon">
+                          <MapPin className="icon" />
+                          <input
+                            id="address"
+                            type="text"
+                            placeholder="Nhập địa chỉ đầy đủ"
+                            className={`form-input ${
+                              validationErrors.customer.address ? "error" : ""
+                            }`}
+                            value={bookingData.customer.address}
+                            onChange={(e) =>
+                              handleCustomerChange("address", e.target.value)
+                            }
+                            onBlur={() =>
+                              markFieldAsTouched("customer.address")
+                            }
                           />
+                        </div>
+                        {touchedFields["customer.address"] &&
+                          validationErrors.customer.address && (
+                            <ErrorMessage
+                              message={validationErrors.customer.address}
+                            />
+                          )}
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="cccdImage" className="form-label">
+                          Ảnh CCCD/CMND
+                        </label>
+                        <div className="form-input-icon">
+                          <Upload className="icon" />
+                          <input
+                            id="cccdImage"
+                            type="file"
+                            accept="image/jpeg,image/png,image/jpg"
+                            className={`form-input ${
+                              validationErrors.customer.cccdImage ? "error" : ""
+                            }`}
+                            onChange={handleCccdImageChange}
+                            onBlur={() =>
+                              markFieldAsTouched("customer.cccdImage")
+                            }
+                          />
+                        </div>
+                        {touchedFields["customer.cccdImage"] &&
+                          validationErrors.customer.cccdImage && (
+                            <ErrorMessage
+                              message={validationErrors.customer.cccdImage}
+                            />
+                          )}
+                        {bookingData.customer.cccdImage && (
+                          <div className="mt-2 text-sm text-gray-600">
+                            File đã chọn: {bookingData.customer.cccdImage.name}
+                          </div>
                         )}
+                      </div>
                     </div>
 
                     <div className="form-group">

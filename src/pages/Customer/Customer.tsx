@@ -22,6 +22,9 @@ import {
   CardContent,
   Card,
   InputAdornment,
+  Modal,
+  Backdrop,
+  Fade,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit";
@@ -30,7 +33,16 @@ import { useNavigate } from "react-router-dom";
 import "../../css/Customer.css";
 import api from "../../api/axios";
 import { SearchIcon } from "lucide-react";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
+
+const FILES_URL = import.meta.env.VITE_FILES_URL || "http://127.0.0.1:8000";
+const DEFAULT_AVATAR = "/default-avatar.png";
+
+const resolvePath = (p?: string) => {
+  if (!p) return DEFAULT_AVATAR;
+  const path = p.replace(/^public\//, "");
+  return `${FILES_URL}/storage/${path}`;
+};
 
 interface Room {
   id: number;
@@ -130,6 +142,7 @@ interface Customer {
   address: string;
   note: string;
   bookings: Booking[];
+  cccd_image_path?: string;
 }
 
 interface ValidationErrors {
@@ -205,6 +218,8 @@ const Customer: React.FC = () => {
   const [editError, setEditError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
+  const [openImageModal, setOpenImageModal] = useState<boolean>(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const formatCurrency = (amount: string): string => {
@@ -277,6 +292,7 @@ const Customer: React.FC = () => {
               gender: mapGenderToVietnamese(customer.gender || "other"),
               nationality: customer.nationality || "Không xác định",
               note: customer.note || "",
+              cccd_image_path: customer.cccd_image_path || "",
               bookings: customer.bookings
                 ? customer.bookings.map((booking) => ({
                     id: Number(booking.id) || 0,
@@ -387,7 +403,9 @@ const Customer: React.FC = () => {
       setLastPage(Math.ceil(allData.length / 10));
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Không thể tải danh sách khách hàng";
+        err instanceof Error
+          ? err.message
+          : "Không thể tải danh sách khách hàng";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -548,6 +566,16 @@ const Customer: React.FC = () => {
 
   const handleViewBookingDetails = (bookingId: number) => {
     navigate(`/listbookings/detail/${bookingId}`);
+  };
+
+  const handleOpenImageModal = (path: string) => {
+    setSelectedImageUrl(resolvePath(path));
+    setOpenImageModal(true);
+  };
+
+  const handleCloseImageModal = () => {
+    setOpenImageModal(false);
+    setSelectedImageUrl(null);
   };
 
   const handlePageChange = (
@@ -1115,7 +1143,28 @@ const Customer: React.FC = () => {
                                             </TableCell>
                                           </TableRow>
                                           <TableRow>
-                                            <TableCell colSpan={2}>
+                                            <TableCell>
+                                              <strong>Ảnh CCCD:</strong>{" "}
+                                              {customer.cccd_image_path ? (
+                                                <a
+                                                  href="#"
+                                                  onClick={() =>
+                                                    handleOpenImageModal(
+                                                      customer.cccd_image_path!
+                                                    )
+                                                  }
+                                                  style={{
+                                                    color: "#1976d2",
+                                                    textDecoration: "underline",
+                                                  }}
+                                                >
+                                                  Xem ảnh CCCD
+                                                </a>
+                                              ) : (
+                                                "Không có ảnh"
+                                              )}
+                                            </TableCell>
+                                            <TableCell>
                                               <strong>Ghi chú:</strong>{" "}
                                               {customer.note}
                                             </TableCell>
@@ -1250,6 +1299,65 @@ const Customer: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal hiển thị ảnh CCCD */}
+      <Modal
+        open={openImageModal}
+        onClose={handleCloseImageModal}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+      >
+        <Fade in={openImageModal}>
+          <Box
+            sx={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              bgcolor: "white",
+              boxShadow: 24,
+              p: 4,
+              borderRadius: "8px",
+              maxWidth: "80%",
+              maxHeight: "80%",
+              overflow: "auto",
+            }}
+          >
+            <Typography variant="h6" mb={2}>
+              Ảnh CCCD
+            </Typography>
+            {selectedImageUrl ? (
+              <img
+                src={selectedImageUrl}
+                alt="Ảnh CCCD"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "70vh",
+                  objectFit: "contain",
+                }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
+                  toast.error("Không thể tải ảnh CCCD");
+                }}
+              />
+            ) : (
+              <Typography>Không thể tải ảnh</Typography>
+            )}
+            <Box mt={2} display="flex" justifyContent="flex-end">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleCloseImageModal}
+              >
+                Đóng
+              </Button>
+            </Box>
+          </Box>
+        </Fade>
+      </Modal>
     </div>
   );
 };
