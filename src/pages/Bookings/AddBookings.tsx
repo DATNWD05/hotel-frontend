@@ -19,7 +19,6 @@ import "../../css/AddBookings.css";
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
-import { log } from "console";
 
 interface Customer {
   cccd: string;
@@ -31,7 +30,7 @@ interface Customer {
   nationality: string;
   address: string;
   note: string;
-  cccdImage: File | null; // Thêm trường cho file ảnh CCCD
+  cccdImage: File | null; // Thêm trường cho file ảnh CCCD  
 }
 
 interface Room {
