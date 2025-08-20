@@ -19,7 +19,6 @@ import "../../css/AddBookings.css";
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
-import { log } from "console";
 
 interface Customer {
   cccd: string;
@@ -31,7 +30,7 @@ interface Customer {
   nationality: string;
   address: string;
   note: string;
-  cccdImage: File | null; // Thêm trường cho file ảnh CCCD
+  cccdImage: File | null;
 }
 
 interface Room {
@@ -76,7 +75,7 @@ interface ValidationErrors {
     phone?: string;
     dateOfBirth?: string;
     address?: string;
-    cccdImage?: string; // Thêm lỗi cho ảnh CCCD
+    cccdImage?: string;
   };
   booking: {
     checkInDate?: string;
@@ -117,7 +116,7 @@ export default function HotelBooking() {
       nationality: "Vietnamese",
       address: "",
       note: "",
-      cccdImage: null, // Khởi tạo trường ảnh CCCD
+      cccdImage: null,
     },
     rooms: [{ id: "1", type: "", number: "", price: 0, roomId: 0, guests: 0 }],
     checkInDate: "",
@@ -208,11 +207,10 @@ export default function HotelBooking() {
 
       setLoadingRooms(true);
       try {
-        const formattedCheckIn = dayjs(bookingData.checkInDate).format(
-          "YYYY-MM-DD HH:mm:ss"
-        );
-        const formattedCheckOut = dayjs(bookingData.checkOutDate).format(
-          "YYYY-MM-DD HH:mm:ss"
+        const formattedCheckIn = formatDateTime(bookingData.checkInDate, true);
+        const formattedCheckOut = formatDateTime(
+          bookingData.checkOutDate,
+          false
         );
 
         const response = await api.post("/available-rooms", {
@@ -468,7 +466,7 @@ export default function HotelBooking() {
             delete errors.customer.cccdImage;
           }
         } else {
-          delete errors.customer.cccdImage; // Ảnh CCCD không bắt buộc
+          delete errors.customer.cccdImage;
         }
         break;
     }
@@ -488,7 +486,7 @@ export default function HotelBooking() {
         if (!value) {
           errors.booking.checkInDate = "Vui lòng chọn thời gian nhận phòng";
         } else {
-          const checkInDate = new Date(value as string);
+          const checkInDate = new Date(formatDateTime(value as string, true));
           if (checkInDate < now) {
             errors.booking.checkInDate =
               "Thời gian nhận phòng không thể là quá khứ";
@@ -501,14 +499,24 @@ export default function HotelBooking() {
         if (!value) {
           errors.booking.checkOutDate = "Vui lòng chọn thời gian trả phòng";
         } else if (bookingData.checkInDate) {
-          const checkInDate = new Date(bookingData.checkInDate);
-          const checkOutDate = new Date(value as string);
+          const checkInDate = new Date(
+            formatDateTime(bookingData.checkInDate, true)
+          );
+          const checkOutDate = new Date(formatDateTime(value as string, false));
           if (checkOutDate <= checkInDate) {
             errors.booking.checkOutDate =
               "Thời gian trả phòng phải sau thời gian nhận phòng";
           } else if (checkOutDate < now) {
             errors.booking.checkOutDate =
               "Thời gian trả phòng không thể là quá khứ";
+          } else if (!bookingData.is_hourly) {
+            const checkOutHour = checkOutDate.getHours();
+            if (checkOutHour !== 12) {
+              errors.booking.checkOutDate =
+                "Thời gian trả phòng phải là 12:00 trưa";
+            } else {
+              delete errors.booking.checkOutDate;
+            }
           } else {
             delete errors.booking.checkOutDate;
           }
@@ -545,13 +553,20 @@ export default function HotelBooking() {
     }
 
     if (bookingData.checkInDate && bookingData.checkOutDate) {
-      const checkInDate = new Date(bookingData.checkInDate);
-      const checkOutDate = new Date(bookingData.checkOutDate);
+      const checkInDate = new Date(
+        formatDateTime(bookingData.checkInDate, true)
+      );
+      const checkOutDate = new Date(
+        formatDateTime(bookingData.checkOutDate, false)
+      );
       const diffHours =
         (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60);
       if (bookingData.is_hourly && diffHours > 24) {
         errors.booking.dateRange =
           "Thời gian lưu trú theo giờ không được vượt quá 24 giờ";
+      } else if (!bookingData.is_hourly && diffHours < 24) {
+        errors.booking.dateRange =
+          "Thời gian lưu trú theo ngày phải ít nhất 1 đêm";
       } else if (!bookingData.is_hourly && diffHours > 30 * 24) {
         errors.booking.dateRange =
           "Thời gian lưu trú theo ngày không được vượt quá 30 ngày";
@@ -613,10 +628,21 @@ export default function HotelBooking() {
     setTouchedFields((prev) => ({ ...prev, [fieldPath]: true }));
   };
 
+  const formatDateTime = (date: string, isCheckIn: boolean): string => {
+    if (!date) return "";
+    if (bookingData.is_hourly) {
+      return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
+    }
+    const time = isCheckIn ? "14:00:00" : "12:00:00";
+    return dayjs(date).format(`YYYY-MM-DD ${time}`);
+  };
+
   const calculateDuration = () => {
     if (bookingData.checkInDate && bookingData.checkOutDate) {
-      const checkIn = new Date(bookingData.checkInDate);
-      const checkOut = new Date(bookingData.checkOutDate);
+      const checkIn = new Date(formatDateTime(bookingData.checkInDate, true));
+      const checkOut = new Date(
+        formatDateTime(bookingData.checkOutDate, false)
+      );
       if (bookingData.is_hourly) {
         return Math.max(
           1,
@@ -712,30 +738,28 @@ export default function HotelBooking() {
     field: string,
     value: string | number | boolean | ""
   ) => {
-    setBookingData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-
-    markFieldAsTouched(`booking.${field}`);
-    validateBookingField(field, value);
-
-    if (
-      field === "checkInDate" ||
-      field === "checkOutDate" ||
-      field === "is_hourly"
-    ) {
-      setBookingData((prev) => ({
+    setBookingData((prev) => {
+      const newData = {
         ...prev,
-        rooms: prev.rooms.map((room) => ({
+        [field]: value,
+      };
+      if (field === "is_hourly" && value === true) {
+        // Reset check-in and check-out when switching to hourly
+        newData.checkInDate = "";
+        newData.checkOutDate = "";
+        newData.rooms = prev.rooms.map((room) => ({
           ...room,
           type: "",
           number: "",
           price: 0,
           roomId: 0,
-        })),
-      }));
-    }
+        }));
+      }
+      return newData;
+    });
+
+    markFieldAsTouched(`booking.${field}`);
+    validateBookingField(field, value);
   };
 
   const handlePromotionChange = (value: string) => {
@@ -853,7 +877,7 @@ export default function HotelBooking() {
             nationality: data.nationality || "Vietnamese",
             address: data.address || "",
             note: data.note || "",
-            cccdImage: null, // Không load ảnh từ server
+            cccdImage: null,
           },
         }));
       }
@@ -945,12 +969,8 @@ export default function HotelBooking() {
         throw new Error("Vui lòng chọn ít nhất một phòng hợp lệ");
       }
 
-      const formattedCheckIn = dayjs(bookingData.checkInDate).format(
-        "YYYY-MM-DD HH:mm:ss"
-      );
-      const formattedCheckOut = dayjs(bookingData.checkOutDate).format(
-        "YYYY-MM-DD HH:mm:ss"
-      );
+      const formattedCheckIn = formatDateTime(bookingData.checkInDate, true);
+      const formattedCheckOut = formatDateTime(bookingData.checkOutDate, false);
 
       const validateResponse = await api.post("/bookings/validate-rooms", {
         room_ids: validRoomIds,
@@ -1506,7 +1526,12 @@ export default function HotelBooking() {
                           }`}
                           value={bookingData.checkOutDate}
                           onChange={(e) =>
-                            handleBookingChange("checkOutDate", e.target.value)
+                            handleBookingChange(
+                              "checkOutDate",
+                              bookingData.is_hourly
+                                ? e.target.value
+                                : formatDateTime(e.target.value, false)
+                            )
                           }
                           onBlur={() =>
                             markFieldAsTouched("booking.checkOutDate")
@@ -1562,7 +1587,7 @@ export default function HotelBooking() {
                     </div>
 
                     {validationErrors.booking.dateRange && (
-                      <div style={{ marginBottom: "1rem" }}>
+                      <div className="mb-4">
                         <ErrorMessage
                           message={validationErrors.booking.dateRange}
                         />
@@ -1855,33 +1880,27 @@ export default function HotelBooking() {
 
                 {bookingData.checkInDate && bookingData.checkOutDate && (
                   <div className="date-info">
-                    {dayjs(bookingData.checkInDate).format("DD/MM/YYYY HH:mm")}{" "}
+                    {dayjs(
+                      formatDateTime(bookingData.checkInDate, true)
+                    ).format("DD/MM/YYYY HH:mm")}{" "}
                     -{" "}
-                    {dayjs(bookingData.checkOutDate).format("DD/MM/YYYY HH:mm")}
+                    {dayjs(
+                      formatDateTime(bookingData.checkOutDate, false)
+                    ).format("DD/MM/YYYY HH:mm")}
                   </div>
                 )}
 
                 {bookingData.rooms.length > 0 && (
-                  <div style={{ marginTop: "1rem" }}>
-                    <h4
-                      style={{
-                        fontSize: "0.875rem",
-                        fontWeight: "600",
-                        marginBottom: "0.5rem",
-                        color: "#374151",
-                      }}
-                    >
+                  <div className="mt-4">
+                    <h4 className="mb-2 text-sm font-semibold text-gray-700">
                       Chi tiết phòng:
                     </h4>
-                    <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                    <div className="text-xs text-gray-500">
                       {bookingData.rooms.map(
                         (room, index) =>
                           room.type &&
                           room.number && (
-                            <div
-                              key={room.id}
-                              style={{ marginBottom: "0.25rem" }}
-                            >
+                            <div key={room.id} className="mb-1">
                               {index + 1}.{" "}
                               {
                                 roomTypes.find(
