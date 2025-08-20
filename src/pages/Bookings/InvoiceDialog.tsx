@@ -1,16 +1,7 @@
 import React, { useEffect, useMemo } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  Box,
-  Paper,
-  Typography,
-  Divider,
-  CircularProgress,
-  Stack,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  Button, Box, Paper, Typography, Divider, CircularProgress, Chip, GlobalStyles,
 } from "@mui/material";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
@@ -19,12 +10,7 @@ import { toast } from "react-toastify";
 /* ===== Numeral locale VN ===== */
 numeral.register("locale", "vi", {
   delimiters: { thousands: ".", decimal: "," },
-  abbreviations: {
-    thousand: "k",
-    million: "tr",
-    billion: "tỷ",
-    trillion: "ng",
-  },
+  abbreviations: { thousand: "k", million: "tr", billion: "tỷ", trillion: "ng" },
   ordinal: () => "º",
   currency: { symbol: "đ" },
 });
@@ -39,7 +25,6 @@ interface LegacyInvoice {
     status?: string;
     check_in_date?: string;
     check_out_date?: string;
-    // Nếu API cũ có trả customer thì để optional:
     customer?: { name?: string; email?: string; phone?: string };
   };
   room_amount: number;
@@ -51,17 +36,11 @@ interface LegacyInvoice {
 }
 
 type LineBase = { total: number };
-type ServiceLine = LineBase & {
-  quantity: number;
-  price: number;
-  service_id: number;
-  name: string;
+export type ServiceLine = LineBase & {
+  quantity: number; price: number; service_id: number; name: string;
 };
-type AmenityLine = LineBase & {
-  quantity: number;
-  price: number;
-  amenity_id: number;
-  amenity_name: string;
+export type AmenityLine = LineBase & {
+  quantity: number; price: number; amenity_id: number; amenity_name: string;
   room_number?: string | number;
 };
 
@@ -109,11 +88,7 @@ interface InvoiceDialogProps {
 
 /* ===== Helpers ===== */
 const isPayload = (x: any): x is InvoicePayload =>
-  !!x &&
-  typeof x === "object" &&
-  "invoice" in x &&
-  "meta" in x &&
-  "totals" in x;
+  !!x && typeof x === "object" && "invoice" in x && "meta" in x && "totals" in x;
 
 const formatCurrency = (value?: string | number | null): string => {
   const n = Number(value);
@@ -134,23 +109,17 @@ const safeFormatDate = (value?: string | null) => {
   return value;
 };
 
-const getBookingStatus = (
-  status: string
-): { status: string; color: string } => {
+type StatusColor = "default" | "warning" | "success" | "info" | "error";
+type StatusChip = { label: string; color: StatusColor };
+const getStatusChip = (status: string): StatusChip => {
   switch ((status || "").toLowerCase()) {
-    case "pending":
-      return { status: "Chờ xác nhận", color: "#FFA500" };
-    case "confirmed":
-      return { status: "Đã xác nhận", color: "#388E3C" };
-    case "checked-in":
-      return { status: "Đã nhận phòng", color: "#1A73E8" };
-    case "checked-out":
-      return { status: "Đã trả phòng", color: "#757575" };
+    case "pending":    return { label: "Chờ xác nhận", color: "warning" };
+    case "confirmed":  return { label: "Đã xác nhận",  color: "success" };
+    case "checked-in": return { label: "Đã nhận phòng", color: "info" };
+    case "checked-out":return { label: "Đã trả phòng",  color: "default" };
     case "canceled":
-    case "cancelled":
-      return { status: "Đã hủy", color: "#D32F2F" };
-    default:
-      return { status: "Không xác định", color: "#757575" };
+    case "cancelled":  return { label: "Đã hủy",        color: "error" };
+    default:           return { label: "Không xác định", color: "default" };
   }
 };
 
@@ -158,7 +127,7 @@ type ViewModel = {
   code: string;
   bookingId: number | string;
   issuedAt: string;
-  statusText: { status: string; color: string };
+  statusChip: StatusChip;
   checkIn: string;
   checkOut: string;
   isHourly: boolean;
@@ -174,6 +143,156 @@ type ViewModel = {
   };
   services: ServiceLine[];
   amenities: AmenityLine[];
+};
+
+/* ===== Small UI pieces ===== */
+const SectionCard: React.FC<{ title: React.ReactNode; children: React.ReactNode }> = ({ title, children }) => (
+  <Paper
+    elevation={0}
+    sx={{
+      p: 2,
+      borderRadius: 2,
+      border: "1px solid #e0e0e0",
+      backgroundColor: "#fafafa",
+    }}
+  >
+    <Typography variant="h6" fontWeight={800} sx={{ color: "#333", mb: 1 }}>
+      {title}
+    </Typography>
+    {children}
+  </Paper>
+);
+
+const KVRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
+    <Typography fontWeight={700}>{label}:</Typography>
+    <Typography sx={{ textAlign: "right", wordBreak: "break-word" }}>{value}</Typography>
+  </Box>
+);
+
+const MoneyRow = ({ label, value, isDiscount = false }: { label: string; value: string; isDiscount?: boolean }) => (
+  <Box sx={{ display: "flex", justifyContent: "space-between", py: 1, borderBottom: "1px solid #eee" }}>
+    <Typography fontWeight={700}>{label}:</Typography>
+    <Typography sx={{ fontWeight: 600, color: isDiscount ? "#4caf50" : "inherit", fontVariantNumeric: "tabular-nums" }}>
+      {value}
+    </Typography>
+  </Box>
+);
+
+/** Grid 4 cột: Tên | SL | Đơn giá | Thành tiền */
+const ServiceGrid: React.FC<{ items: ServiceLine[] }> = ({ items }) => {
+  const cols = { xs: "1.6fr .6fr 1fr 1.2fr", sm: "2fr .6fr 1fr 1.2fr" };
+  return (
+    <Box sx={{ px: 1 }}>
+      {/* Header */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: cols,
+          gap: 1.5,
+          alignItems: "center",
+          mb: 0.5,
+          color: "#555",
+          fontWeight: 700,
+          letterSpacing: 0.2,
+        }}
+      >
+        <Typography variant="body2">Tên dịch vụ</Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>SL</Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>Đơn giá</Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>Thành tiền</Typography>
+      </Box>
+
+      {/* Rows */}
+      {items.map((s, idx) => (
+        <React.Fragment key={`srv-${s.service_id}-${idx}`}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: cols,
+              gap: 1.5,
+              alignItems: "center",
+              py: 0.75,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            <Typography sx={{ fontWeight: 600, color: "#1f2937" }}>
+              {s.name}
+            </Typography>
+            <Typography sx={{ textAlign: "right" }}>{s.quantity}</Typography>
+            <Typography sx={{ textAlign: "right" }}>{formatCurrency(s.price)}</Typography>
+            <Typography sx={{ textAlign: "right", fontWeight: 700 }}>
+              {formatCurrency(s.total)}
+            </Typography>
+          </Box>
+          {idx < items.length - 1 && <Divider sx={{ my: 0.5 }} />}
+        </React.Fragment>
+      ))}
+    </Box>
+  );
+};
+
+/** Grid 5 cột: Tên | Phòng | SL | Đơn giá | Thành tiền (nếu có room_number) */
+const AmenityGrid: React.FC<{ items: AmenityLine[] }> = ({ items }) => {
+  const hasRoom = items.some((i) => i.room_number);
+  const cols = hasRoom
+    ? { xs: "1.3fr .7fr .5fr 1fr 1.2fr", sm: "1.6fr .7fr .5fr 1fr 1.2fr" }
+    : { xs: "1.8fr .6fr 1fr 1.2fr", sm: "2fr .6fr 1fr 1.2fr" };
+
+  return (
+    <Box sx={{ px: 1 }}>
+      {/* Header */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: cols,
+          gap: 1.5,
+          alignItems: "center",
+          mb: 0.5,
+          color: "#555",
+          fontWeight: 700,
+          letterSpacing: 0.2,
+        }}
+      >
+        <Typography variant="body2">Tên tiện nghi</Typography>
+        {hasRoom && <Typography variant="body2" sx={{ textAlign: "center" }}>Phòng</Typography>}
+        <Typography variant="body2" sx={{ textAlign: "right" }}>SL</Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>Đơn giá</Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>Thành tiền</Typography>
+      </Box>
+
+      {/* Rows */}
+      {items.map((a, idx) => (
+        <React.Fragment key={`amen-${a.amenity_id}-${idx}`}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: cols,
+              gap: 1.5,
+              alignItems: "center",
+              py: 0.75,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            <Typography sx={{ fontWeight: 600, color: "#1f2937" }}>
+              {a.amenity_name}
+            </Typography>
+            {hasRoom && (
+              <Typography sx={{ textAlign: "center" }}>
+                {a.room_number ?? "-"}
+              </Typography>
+            )}
+            <Typography sx={{ textAlign: "right" }}>{a.quantity}</Typography>
+            <Typography sx={{ textAlign: "right" }}>{formatCurrency(a.price)}</Typography>
+            <Typography sx={{ textAlign: "right", fontWeight: 700 }}>
+              {formatCurrency(a.total)}
+            </Typography>
+          </Box>
+          {idx < items.length - 1 && <Divider sx={{ my: 0.5 }} />}
+        </React.Fragment>
+      ))}
+    </Box>
+  );
 };
 
 /* ===== Component ===== */
@@ -206,7 +325,7 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
         issuedAt:
           invoiceInfo.meta.formatted_issued ??
           safeFormatDateTime(invoiceInfo.invoice.issued_date || undefined),
-        statusText: getBookingStatus(invoiceInfo.booking.status),
+        statusChip: getStatusChip(invoiceInfo.booking.status),
         checkIn: invoiceInfo.meta.formatted_checkin || "N/A",
         checkOut: invoiceInfo.meta.formatted_checkout || "N/A",
         isHourly,
@@ -235,7 +354,7 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       code: legacy.invoice_code,
       bookingId: legacy.booking_id,
       issuedAt: safeFormatDateTime(legacy.issued_date),
-      statusText: getBookingStatus(legacy.booking?.status || ""),
+      statusChip: getStatusChip(legacy.booking?.status || ""),
       checkIn: safeFormatDate(legacy.booking?.check_in_date),
       checkOut: safeFormatDate(legacy.booking?.check_out_date),
       isHourly: false,
@@ -265,12 +384,33 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      {/* Print & small global tweaks without external CSS */}
+      <GlobalStyles
+        styles={{
+          "@media print": {
+            "@page": { size: "A4", margin: "12mm" },
+            ".MuiDialogActions-root, .no-print": { display: "none !important" },
+            ".MuiDialog-paper": {
+              boxShadow: "none !important",
+              border: "none !important",
+              maxWidth: "100% !important",
+              width: "100% !important",
+            },
+            body: {
+              WebkitPrintColorAdjust: "exact",
+              printColorAdjust: "exact",
+              background: "#fff !important",
+            },
+          },
+        }}
+      />
+
       <DialogTitle
         sx={{
-          fontWeight: 600,
-          fontSize: "25px",
+          fontWeight: 700,
+          fontSize: 25,
           color: "#0288d1",
-          mb: 2,
+          mb: 1,
           textAlign: "center",
         }}
       >
@@ -281,15 +421,13 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
         {invoiceLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress />
-            <Typography sx={{ ml: 2 }}>
-              Đang tải thông tin hóa đơn...
-            </Typography>
+            <Typography sx={{ ml: 2 }}>Đang tải thông tin hóa đơn...</Typography>
           </Box>
         ) : vm ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {/* Header */}
             <Paper
-              elevation={1}
+              elevation={0}
               sx={{
                 p: 3,
                 borderRadius: 3,
@@ -298,229 +436,109 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                 textAlign: "center",
               }}
             >
-              <Typography
-                variant="h5"
-                fontWeight={700}
-                sx={{ color: "#0288d1", mb: 1 }}
-              >
+              <Typography variant="h5" fontWeight={800} sx={{ color: "#0288d1", mb: 0.5 }}>
                 {vm.code}
               </Typography>
               <Typography variant="body1" sx={{ color: "#666" }}>
-                Ngày xuất: {vm.issuedAt}
+                Ngày xuất: <b>{vm.issuedAt}</b>
               </Typography>
             </Paper>
 
             {/* Thông tin đặt phòng */}
-            <Paper
-              elevation={1}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                border: "1px solid #e0e0e0",
-                backgroundColor: "#fafafa",
-              }}
-            >
-              <Typography
-                variant="h6"
-                fontWeight={700}
-                gutterBottom
-                sx={{ color: "#333" }}
-              >
-                📋 Thông tin đặt phòng
-              </Typography>
+            <SectionCard title="📋 Thông tin đặt phòng">
               <Box
-                sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                  gap: 1.5,
+                }}
               >
-                <InfoRow label="Mã đặt phòng" value={`#${vm.bookingId}`} />
-                <InfoRow
+                <KVRow label="Mã đặt phòng" value={`#${vm.bookingId}`} />
+                <KVRow
                   label="Trạng thái"
-                  value={vm.statusText.status}
-                  valueColor={vm.statusText.color}
+                  value={
+                    <Chip
+                      size="small"
+                      label={vm.statusChip.label}
+                      color={vm.statusChip.color}
+                      variant={vm.statusChip.color === "default" ? "outlined" : "filled"}
+                    />
+                  }
                 />
-                <InfoRow label="Check-in" value={vm.checkIn} />
-                <InfoRow label="Check-out" value={vm.checkOut} />
-                {vm.durationText && (
-                  <InfoRow label="Hình thức tính" value={vm.durationText} />
-                )}
+                <KVRow label="Check-in" value={vm.checkIn} />
+                <KVRow label="Check-out" value={vm.checkOut} />
+                {vm.durationText && <KVRow label="Hình thức tính" value={vm.durationText} />}
               </Box>
-            </Paper>
+            </SectionCard>
 
-            {/* KHÁCH HÀNG */}
-            <Paper
-              elevation={1}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                border: "1px solid #e0e0e0",
-                backgroundColor: "#fafafa",
-              }}
-            >
-              <Typography
-                variant="h6"
-                fontWeight={700}
-                gutterBottom
-                sx={{ color: "#333" }}
-              >
-                👤 Khách hàng
-              </Typography>
+            {/* Khách hàng */}
+            <SectionCard title="👤 Khách hàng">
               <Box
-                sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                  gap: 1.5,
+                }}
               >
-                <InfoRow label="Tên" value={vm.customer.name} />
-                <InfoRow label="SĐT" value={vm.customer.phone} />
-                <InfoRow label="Email" value={vm.customer.email} />
+                <KVRow label="Tên" value={vm.customer.name} />
+                <KVRow label="SĐT" value={vm.customer.phone} />
+                <KVRow label="Email" value={vm.customer.email} />
               </Box>
-            </Paper>
+            </SectionCard>
 
             {/* Dịch vụ đã sử dụng */}
             {vm.services.length > 0 && (
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: "1px solid #e0e0e0",
-                  backgroundColor: "#fafafa",
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                  gutterBottom
-                  sx={{ color: "#333" }}
-                >
-                  🧾 Dịch vụ đã sử dụng
-                </Typography>
-                <Stack spacing={1}>
-                  {vm.services.map((s) => (
-                    <Line
-                      key={`srv-${s.service_id}`}
-                      left={`${s.name} × ${s.quantity}`}
-                      right={`${formatCurrency(s.price)} × ${
-                        s.quantity
-                      } = ${formatCurrency(s.total)}`}
-                    />
-                  ))}
-                </Stack>
-              </Paper>
+              <SectionCard title="🧾 Dịch vụ đã sử dụng">
+                <ServiceGrid items={vm.services} />
+              </SectionCard>
             )}
 
             {/* Tiện nghi phát sinh */}
             {vm.amenities.length > 0 && (
-              <Paper
-                elevation={1}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: "1px solid #e0e0e0",
-                  backgroundColor: "#fafafa",
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                  gutterBottom
-                  sx={{ color: "#333" }}
-                >
-                  🧺 Tiện nghi phát sinh
-                </Typography>
-                <Stack spacing={1}>
-                  {vm.amenities.map((a, idx) => (
-                    <Line
-                      key={`amen-${a.amenity_id}-${idx}`}
-                      left={`${a.amenity_name}${
-                        a.room_number ? ` (Phòng ${a.room_number})` : ""
-                      } × ${a.quantity}`}
-                      right={`${formatCurrency(a.price)} × ${
-                        a.quantity
-                      } = ${formatCurrency(a.total)}`}
-                    />
-                  ))}
-                </Stack>
-              </Paper>
+              <SectionCard title="🧺 Tiện nghi phát sinh">
+                <AmenityGrid items={vm.amenities} />
+              </SectionCard>
             )}
 
             {/* Chi tiết thanh toán */}
-            <Paper
-              elevation={1}
-              sx={{
-                p: 2,
-                borderRadius: 2,
-                border: "1px solid #e0e0e0",
-                backgroundColor: "#fafafa",
-              }}
-            >
-              <Typography
-                variant="h6"
-                fontWeight={700}
-                gutterBottom
-                sx={{ color: "#333" }}
-              >
-                💰 Chi tiết thanh toán
-              </Typography>
+            <SectionCard title="💰 Chi tiết thanh toán">
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                <Row
-                  label="Tiền phòng"
-                  value={formatCurrency(vm.amounts.room)}
-                />
-                <Row
-                  label="Tiền dịch vụ"
-                  value={formatCurrency(vm.amounts.service)}
-                />
-                <Row
-                  label="Tiền tiện nghi"
-                  value={formatCurrency(vm.amounts.amenity)}
-                />
-                <Row
-                  label="Giảm giá"
-                  value={
-                    Number(vm.amounts.discount) > 0
-                      ? `-${formatCurrency(vm.amounts.discount)}`
-                      : formatCurrency(0)
-                  }
-                  mutedColor="#4caf50"
-                />
-                <Row
-                  label="Tiền đặt cọc"
-                  value={formatCurrency(vm.amounts.deposit)}
-                />
+                <MoneyRow label="Tiền phòng" value={formatCurrency(vm.amounts.room)} />
+                <MoneyRow label="Tiền dịch vụ" value={formatCurrency(vm.amounts.service)} />
+                <MoneyRow label="Tiền tiện nghi" value={formatCurrency(vm.amounts.amenity)} />
+                <MoneyRow label="Giảm giá" value={discountText} isDiscount />
+                <MoneyRow label="Tiền đặt cọc" value={formatCurrency(vm.amounts.deposit)} />
 
                 <Divider sx={{ my: 1 }} />
                 <Box
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
-                    py: 2,
+                    alignItems: "center",
+                    py: 1.25,
                     backgroundColor: "#e3f2fd",
                     px: 2,
                     borderRadius: 2,
                     border: "2px solid #0288d1",
+                    fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  <Typography
-                    variant="h6"
-                    fontWeight={700}
-                    sx={{ color: "#0288d1" }}
-                  >
+                  <Typography variant="h6" fontWeight={800} sx={{ color: "#0288d1" }}>
                     TỔNG CỘNG:
                   </Typography>
-                  <Typography
-                    variant="h6"
-                    fontWeight={700}
-                    sx={{ color: "#0288d1" }}
-                  >
+                  <Typography variant="h6" fontWeight={800} sx={{ color: "#0288d1" }}>
                     {formatCurrency(vm.amounts.total)}
                   </Typography>
                 </Box>
               </Box>
-            </Paper>
+            </SectionCard>
 
             {/* Footer */}
-            <Box sx={{ textAlign: "center", mt: 2, color: "#666" }}>
+            <Box sx={{ textAlign: "center", mt: 1, color: "#666" }}>
               <Typography variant="body2" sx={{ fontStyle: "italic" }}>
                 Cảm ơn quý khách đã sử dụng dịch vụ của chúng tôi!
               </Typography>
-              <Typography variant="body2" sx={{ mt: 1 }}>
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
                 Hóa đơn được tạo tự động bởi hệ thống
               </Typography>
             </Box>
@@ -533,30 +551,16 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between" }}>
-        <Button
-          onClick={onClose}
-          color="inherit"
-          sx={{
-            fontWeight: 600,
-            textTransform: "none",
-            borderRadius: 2,
-            fontSize: "15px",
-          }}
-        >
+        <Button onClick={onClose} color="inherit" sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2, fontSize: 15 }}>
           Đóng
         </Button>
         <Button
+          className="no-print"
           variant="contained"
           color="primary"
           onClick={onPrintInvoice}
           disabled={invoiceLoading}
-          sx={{
-            borderRadius: 2,
-            px: 3,
-            fontWeight: 600,
-            textTransform: "none",
-            fontSize: "15px",
-          }}
+          sx={{ borderRadius: 2, px: 3, fontWeight: 800, textTransform: "none", fontSize: 15 }}
         >
           {invoiceLoading ? <CircularProgress size={24} /> : "🖨️ In hóa đơn"}
         </Button>
@@ -564,48 +568,5 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
     </Dialog>
   );
 };
-
-/* ---- UI helpers ---- */
-const InfoRow = ({
-  label,
-  value,
-  valueColor,
-}: {
-  label: string;
-  value: string;
-  valueColor?: string;
-}) => (
-  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-    <Typography fontWeight={600}>{label}:</Typography>
-    <Typography sx={{ color: valueColor }}>{value}</Typography>
-  </Box>
-);
-const Line = ({ left, right }: { left: string; right: string }) => (
-  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-    <Typography>{left}</Typography>
-    <Typography>{right}</Typography>
-  </Box>
-);
-const Row = ({
-  label,
-  value,
-  mutedColor,
-}: {
-  label: string;
-  value: string;
-  mutedColor?: string;
-}) => (
-  <Box
-    sx={{
-      display: "flex",
-      justifyContent: "space-between",
-      py: 1,
-      borderBottom: "1px solid #eee",
-    }}
-  >
-    <Typography fontWeight={600}>{label}:</Typography>
-    <Typography sx={{ color: mutedColor }}>{value}</Typography>
-  </Box>
-);
 
 export default InvoiceDialog;
