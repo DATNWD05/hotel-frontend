@@ -10,6 +10,7 @@ interface RoomTypeFormData {
   description: string;
   max_occupancy: number;
   base_rate: number;
+  hourly_rate: number; // ⬅️ NEW
 }
 
 interface ValidationErrors {
@@ -18,6 +19,7 @@ interface ValidationErrors {
   description?: string;
   max_occupancy?: string;
   base_rate?: string;
+  hourly_rate?: string; // ⬅️ NEW
 }
 
 const AddRoomType: React.FC = () => {
@@ -28,6 +30,7 @@ const AddRoomType: React.FC = () => {
     description: "",
     max_occupancy: 0,
     base_rate: 0,
+    hourly_rate: 0, // ⬅️ NEW
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
@@ -46,14 +49,23 @@ const AddRoomType: React.FC = () => {
     if (!data.code.trim()) errors.code = "Mã không được để trống";
     else if (data.code.length > 20)
       errors.code = "Mã không được vượt quá 20 ký tự";
+
     if (!data.name.trim()) errors.name = "Tên không được để trống";
     else if (data.name.length > 50)
       errors.name = "Tên không được vượt quá 50 ký tự";
+
     if (data.description && data.description.length > 500)
       errors.description = "Mô tả không được vượt quá 500 ký tự";
+
     if (data.max_occupancy <= 0)
       errors.max_occupancy = "Số người tối đa phải lớn hơn 0";
+
     if (data.base_rate < 0) errors.base_rate = "Giá cơ bản không được âm";
+
+    if (data.hourly_rate < 0)
+      // ⬅️ NEW
+      errors.hourly_rate = "Giá theo giờ không được âm";
+
     return errors;
   };
 
@@ -65,16 +77,22 @@ const AddRoomType: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    const newValue =
-      name === "max_occupancy" || name === "base_rate"
-        ? Number(value) || 0
-        : value;
-    setFormData((prev) => ({
-      ...prev,
-      [name as keyof RoomTypeFormData]: newValue,
-    }));
+
+    const numericFields: Array<keyof RoomTypeFormData> = [
+      "max_occupancy",
+      "base_rate",
+      "hourly_rate", // ⬅️ NEW
+    ];
+
+    const newValue = (numericFields as string[]).includes(name)
+      ? Number(value) || 0
+      : value;
+
+    const next = { ...formData, [name]: newValue } as RoomTypeFormData;
+    setFormData(next);
     markFieldAsTouched(name as keyof RoomTypeFormData);
-    const errors = validateForm({ ...formData, [name]: newValue });
+
+    const errors = validateForm(next);
     setValidationErrors((prev) => ({
       ...prev,
       [name]: errors[name as keyof ValidationErrors] || "",
@@ -85,8 +103,8 @@ const AddRoomType: React.FC = () => {
     const errors = validateForm(formData);
     if (Object.keys(errors).length > 0) {
       setValidationErrors(errors);
-      Object.keys(formData).forEach((key) =>
-        markFieldAsTouched(key as keyof RoomTypeFormData)
+      (Object.keys(formData) as Array<keyof RoomTypeFormData>).forEach((key) =>
+        markFieldAsTouched(key)
       );
       setSubmitStatus("error");
       setErrorMessage("Vui lòng kiểm tra và điền đầy đủ thông tin hợp lệ!");
@@ -96,6 +114,7 @@ const AddRoomType: React.FC = () => {
     setLoading(true);
     setErrorMessage("");
     try {
+      // ⬇️ Payload now includes hourly_rate
       const response = await api.post("/room-types", formData);
       if (response.status === 201) {
         setSubmitStatus("success");
@@ -157,11 +176,14 @@ const AddRoomType: React.FC = () => {
             </span>
           </div>
         )}
+
         <h3 className="text-3xl font-bold text-gray-800 mb-4 border-b-4 border-blue-500 inline-block pb-1">
           Thêm Loại Phòng
         </h3>
+
         <div className="card">
           <div className="tab-content">
+            {/* Row 1: code + name */}
             <div className="form-grid form-grid-2 mb-4">
               <div className="form-group">
                 <label htmlFor="code" className="form-label required">
@@ -185,6 +207,7 @@ const AddRoomType: React.FC = () => {
                   <ErrorMessage message={validationErrors.code} />
                 )}
               </div>
+
               <div className="form-group">
                 <label htmlFor="name" className="form-label required">
                   Tên loại phòng
@@ -208,6 +231,8 @@ const AddRoomType: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Row 2: max_occupancy + base_rate */}
             <div className="form-grid form-grid-2 mb-4">
               <div className="form-group">
                 <label htmlFor="max_occupancy" className="form-label required">
@@ -234,6 +259,7 @@ const AddRoomType: React.FC = () => {
                     <ErrorMessage message={validationErrors.max_occupancy} />
                   )}
               </div>
+
               <div className="form-group">
                 <label htmlFor="base_rate" className="form-label required">
                   Giá cơ bản (VNĐ)
@@ -258,7 +284,36 @@ const AddRoomType: React.FC = () => {
                 )}
               </div>
             </div>
-            <div className="form-grid form-grid-1 mb-4">
+
+            {/* Row 3: hourly_rate + description (side-by-side) */}
+            <div className="form-grid form-grid-2 mb-4">
+              {/* Hourly rate */}
+              <div className="form-group">
+                <label htmlFor="hourly_rate" className="form-label">
+                  Giá theo giờ (VNĐ)
+                </label>
+                <input
+                  id="hourly_rate"
+                  type="number"
+                  placeholder="Nhập giá theo giờ"
+                  className={`form-input ${
+                    touchedFields["hourly_rate"] && validationErrors.hourly_rate
+                      ? "error"
+                      : ""
+                  }`}
+                  name="hourly_rate"
+                  value={formData.hourly_rate}
+                  onChange={handleChange}
+                  onBlur={() => markFieldAsTouched("hourly_rate")}
+                  min="0"
+                />
+                {touchedFields["hourly_rate"] &&
+                  validationErrors.hourly_rate && (
+                    <ErrorMessage message={validationErrors.hourly_rate} />
+                  )}
+              </div>
+
+              {/* Description (now next to hourly_rate) */}
               <div className="form-group">
                 <label htmlFor="description" className="form-label">
                   Mô tả
@@ -283,6 +338,8 @@ const AddRoomType: React.FC = () => {
                   )}
               </div>
             </div>
+
+            {/* Actions */}
             <div className="form-group">
               <div
                 style={{
@@ -315,6 +372,7 @@ const AddRoomType: React.FC = () => {
                     </>
                   )}
                 </button>
+
                 <button
                   onClick={handleCancel}
                   disabled={loading}

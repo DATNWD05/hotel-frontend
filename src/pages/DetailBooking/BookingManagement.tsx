@@ -240,15 +240,22 @@ const BookingManagement = () => {
             ...data.customer,
             cccd_image_path: data.customer.cccd_image_path || null,
           },
-          rooms: data.rooms.map((room: Room) => ({
+          rooms: data.rooms.map((room: any) => ({
             ...room,
             id: Number(room.id),
-            services: (room.services || []).map((service: Service) => ({
-              ...service,
+            services: (room.services || []).map((s: any) => ({
+              ...s,
+              // ID thật để gọi API xóa (ưu tiên pivot)
+              service_id: s.service_id ?? s.pivot?.service_id ?? s.id,
+              // Phòng gắn với dịch vụ
+              room_id: s.room_id ?? s.pivot?.room_id ?? Number(room.id),
+              // Số lượng & total an toàn
+              quantity: s.quantity ?? s.pivot?.quantity ?? 1,
               total:
-                service.total ??
-                Number.parseFloat(service.price) * (service.quantity || 1),
-              icon: service.icon || Coffee,
+                s.total ??
+                Number.parseFloat(String(s.price ?? 0)) *
+                  (s.quantity ?? s.pivot?.quantity ?? 1),
+              icon: s.icon || Coffee,
             })),
             room_type: {
               ...room.room_type,
@@ -260,33 +267,42 @@ const BookingManagement = () => {
               ),
             },
           })),
-          services: (data.services || []).map((service: Service) => ({
-            ...service,
+
+          services: (data.services || []).map((s: any) => ({
+            ...s,
+            service_id: s.service_id ?? s.pivot?.service_id ?? s.id,
+            room_id: s.room_id ?? s.pivot?.room_id ?? null,
+            quantity: s.quantity ?? s.pivot?.quantity ?? 1,
             total:
-              service.total ??
-              Number.parseFloat(service.price) * (service.quantity || 1),
-            icon: service.icon || Coffee,
+              s.total ??
+              Number.parseFloat(String(s.price ?? 0)) *
+                (s.quantity ?? s.pivot?.quantity ?? 1),
+            icon: s.icon || Coffee,
           })),
+
           creator: data.creator || { id: 0, name: "Unknown", email: "N/A" },
         };
         setBooking(bookingData);
         setRoomServices(
           data.rooms.reduce(
-            (acc: Record<number, Service[]>, room: Room) => ({
+            (acc: Record<number, Service[]>, room: any) => ({
               ...acc,
-              [Number(room.id)]: (room.services || []).map(
-                (service: Service) => ({
-                  ...service,
-                  total:
-                    service.total ??
-                    Number.parseFloat(service.price) * (service.quantity || 1),
-                  icon: service.icon || Coffee,
-                })
-              ),
+              [Number(room.id)]: (room.services || []).map((s: any) => ({
+                ...s,
+                service_id: s.service_id ?? s.pivot?.service_id ?? s.id,
+                room_id: s.room_id ?? s.pivot?.room_id ?? Number(room.id),
+                quantity: s.quantity ?? s.pivot?.quantity ?? 1,
+                total:
+                  s.total ??
+                  Number.parseFloat(String(s.price ?? 0)) *
+                    (s.quantity ?? s.pivot?.quantity ?? 1),
+                icon: s.icon || Coffee,
+              })),
             }),
             {}
           )
         );
+
         setSelectedRoomId(Number(data.rooms[0]?.id) || null);
         if (data.customer.cccd_image_path) {
           console.log("cccd_image_path:", data.customer.cccd_image_path);
@@ -461,13 +477,15 @@ const BookingManagement = () => {
         if (response.status === 200) {
           const newServices = services.map(({ service, quantity, note }) => ({
             ...service,
+            id: service.id, // giữ nguyên id gốc của dịch vụ
+            service_id: service.service_id ?? service.id,
+            room_id: roomId,
             quantity,
             note,
             total: Number.parseFloat(service.price) * quantity,
-            id: service.id || Date.now(),
             pivot: {
               booking_id: bookingId,
-              service_id: service.id,
+              service_id: service.service_id ?? service.id,
               room_id: roomId,
               quantity,
             },
@@ -527,14 +545,16 @@ const BookingManagement = () => {
           setRoomServices((prev) => ({
             ...prev,
             [roomId]: (prev[roomId] || []).filter(
-              (service) => service.id !== serviceId
+              (s) => (s.service_id ?? s.id) !== serviceId
             ),
           }));
 
           setBooking((prev) => {
             if (!prev) return prev;
             const updatedServices = prev.services.filter(
-              (s) => s.id !== serviceId || s.pivot?.room_id !== roomId
+              (s) =>
+                (s.service_id ?? s.id) !== serviceId ||
+                (s.pivot?.room_id ?? s.room_id) !== roomId
             );
             return {
               ...prev,
@@ -1127,8 +1147,13 @@ const BookingManagement = () => {
 
           {services.length > 0 ? (
             <div className="services-list">
-              {services.map((service) => (
-                <div key={service.id} className="service-item">
+              {services.map((service, idx) => (
+                <div
+                  key={`${service.service_id ?? service.id}-${
+                    service.room_id ?? room.id
+                  }-${idx}`}
+                  className="service-item"
+                >
                   <div className="service-item-content">
                     {service.icon ? (
                       <service.icon className="icon-medium" />
@@ -1154,7 +1179,12 @@ const BookingManagement = () => {
                       title="Xóa dịch vụ"
                       className="icon-btn icon-btn-danger"
                       onClick={() =>
-                        handleOpenRemoveServiceDialog(room.id, service.id)
+                        handleOpenRemoveServiceDialog(
+                          room.id,
+                          service.service_id ??
+                            service.pivot?.service_id ??
+                            service.id
+                        )
                       }
                     >
                       <Trash2 className="icon-small" />

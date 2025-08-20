@@ -537,7 +537,7 @@ const RosterTable: React.FC = () => {
             variant="contained"
             component="label"
             sx={{
-              borderRadius: "999px",
+              borderRadius: "6px",
               padding: "6px 24px",
               fontWeight: "bold",
               backgroundColor: "#d32f2f",
