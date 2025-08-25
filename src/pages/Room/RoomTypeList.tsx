@@ -36,6 +36,8 @@ import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import axios, { AxiosError } from "axios";
 import "../../css/service.css";
+// 👇 để tái dùng style bảng 2 cột & container giống Customer.tsx
+import "../../css/Customer.css";
 
 interface Amenity {
   id: number;
@@ -50,7 +52,7 @@ interface RoomType {
   description: string;
   max_occupancy: number;
   base_rate: number;
-  hourly_rate: number; // ✅ THÊM TRƯỜNG THEO GIỜ
+  hourly_rate: number; // ✅ THEO GIỜ
   amenities: Amenity[];
 }
 
@@ -65,13 +67,19 @@ interface ValidationErrors {
   description?: string;
   max_occupancy?: string;
   base_rate?: string;
-  hourly_rate?: string; // ✅ THÊM LỖI CHO THEO GIỜ
+  hourly_rate?: string;
 }
 
 interface AmenityPayload {
   id: number;
   quantity: number;
 }
+
+// Helper định dạng VND giống Customer.tsx
+const vnd = (n: number | string) => {
+  const num = typeof n === "string" ? Number(n) : n;
+  return isNaN(num) ? "0 đ" : num.toLocaleString("vi-VN") + " đ";
+};
 
 const RoomTypesList: React.FC = () => {
   const navigate = useNavigate();
@@ -87,9 +95,7 @@ const RoomTypesList: React.FC = () => {
   );
   const [editRoomTypeId, setEditRoomTypeId] = useState<number | null>(null);
   const [editFormData, setEditFormData] = useState<RoomType | null>(null);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -131,12 +137,9 @@ const RoomTypesList: React.FC = () => {
               headers: { Authorization: `Bearer ${token}` },
             }
           ),
-          axios.get<{ data: Amenity[] }>(
-            "http://127.0.0.1:8000/api/amenities",
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          ),
+          axios.get<{ data: Amenity[] }>("http://127.0.0.1:8000/api/amenities", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
 
         if (
@@ -202,9 +205,9 @@ const RoomTypesList: React.FC = () => {
     if (data.max_occupancy <= 0)
       errors.max_occupancy = "Số người tối đa phải lớn hơn 0";
     if (data.base_rate < 100000)
-      errors.base_rate = "Giá cơ bản tối thiểu 100.000đ"; // ✅ khớp BE
+      errors.base_rate = "Giá cơ bản tối thiểu 100.000đ"; // khớp BE
     if (data.hourly_rate < 100000)
-      errors.hourly_rate = "Giá theo giờ tối thiểu 100.000đ"; // ✅ mới
+      errors.hourly_rate = "Giá theo giờ tối thiểu 100.000đ";
     if (data.description && data.description.length > 500)
       errors.description = "Mô tả không được vượt quá 500 ký tự";
     return errors;
@@ -215,7 +218,7 @@ const RoomTypesList: React.FC = () => {
   ) => {
     const { name, value } = e.target;
     if (editFormData) {
-      const numericFields = ["max_occupancy", "base_rate", "hourly_rate"]; // ✅ THÊM HOURLY
+      const numericFields = ["max_occupancy", "base_rate", "hourly_rate"];
       const updatedData = {
         ...editFormData,
         [name as keyof RoomType]: numericFields.includes(name)
@@ -273,7 +276,7 @@ const RoomTypesList: React.FC = () => {
           description: editFormData.description,
           max_occupancy: editFormData.max_occupancy,
           base_rate: editFormData.base_rate,
-          hourly_rate: editFormData.hourly_rate, // ✅ GỬI LÊN BE
+          hourly_rate: editFormData.hourly_rate,
           amenities: selectedAmenities, // giữ tương thích nếu BE cần
         },
         {
@@ -750,7 +753,6 @@ const RoomTypesList: React.FC = () => {
                   <TableCell sx={{ minWidth: "140px" }}>
                     <b>Giá theo giờ</b>
                   </TableCell>
-                  {/* ✅ CỘT MỚI */}
                   <TableCell align="center" sx={{ minWidth: "150px" }}>
                     <b>Hành động</b>
                   </TableCell>
@@ -764,9 +766,8 @@ const RoomTypesList: React.FC = () => {
                       <TableCell>{rt.name}</TableCell>
                       <TableCell>{rt.description}</TableCell>
                       <TableCell>{rt.max_occupancy}</TableCell>
-                      <TableCell>{rt.base_rate.toLocaleString()} đ</TableCell>
-                      <TableCell>{rt.hourly_rate.toLocaleString()} đ</TableCell>
-                      {/* ✅ HIỂN THỊ */}
+                      <TableCell>{vnd(rt.base_rate)}</TableCell>
+                      <TableCell>{vnd(rt.hourly_rate)}</TableCell>
                       <TableCell align="center">
                         <Box
                           display="flex"
@@ -787,8 +788,10 @@ const RoomTypesList: React.FC = () => {
                               p: "6px",
                               "&:hover": {
                                 bgcolor: "#bbdefb",
-                                boxShadow: "0 2px 6px rgba(25, 118, 210, 0.4)",
+                                boxShadow:
+                                  "0 2px 6px rgba(25,118,210,0.4)",
                               },
+                              transition: "all 0.2s ease-in-out",
                             }}
                           >
                             {selectedRoomTypeId === rt.id ? (
@@ -806,7 +809,8 @@ const RoomTypesList: React.FC = () => {
                               p: "6px",
                               "&:hover": {
                                 bgcolor: "#fff9c4",
-                                boxShadow: "0 2px 6px rgba(250, 204, 21, 0.4)",
+                                boxShadow:
+                                  "0 2px 6px rgba(250, 204, 21, 0.4)",
                               },
                             }}
                           >
@@ -821,7 +825,8 @@ const RoomTypesList: React.FC = () => {
                               p: "6px",
                               "&:hover": {
                                 bgcolor: "#ffcdd2",
-                                boxShadow: "0 2px 6px rgba(211, 47, 47, 0.4)",
+                                boxShadow:
+                                  "0 2px 6px rgba(211, 47, 47, 0.4)",
                               },
                             }}
                           >
@@ -830,11 +835,13 @@ const RoomTypesList: React.FC = () => {
                         </Box>
                       </TableCell>
                     </TableRow>
+
                     <TableRow>
                       <TableCell colSpan={7} style={{ padding: 0 }}>
                         <Collapse in={selectedRoomTypeId === rt.id}>
                           <div className="promotion-detail-container">
                             {editRoomTypeId === rt.id && editFormData ? (
+                              // EDIT MODE
                               <Box
                                 sx={{
                                   p: 2,
@@ -935,7 +942,6 @@ const RoomTypesList: React.FC = () => {
                                         ),
                                       }}
                                     />
-                                    {/* ✅ INPUT MỚI */}
                                   </Box>
                                   <TextField
                                     label="Mô tả"
@@ -1105,47 +1111,67 @@ const RoomTypesList: React.FC = () => {
                                 </Box>
                               </Box>
                             ) : (
+                              // VIEW MODE (giống Customer.tsx)
                               <Box
                                 sx={{
-                                  p: 2,
-                                  bgcolor: "#fff",
-                                  borderRadius: "8px",
+                                  width: "100%",
+                                  bgcolor: "#f9f9f9",
+                                  px: 3,
+                                  py: 2,
+                                  borderTop: "1px solid #ddd",
                                 }}
                               >
-                                <Typography
-                                  variant="h6"
-                                  gutterBottom
-                                  sx={{ fontWeight: 600, color: "#333" }}
-                                >
-                                  Thông tin loại phòng
-                                </Typography>
-                                <Box display="grid" gap={1}>
-                                  <Typography>
-                                    <strong>Mã:</strong> {rt.code}
-                                  </Typography>
-                                  <Typography>
-                                    <strong>Tên:</strong> {rt.name}
-                                  </Typography>
-                                  <Typography>
-                                    <strong>Số người tối đa:</strong>{" "}
-                                    {rt.max_occupancy}
-                                  </Typography>
-                                  <Typography>
-                                    <strong>Giá cơ bản:</strong>{" "}
-                                    {rt.base_rate.toLocaleString()} đ
-                                  </Typography>
-                                  <Typography>
-                                    <strong>Giá theo giờ:</strong>{" "}
-                                    {rt.hourly_rate.toLocaleString()} đ
-                                  </Typography>
-                                  {/* ✅ HIỂN THỊ */}
-                                  <Typography>
-                                    <strong>Mô tả:</strong> {rt.description}
-                                  </Typography>
-                                  <Typography>
-                                    <strong>Tiện nghi:</strong>
-                                  </Typography>
-                                  <Box display="flex" flexWrap="wrap" gap={1}>
+                                <div className="customer-detail-container">
+                                  <h3>Thông tin loại phòng</h3>
+
+                                  <Table
+                                    className="customer-detail-table"
+                                    sx={{ mb: 2 }}
+                                  >
+                                    <TableBody>
+                                      <TableRow>
+                                        <TableCell>
+                                          <strong>Mã:</strong> {rt.code}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>Tên:</strong> {rt.name}
+                                        </TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell>
+                                          <strong>Số người tối đa:</strong>{" "}
+                                          {rt.max_occupancy}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>Giá cơ bản:</strong>{" "}
+                                          {vnd(rt.base_rate)}
+                                        </TableCell>
+                                      </TableRow>
+                                      <TableRow>
+                                        <TableCell>
+                                          <strong>Giá theo giờ:</strong>{" "}
+                                          {vnd(rt.hourly_rate)}
+                                        </TableCell>
+                                        <TableCell>
+                                          <strong>Mô tả:</strong>{" "}
+                                          {rt.description || "—"}
+                                        </TableCell>
+                                      </TableRow>
+                                    </TableBody>
+                                  </Table>
+
+                                  <h3>Tiện nghi</h3>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: 1,
+                                      bgcolor: "#fff",
+                                      p: 2,
+                                      borderRadius: "8px",
+                                      border: "1px solid #eee",
+                                    }}
+                                  >
                                     {rt.amenities.length > 0 ? (
                                       rt.amenities.map((amenity) => (
                                         <Chip
@@ -1168,13 +1194,13 @@ const RoomTypesList: React.FC = () => {
                                     ) : (
                                       <Typography
                                         variant="body2"
-                                        color="textSecondary"
+                                        color="text.secondary"
                                       >
-                                        Không có tiện nghi
+                                        Không có tiện nghi.
                                       </Typography>
                                     )}
                                   </Box>
-                                </Box>
+                                </div>
                               </Box>
                             )}
                           </div>
@@ -1314,7 +1340,10 @@ const RoomTypesList: React.FC = () => {
                         size="small"
                         value={qty}
                         onChange={(e) =>
-                          handleAddQtyChange(amenity.id, Number(e.target.value))
+                          handleAddQtyChange(
+                            amenity.id,
+                            Number(e.target.value)
+                          )
                         }
                         inputProps={{ min: 1, style: { width: 80 } }}
                         disabled={!checked}
