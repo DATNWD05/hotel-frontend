@@ -36,6 +36,8 @@ import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
 import { toast } from "react-toastify";
 import axios from "axios";
 import "../../css/Service.css";
+// tái dùng layout chi tiết giống Customer.tsx
+import "../../css/Customer.css";
 
 interface Service {
   id: string;
@@ -70,6 +72,12 @@ interface ValidationErrors {
   price?: string;
   description?: string;
 }
+
+// helper format tiền VND
+const vnd = (n: number | string) => {
+  const num = typeof n === "string" ? Number(n) : n;
+  return isNaN(num) ? "0 đ" : num.toLocaleString("vi-VN") + " đ";
+};
 
 const Service: React.FC = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -211,6 +219,7 @@ const Service: React.FC = () => {
       });
 
     fetchAllServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategories]);
 
   useEffect(() => {
@@ -632,9 +641,7 @@ const Service: React.FC = () => {
                             )?.name || "Không xác định"}
                           </TableCell>
                           <TableCell>{service.name}</TableCell>
-                          <TableCell>
-                            {service.price.toLocaleString("vi-VN")} đ
-                          </TableCell>
+                          <TableCell>{vnd(service.price)}</TableCell>
                           <TableCell>{service.description}</TableCell>
                           <TableCell align="center">
                             <Box display="flex" justifyContent="center" gap={1}>
@@ -697,82 +704,81 @@ const Service: React.FC = () => {
                             </Box>
                           </TableCell>
                         </TableRow>
+
+                        {/* Chi tiết: bố cục giống Customer.tsx */}
                         <TableRow>
                           <TableCell colSpan={5} style={{ padding: 0 }}>
                             <Collapse in={selectedServiceId === service.id}>
-                              <div className="promotion-detail-container">
-                                {editServiceId === service.id &&
-                                editFormData ? (
-                                  <Box
-                                    sx={{
-                                      p: 2,
-                                      bgcolor: "#fff",
-                                      borderRadius: "8px",
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="h6"
-                                      gutterBottom
-                                      sx={{ fontWeight: 600, color: "#333" }}
-                                    >
-                                      Chỉnh sửa dịch vụ
-                                    </Typography>
-                                    <Box
-                                      display="flex"
-                                      flexDirection="column"
-                                      gap={2}
-                                    >
-                                      <TextField
-                                        label="Tên dịch vụ"
-                                        name="name"
-                                        value={editFormData.name}
-                                        onChange={handleChange}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.name}
-                                        helperText={validationErrors.name}
-                                        sx={{
-                                          bgcolor: "#fff",
-                                          borderRadius: "4px",
-                                        }}
-                                      />
-                                      <TextField
-                                        label="Giá mỗi đơn"
-                                        name="price"
-                                        type="number"
-                                        value={editFormData.price}
-                                        onChange={handleChange}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.price}
-                                        helperText={validationErrors.price}
-                                        sx={{
-                                          bgcolor: "#fff",
-                                          borderRadius: "4px",
-                                        }}
-                                      />
-                                      <TextField
-                                        label="Mô tả"
-                                        name="description"
-                                        value={editFormData.description}
-                                        onChange={handleChange}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        multiline
-                                        rows={3}
-                                        error={!!validationErrors.description}
-                                        helperText={
-                                          validationErrors.description
-                                        }
-                                        sx={{
-                                          bgcolor: "#fff",
-                                          borderRadius: "4px",
-                                        }}
-                                      />
-                                      <Box mt={2} display="flex" gap={2}>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  bgcolor: "#f9f9f9",
+                                  px: 3,
+                                  py: 2,
+                                  borderTop: "1px solid #ddd",
+                                }}
+                              >
+                                <div className="customer-detail-container">
+                                  {editServiceId === service.id &&
+                                  editFormData ? (
+                                    // EDIT MODE
+                                    <>
+                                      <h3>Chỉnh sửa dịch vụ</h3>
+                                      <Box
+                                        display="flex"
+                                        flexDirection="column"
+                                        gap={2}
+                                      >
+                                        <TextField
+                                          label="Tên dịch vụ"
+                                          name="name"
+                                          value={editFormData.name}
+                                          onChange={handleChange}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={!!validationErrors.name}
+                                          helperText={validationErrors.name}
+                                        />
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Giá mỗi đơn"
+                                            name="price"
+                                            type="number"
+                                            value={editFormData.price}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.price}
+                                            helperText={validationErrors.price}
+                                            InputProps={{
+                                              endAdornment: (
+                                                <InputAdornment position="end">
+                                                  đ
+                                                </InputAdornment>
+                                              ),
+                                            }}
+                                          />
+                                        </Box>
+                                        <TextField
+                                          label="Mô tả"
+                                          name="description"
+                                          value={editFormData.description}
+                                          onChange={handleChange}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          multiline
+                                          rows={3}
+                                          error={!!validationErrors.description}
+                                          helperText={
+                                            validationErrors.description
+                                          }
+                                        />
+                                      </Box>
+
+                                      <Box pb={3} mt={2} display="flex" gap={2}>
                                         <Button
                                           variant="contained"
                                           onClick={handleSave}
@@ -829,47 +835,42 @@ const Service: React.FC = () => {
                                           {editError}
                                         </Typography>
                                       )}
-                                    </Box>
-                                  </Box>
-                                ) : (
-                                  <Box
-                                    sx={{
-                                      p: 2,
-                                      bgcolor: "#fff",
-                                      borderRadius: "8px",
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="h6"
-                                      gutterBottom
-                                      sx={{ fontWeight: 600, color: "#333" }}
-                                    >
-                                      Thông tin dịch vụ
-                                    </Typography>
-                                    <Box display="grid" gap={1}>
-                                      <Typography>
-                                        <strong>Tên dịch vụ:</strong>{" "}
-                                        {service.name}
-                                      </Typography>
-                                      <Typography>
-                                        <strong>Nhóm dịch vụ:</strong>{" "}
-                                        {serviceCategories.find(
-                                          (c) => c.id === service.category.id
-                                        )?.name || "Không xác định"}
-                                      </Typography>
-                                      <Typography>
-                                        <strong>Giá mỗi đơn:</strong>{" "}
-                                        {service.price.toLocaleString("vi-VN")}{" "}
-                                        đ
-                                      </Typography>
-                                      <Typography>
-                                        <strong>Mô tả:</strong>{" "}
-                                        {service.description}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                )}
-                              </div>
+                                    </>
+                                  ) : (
+                                    // VIEW MODE: bảng 2 cột giống Customer.tsx
+                                    <>
+                                      <h3>Thông tin dịch vụ</h3>
+                                      <Table className="customer-detail-table">
+                                        <TableBody>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Tên dịch vụ:</strong>{" "}
+                                              {service.name}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Nhóm dịch vụ:</strong>{" "}
+                                              {serviceCategories.find(
+                                                (c) =>
+                                                  c.id === service.category.id
+                                              )?.name || "Không xác định"}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Giá mỗi đơn:</strong>{" "}
+                                              {vnd(service.price)}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Mô tả:</strong>{" "}
+                                              {service.description || "—"}
+                                            </TableCell>
+                                          </TableRow>
+                                        </TableBody>
+                                      </Table>
+                                    </>
+                                  )}
+                                </div>
+                              </Box>
                             </Collapse>
                           </TableCell>
                         </TableRow>
