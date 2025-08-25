@@ -102,7 +102,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [roomsLoading, setRoomsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // kept internal; not rendered
   const [roomDropdownOpen, setRoomDropdownOpen] = useState<boolean>(false);
   const [isHourly, setIsHourly] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<Record<string, string[]>>({});
@@ -119,18 +119,11 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       setRoomsLoading(true);
       const now = new Date();
       const pad = (n: number) => n.toString().padStart(2, "0");
-      const toLocalDate = (d: Date) =>
-        `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-      const toLocalDT = (d: Date) =>
-        `${toLocalDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      const toLocalDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      const toLocalDT = (d: Date) => `${toLocalDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-      const ciIsPast =
-        checkInDate && new Date(checkInDate).getTime() < now.getTime();
-      const effectiveCheckIn = ciIsPast
-        ? isHourly
-          ? toLocalDT(now)
-          : toLocalDate(now)
-        : checkInDate;
+      const ciIsPast = checkInDate && new Date(checkInDate).getTime() < now.getTime();
+      const effectiveCheckIn = ciIsPast ? (isHourly ? toLocalDT(now) : toLocalDate(now)) : checkInDate;
 
       const { data } = await api.post("/available-rooms", {
         check_in_date: effectiveCheckIn,
@@ -147,9 +140,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
           ? {
               id: r.room_type.id,
               name: r.room_type.name,
-              base_rate: String(
-                r.room_type.base_rate ?? r.room_type.hourly_rate ?? 0
-              ),
+              base_rate: String(r.room_type.base_rate ?? r.room_type.hourly_rate ?? 0),
             }
           : undefined,
         status: r.available ? "available" : "booked",
@@ -198,9 +189,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       );
       setDepositAmount(bookingInfo.deposit_amount);
       setIsHourly(bookingInfo.is_hourly ?? false);
-      const currentRoomIds = bookingInfo.rooms
-        ? bookingInfo.rooms.map((room) => room.id)
-        : [bookingInfo.room.id];
+      const currentRoomIds = bookingInfo.rooms ? bookingInfo.rooms.map((room) => room.id) : [bookingInfo.room.id];
       setSelectedRoomIds(currentRoomIds);
       setError(null);
       setFormErrors({});
@@ -312,8 +301,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     if (isHourly) {
       const hoursDiff = (co.getTime() - ci.getTime()) / (1000 * 60 * 60);
       if (hoursDiff < 1) {
-        const msg =
-          "Thời gian trả phòng phải sau thời gian nhận phòng ít nhất 1 giờ";
+        const msg = "Thời gian trả phòng phải sau thời gian nhận phòng ít nhất 1 giờ";
         setError(msg);
         toast.error(msg);
         return;
@@ -343,11 +331,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       const ciChanged = checkInDate !== originalCheckIn;
       const coChanged = checkOutDate !== originalCheckOut;
 
-      const originalRoomIds = (
-        bookingInfo.rooms
-          ? bookingInfo.rooms.map((r) => r.id)
-          : [bookingInfo.room.id]
-      )
+      const originalRoomIds = (bookingInfo.rooms ? bookingInfo.rooms.map((r) => r.id) : [bookingInfo.room.id])
         .slice()
         .sort((a, b) => a - b);
       const currentRoomIds = selectedRoomIds.slice().sort((a, b) => a - b);
@@ -371,8 +355,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       }
 
       if (ciChanged || coChanged) {
-        const isValidDateStr = (s: string) =>
-          isValid(parseISO(s)) && !isNaN(new Date(s).getTime());
+        const isValidDateStr = (s: string) => isValid(parseISO(s)) && !isNaN(new Date(s).getTime());
         if (!isValidDateStr(checkInDate) || !isValidDateStr(checkOutDate)) {
           setError("Ngày nhận hoặc trả phòng không hợp lệ");
           toast.error("Ngày nhận hoặc trả phòng không hợp lệ");
@@ -381,9 +364,9 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         }
         const checkIn = new Date(checkInDate);
         const checkOut = new Date(checkOutDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (checkIn < today) {
+        const today2 = new Date();
+        today2.setHours(0, 0, 0, 0);
+        if (checkIn < today2) {
           setError("Ngày nhận phòng phải sau hoặc bằng hôm nay");
           toast.error("Ngày nhận phòng phải sau hoặc bằng hôm nay");
           setLoading(false);
@@ -406,13 +389,9 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       if (depositAmount !== "")
         updateData.deposit_amount = Number(depositAmount);
 
-      const { data } = await api.put(
-        `/bookings/${bookingInfo.id}`,
-        updateData,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const { data } = await api.put(`/bookings/${bookingInfo.id}`, updateData, {
+        headers: { "Content-Type": "application/json" },
+      });
 
       onConfirm(data.data);
       toast.success("Cập nhật đặt phòng thành công");
@@ -450,8 +429,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   };
 
   const getRoomDisplayName = (room: Room) => {
-    const typeName =
-      room.room_type?.name ?? `Loại #${room.room_type_id ?? "?"}`;
+    const typeName = room.room_type?.name ?? `Loại #${room.room_type_id ?? "?"}`;
     return `Phòng ${room.room_number} - ${typeName}`;
   };
 
@@ -465,22 +443,12 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="md"
-      fullWidth
-      PaperProps={{ sx: { borderRadius: 2 } }}
-    >
-      <DialogTitle
-        sx={{ fontWeight: 600, fontSize: "25px", color: "#4318FF", mb: 2 }}
-      >
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 2 } }}>
+      <DialogTitle sx={{ fontWeight: 600, fontSize: "25px", color: "#4318FF", mb: 2 }}>
         🧾 Chỉnh sửa đặt phòng
       </DialogTitle>
       <DialogContent dividers sx={{ px: 4, py: 3, bgcolor: "#fff" }}>
-        {error && (
-          <Typography sx={{ color: "#dc2626", mb: 3 }}>{error}</Typography>
-        )}
+        {/* Removed center error message; only toastify is used */}
         {bookingInfo ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <Paper
@@ -498,28 +466,14 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                 <Button
                   variant={!isHourly ? "contained" : "outlined"}
                   onClick={() => setIsHourly(false)}
-                  sx={{
-                    borderRadius: 2,
-                    px: 3,
-                    textTransform: "none",
-                    ...(isHourly
-                      ? { borderColor: "#ccc", color: "#6b7280" }
-                      : { bgcolor: "#4318FF", color: "white" }),
-                  }}
+                  sx={{ borderRadius: 2, px: 3, textTransform: "none", ...(isHourly ? { borderColor: "#ccc", color: "#6b7280" } : { bgcolor: "#4318FF", color: "white" }) }}
                 >
                   Theo ngày
                 </Button>
                 <Button
                   variant={isHourly ? "contained" : "outlined"}
                   onClick={() => setIsHourly(true)}
-                  sx={{
-                    borderRadius: 2,
-                    px: 3,
-                    textTransform: "none",
-                    ...(isHourly
-                      ? { bgcolor: "#4318FF", color: "white" }
-                      : { borderColor: "#ccc", color: "#6b7280" }),
-                  }}
+                  sx={{ borderRadius: 2, px: 3, textTransform: "none", ...(isHourly ? { bgcolor: "#4318FF", color: "white" } : { borderColor: "#ccc", color: "#6b7280" }) }}
                 >
                   Theo giờ
                 </Button>
@@ -537,13 +491,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               <Typography variant="h6" fontWeight={700} gutterBottom>
                 📅 Thời gian
               </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: { xs: "column", md: "row" },
-                  gap: 2,
-                }}
-              >
+              <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, gap: 2 }}>
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <b>Thời gian nhận:</b>{" "}
@@ -592,9 +540,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               </Typography>
               <Box sx={{ mb: 2 }}>
                 {selectedRoomIds.length > 0 && (
-                  <Box
-                    sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}
-                  >
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 2 }}>
                     {selectedRoomIds.map((roomId) => {
                       const room = availableRooms.find((r) => r.id === roomId);
                       return (
@@ -610,64 +556,28 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                               : `Phòng ${roomId}`
                           }
                           onDelete={() => removeRoom(roomId)}
-                          sx={{
-                            bgcolor: "#f3f4f6",
-                            color: "#374151",
-                            fontWeight: 500,
-                          }}
+                          sx={{ bgcolor: "#f3f4f6", color: "#374151", fontWeight: 500 }}
                         />
                       );
                     })}
                   </Box>
                 )}
-                <ClickAwayListener
-                  onClickAway={() => setRoomDropdownOpen(false)}
-                >
+                <ClickAwayListener onClickAway={() => setRoomDropdownOpen(false)}>
                   <Box sx={{ position: "relative" }}>
                     <Box
                       onClick={() => setRoomDropdownOpen(!roomDropdownOpen)}
-                      sx={{
-                        p: 2,
-                        border: "1px solid #ccc",
-                        borderRadius: 2,
-                        bgcolor: "#fff",
-                        cursor: "pointer",
-                      }}
+                      sx={{ p: 2, border: "1px solid #ccc", borderRadius: 2, bgcolor: "#fff", cursor: "pointer" }}
                     >
-                      <Typography
-                        variant="body2"
-                        color={
-                          selectedRoomIds.length === 0 ? "#6b7280" : "#374151"
-                        }
-                      >
+                      <Typography variant="body2" color={selectedRoomIds.length === 0 ? "#6b7280" : "#374151"}>
                         {getSelectedRoomsDisplay()}
                       </Typography>
                       <KeyboardArrowDown
-                        sx={{
-                          position: "absolute",
-                          right: 10,
-                          top: "50%",
-                          transform: roomDropdownOpen
-                            ? "rotate(180deg)"
-                            : "rotate(0deg)",
-                          transition: "transform 0.2s",
-                        }}
+                        sx={{ position: "absolute", right: 10, top: "50%", transform: roomDropdownOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
                       />
                     </Box>
                     {roomDropdownOpen && (
                       <Paper
-                        sx={{
-                          position: "absolute",
-                          top: "100%",
-                          left: 0,
-                          right: 0,
-                          zIndex: 1000,
-                          maxHeight: "300px",
-                          overflowY: "auto",
-                          mt: 1,
-                          border: "1px solid #ccc",
-                          borderRadius: 2,
-                        }}
+                        sx={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 1000, maxHeight: "300px", overflowY: "auto", mt: 1, border: "1px solid #ccc", borderRadius: 2 }}
                       >
                         {roomsLoading ? (
                           <Box sx={{ p: 2, textAlign: "center" }}>
@@ -679,21 +589,9 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                             <Box
                               key={room.id}
                               onClick={() => handleRoomToggle(room.id)}
-                              sx={{
-                                p: 2,
-                                display: "flex",
-                                alignItems: "center",
-                                cursor: "pointer",
-                                bgcolor: selectedRoomIds.includes(room.id)
-                                  ? "#f3f4f6"
-                                  : "transparent",
-                                "&:hover": { bgcolor: "#f9fafb" },
-                              }}
+                              sx={{ p: 2, display: "flex", alignItems: "center", cursor: "pointer", bgcolor: selectedRoomIds.includes(room.id) ? "#f3f4f6" : "transparent", "&:hover": { bgcolor: "#f9fafb" } }}
                             >
-                              <Checkbox
-                                checked={selectedRoomIds.includes(room.id)}
-                                sx={{ mr: 2 }}
-                              />
+                              <Checkbox checked={selectedRoomIds.includes(room.id)} sx={{ mr: 2 }} />
                               <Box>
                                 <Typography variant="body2" fontWeight={500}>
                                   {getRoomDisplayName(room)}
@@ -710,9 +608,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                                 </Typography>
                                 <Typography variant="body2" color="#6b7280">
                                   <b>Trạng thái:</b>{" "}
-                                  {room.status === "available"
-                                    ? "Trống"
-                                    : "Đã đặt"}
+                                  {room.status === "available" ? "Trống" : "Đã đặt"}
                                 </Typography>
                               </Box>
                             </Box>
@@ -740,10 +636,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                 💰 Đặt cọc
               </Typography>
               <Typography variant="body2" sx={{ mb: 1 }}>
-                <b>Số tiền đặt cọc:</b>{" "}
-                {depositAmount
-                  ? `${Number.parseFloat(depositAmount).toLocaleString()} VNĐ`
-                  : "N/A"}
+                <b>Số tiền đặt cọc:</b> {depositAmount ? `${Number.parseFloat(depositAmount).toLocaleString()} VNĐ` : "N/A"}
               </Typography>
               <TextField
                 type="number"
@@ -766,16 +659,8 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         <Button onClick={onClose} color="inherit">
           Đóng
         </Button>
-        <Button
-          onClick={handleConfirm}
-          variant="contained"
-          color="primary"
-          disabled={loading || selectedRoomIds.length === 0}
-          sx={{ borderRadius: 2, px: 3 }}
-        >
-          {loading ? (
-            <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} />
-          ) : null}
+        <Button onClick={handleConfirm} variant="contained" color="primary" disabled={loading || selectedRoomIds.length === 0} sx={{ borderRadius: 2, px: 3 }}>
+          {loading ? <CircularProgress size={16} color="inherit" sx={{ mr: 1 }} /> : null}
           {loading ? "Đang xử lý..." : "Cập nhật"}
         </Button>
       </DialogActions>

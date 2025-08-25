@@ -27,6 +27,7 @@ import {
   Fade,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"; // <-- thêm import này
 import EditIcon from "@mui/icons-material/Edit";
 import { SelectChangeEvent } from "@mui/material/Select";
 import { useNavigate } from "react-router-dom";
@@ -507,7 +508,8 @@ const Customer: React.FC = () => {
         throw new Error("ID khách hàng không hợp lệ");
       }
 
-      const { ...dataToSend } = editFormData;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { ...dataToSend } = editFormData as any;
       dataToSend.gender = mapGenderToBackend(editFormData.gender);
 
       const response = await api.put(`/customers/${customerId}`, dataToSend);
@@ -552,11 +554,12 @@ const Customer: React.FC = () => {
     setEditError(null);
   };
 
+  // TOGGLE như Service: icon & trạng thái đóng/mở
   const handleViewDetails = (id: number) => {
-    if (selectedCustomerId === id && editCustomerId !== id) {
-      setSelectedCustomerId(null);
-    } else {
-      setSelectedCustomerId(id);
+    setSelectedCustomerId((prev) =>
+      prev === id && editCustomerId !== id ? null : id
+    );
+    if (editCustomerId === id) {
       setEditCustomerId(null);
       setEditFormData(null);
       setValidationErrors({});
@@ -684,7 +687,11 @@ const Customer: React.FC = () => {
                           <TableCell align="center">
                             <Box display="flex" justifyContent="center" gap={1}>
                               <IconButton
-                                title="Xem chi tiết"
+                                title={
+                                  selectedCustomerId === customer.id
+                                    ? "Ẩn chi tiết"
+                                    : "Xem chi tiết"
+                                }
                                 sx={{
                                   color: "#1976d2",
                                   bgcolor: "#e3f2fd",
@@ -697,7 +704,11 @@ const Customer: React.FC = () => {
                                 }}
                                 onClick={() => handleViewDetails(customer.id)}
                               >
-                                <VisibilityIcon fontSize="small" />
+                                {selectedCustomerId === customer.id ? (
+                                  <VisibilityOffIcon fontSize="small" />
+                                ) : (
+                                  <VisibilityIcon fontSize="small" />
+                                )}
                               </IconButton>
 
                               <IconButton

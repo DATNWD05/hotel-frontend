@@ -13,8 +13,6 @@ import {
   Typography,
   Box,
   TextField,
-  Snackbar,
-  Alert,
   Card,
   CardContent,
   InputAdornment,
@@ -1148,21 +1146,6 @@ const ListBookings: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={successMessage ? "success" : "error"}
-          sx={{ width: "100%" }}
-        >
-          {successMessage || error}
-        </Alert>
-      </Snackbar>
 
       <Dialog
         open={openCancelDialog}

@@ -8,8 +8,6 @@ import {
   CircularProgress,
   Typography,
   Button,
-  Snackbar,
-  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -46,12 +44,20 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { parseISO, isValid } from "date-fns";
 import api from "../../api/axios";
+import { toast } from "react-toastify";
 import "./BookingManagement.css";
 
 const API_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 const FILES_URL = import.meta.env.VITE_FILES_URL || "http://localhost:8000";
 const DEFAULT_AVATAR = "/default-avatar.png";
+
+// react-toastify helpers (góc phải)
+const notify = {
+  success: (msg: string) => toast.success(msg, { position: "top-right" }),
+  error: (msg: string) => toast.error(msg, { position: "top-right" }),
+  info: (msg: string) => toast.info(msg, { position: "top-right" }),
+};
 
 // Hàm resolvePath từ Customer.tsx
 const resolvePath = (p?: string) => {
@@ -159,8 +165,6 @@ const BookingManagement = () => {
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
-  const [snackbarMessage, setSnackbarMessage] = useState<string>("");
   const [cccdImagePreview, setCccdImagePreview] = useState<string | null>(null);
   const [selectedCccdImage, setSelectedCccdImage] = useState<File | null>(null);
   const [isUploadingCccd, setIsUploadingCccd] = useState(false);
@@ -187,7 +191,6 @@ const BookingManagement = () => {
       setLoading(true);
       setError(null);
       const response = await api.get(`/bookings/${bookingId}`);
-      console.log("Dữ liệu thô từ API /bookings:", response.data);
       if (response.status === 200) {
         const data =
           response.data.booking || response.data.data || response.data;
@@ -295,12 +298,9 @@ const BookingManagement = () => {
 
         setSelectedRoomId(Number(data.rooms[0]?.id) || null);
         if (data.customer.cccd_image_path) {
-          console.log("cccd_image_path:", data.customer.cccd_image_path);
           const imageUrl = resolvePath(data.customer.cccd_image_path);
-          console.log("Generated image URL:", imageUrl);
           setCccdImagePreview(imageUrl);
         } else {
-          console.log("No cccd_image_path provided");
           setCccdImagePreview(null);
         }
       } else {
@@ -308,17 +308,12 @@ const BookingManagement = () => {
       }
     } catch (error: any) {
       console.error("Lỗi khi tải chi tiết đặt phòng:", error);
-      setError(
+      const msg =
         error instanceof Error
           ? `Lỗi: ${error.message}`
-          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng"
-      );
-      setSnackbarMessage(
-        error instanceof Error
-          ? `Lỗi: ${error.message}`
-          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng"
-      );
-      setSnackbarOpen(true);
+          : "Đã xảy ra lỗi khi tải chi tiết đặt phòng";
+      setError(msg);
+      notify.error(msg);
     } finally {
       setLoading(false);
     }
@@ -360,8 +355,7 @@ const BookingManagement = () => {
       }
     } catch (error: any) {
       console.error("Lỗi khi tải danh sách dịch vụ:", error);
-      setSnackbarMessage("Lỗi khi tải danh sách dịch vụ. Vui lòng thử lại.");
-      setSnackbarOpen(true);
+      notify.error("Lỗi khi tải danh sách dịch vụ. Vui lòng thử lại.");
     }
   }, []);
 
@@ -448,10 +442,9 @@ const BookingManagement = () => {
         booking.status === "Checked-out" ||
         booking.status === "Cancelled"
       ) {
-        setSnackbarMessage(
+        notify.error(
           "Không thể thêm dịch vụ vì đơn đặt phòng đã được trả phòng hoặc đã hủy."
         );
-        setSnackbarOpen(true);
         return;
       }
 
@@ -495,8 +488,7 @@ const BookingManagement = () => {
             };
           });
 
-          setSnackbarMessage("Thêm các dịch vụ thành công!");
-          setSnackbarOpen(true);
+          notify.success("Thêm các dịch vụ thành công!");
           setIsAddServiceOpen(false);
         }
       } catch (error: any) {
@@ -504,8 +496,7 @@ const BookingManagement = () => {
         const errorMessage =
           error.response?.data?.message ||
           "Lỗi khi thêm dịch vụ. Vui lòng thử lại.";
-        setSnackbarMessage(errorMessage);
-        setSnackbarOpen(true);
+        notify.error(errorMessage);
       }
     },
     [booking, bookingId]
@@ -514,8 +505,7 @@ const BookingManagement = () => {
   const removeServiceFromRoom = useCallback(
     async (roomId: number, serviceId: number) => {
       if (!booking || !roomId || !serviceId) {
-        setSnackbarMessage("Thông tin phòng hoặc dịch vụ không hợp lệ.");
-        setSnackbarOpen(true);
+        notify.error("Thông tin phòng hoặc dịch vụ không hợp lệ.");
         return;
       }
 
@@ -549,31 +539,20 @@ const BookingManagement = () => {
             };
           });
 
-          setSnackbarMessage("Xóa dịch vụ thành công!");
-          setSnackbarOpen(true);
+          notify.success("Xóa dịch vụ thành công!");
         }
       } catch (error: any) {
         console.error("Lỗi khi xóa dịch vụ:", error);
         const errorMessage =
           error.response?.data?.message ||
           "Lỗi khi xóa dịch vụ. Vui lòng thử lại.";
-        setSnackbarMessage(errorMessage);
-        setSnackbarOpen(true);
+        notify.error(errorMessage);
       }
     },
     [booking, bookingId]
   );
 
   const handleOpenRemoveServiceDialog = (roomId: number, serviceId: number) => {
-    if (booking?.status === "Checked-out" || booking?.status === "Cancelled") {
-      setSnackbarMessage(
-        booking.status === "Checked-out"
-          ? "Không thể xóa dịch vụ vì đơn đặt phòng đã được trả phòng."
-          : "Không thể xóa dịch vụ vì đơn đặt phòng đã bị hủy."
-      );
-      setSnackbarOpen(true);
-      return;
-    }
     setServiceToRemove({ roomId, serviceId });
     setOpenRemoveServiceDialog(true);
   };
@@ -588,6 +567,58 @@ const BookingManagement = () => {
     setServiceToRemove(null);
   };
 
+  const handleCheckIn = async () => {
+    if (booking?.status !== "Confirmed") {
+      notify.error("Chỉ có thể check-in cho đơn đặt phòng đã xác nhận.");
+      return;
+    }
+
+    try {
+      const response = await api.post(`/check-in/${bookingId}`);
+      if (response.status === 200) {
+        setBooking((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "Checked-in",
+                check_in_at: new Date().toISOString(),
+              }
+            : prev
+        );
+        notify.success("Check-in thành công!");
+      }
+    } catch (error: any) {
+      console.error("Lỗi khi check-in:", error);
+      notify.error("Lỗi khi check-in. Vui lòng thử lại.");
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (booking?.status !== "Checked-in") {
+      notify.error("Chỉ có thể check-out cho đơn đặt phòng đang ở.");
+      return;
+    }
+
+    try {
+      const response = await api.get(`/check-out/${bookingId}`);
+      if (response.status === 200) {
+        setBooking((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "Checked-out",
+                check_out_at: new Date().toISOString(),
+              }
+            : prev
+        );
+        notify.success("Check-out thành công!");
+      }
+    } catch (error: any) {
+      console.error("Lỗi khi check-out:", error);
+      notify.error("Lỗi khi check-out. Vui lòng thử lại.");
+    }
+  };
+
   const handleCccdImageChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -595,15 +626,11 @@ const BookingManagement = () => {
       const file = e.target.files[0];
       const validTypes = ["image/jpeg", "image/png", "image/jpg"];
       if (!validTypes.includes(file.type)) {
-        setSnackbarMessage(
-          "Vui lòng chọn file ảnh định dạng JPEG, PNG hoặc JPG."
-        );
-        setSnackbarOpen(true);
+        notify.error("Vui lòng chọn file ảnh định dạng JPEG, PNG hoặc JPG.");
         return;
       }
       if (file.size > 2 * 1024 * 1024) {
-        setSnackbarMessage("Kích thước ảnh không được vượt quá 2MB.");
-        setSnackbarOpen(true);
+        notify.error("Kích thước ảnh không được vượt quá 2MB.");
         return;
       }
 
@@ -617,8 +644,7 @@ const BookingManagement = () => {
   const handleUploadCccdImage = async (fileToUpload?: File) => {
     const file = fileToUpload || selectedCccdImage;
     if (!file || !booking?.customer?.id) {
-      setSnackbarMessage("Vui lòng chọn ảnh CCCD trước khi upload.");
-      setSnackbarOpen(true);
+      notify.error("Vui lòng chọn ảnh CCCD trước khi upload.");
       return;
     }
 
@@ -656,7 +682,6 @@ const BookingManagement = () => {
 
       if (response.status === 200) {
         const updatedCustomer = response.data.data || response.data;
-        console.log("Upload response:", updatedCustomer);
         setBooking((prev) =>
           prev
             ? {
@@ -670,25 +695,22 @@ const BookingManagement = () => {
         );
         if (updatedCustomer.cccd_image_path) {
           const imageUrl = resolvePath(updatedCustomer.cccd_image_path);
-          console.log("New image URL:", imageUrl);
           setCccdImagePreview(imageUrl);
         } else {
           setCccdImagePreview(null);
         }
         setSelectedCccdImage(null);
-        setSnackbarMessage("Cập nhật ảnh CCCD thành công!");
-        setSnackbarOpen(true);
+        notify.success("Cập nhật ảnh CCCD thành công!");
       }
     } catch (error: any) {
       console.error("Lỗi khi upload ảnh CCCD:", error);
       let errorMessage = "Lỗi khi upload ảnh CCCD. Vui lòng thử lại.";
       if (error.response?.data?.errors) {
-        errorMessage = Object.values(error.response.data.errors)
+        errorMessage = (Object.values(error.response.data.errors) as string[])
           .flat()
           .join(" ");
       }
-      setSnackbarMessage(errorMessage);
-      setSnackbarOpen(true);
+      notify.error(errorMessage);
     } finally {
       setIsUploadingCccd(false);
     }
@@ -1084,12 +1106,7 @@ const BookingManagement = () => {
                   <div className="service-item-actions">
                     <button
                       title="Xóa dịch vụ"
-                      className={`icon-btn icon-btn-danger ${
-                        booking?.status === "Checked-out" ||
-                        booking?.status === "Cancelled"
-                          ? "icon-btn-disabled"
-                          : ""
-                      }`}
+                      className="icon-btn icon-btn-danger"
                       onClick={() =>
                         handleOpenRemoveServiceDialog(
                           room.id,
@@ -1097,10 +1114,6 @@ const BookingManagement = () => {
                             service.pivot?.service_id ??
                             service.id
                         )
-                      }
-                      disabled={
-                        booking?.status === "Checked-out" ||
-                        booking?.status === "Cancelled"
                       }
                     >
                       <Trash2 className="icon-small" />
@@ -1302,10 +1315,9 @@ const BookingManagement = () => {
                               cccdImagePreview
                             );
                             (e.target as HTMLImageElement).src = DEFAULT_AVATAR;
-                            setSnackbarMessage(
+                            notify.error(
                               "Không thể tải ảnh CCCD. Vui lòng kiểm tra file hoặc cấu hình server."
                             );
-                            setSnackbarOpen(true);
                           }}
                         />
                       ) : (
@@ -1471,23 +1483,6 @@ const BookingManagement = () => {
               </Button>
             </DialogActions>
           </Dialog>
-
-          <Snackbar
-            open={snackbarOpen}
-            autoHideDuration={3000}
-            onClose={handleSnackbarClose}
-            anchorOrigin={{ vertical: "top", horizontal: "center" }}
-          >
-            <Alert
-              onClose={handleSnackbarClose}
-              severity={
-                snackbarMessage.includes("thành công") ? "success" : "error"
-              }
-              sx={{ width: "100%" }}
-            >
-              {snackbarMessage}
-            </Alert>
-          </Snackbar>
         </div>
       )}
     </div>
