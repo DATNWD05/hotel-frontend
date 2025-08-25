@@ -136,12 +136,14 @@ const AddRoomType: React.FC = () => {
             <span>{submitStatus === "success" ? "Thêm loại phòng thành công!" : errorMessage}</span>
           </div>
         )}
-        <h3 className="text-3xl font-bold text-gray-800 mb-4 border-b-4 border-blue-500 inline-block pb-1">
+        <h3 className="inline-block pb-1 mb-4 text-3xl font-bold text-gray-800 border-b-4 border-blue-500">
           Thêm Loại Phòng
         </h3>
+
         <div className="card">
           <div className="tab-content">
-            <div className="form-grid form-grid-2 mb-4">
+            {/* Row 1: code + name */}
+            <div className="mb-4 form-grid form-grid-2">
               <div className="form-group">
                 <label htmlFor="code" className="form-label required">Mã loại phòng</label>
                 <input
@@ -156,6 +158,7 @@ const AddRoomType: React.FC = () => {
                 />
                 {touchedFields["code"] && validationErrors.code && <ErrorMessage message={validationErrors.code} />}
               </div>
+
               <div className="form-group">
                 <label htmlFor="name" className="form-label required">Tên loại phòng</label>
                 <input
@@ -188,6 +191,7 @@ const AddRoomType: React.FC = () => {
                 />
                 {touchedFields["max_occupancy"] && validationErrors.max_occupancy && <ErrorMessage message={validationErrors.max_occupancy} />}
               </div>
+
               <div className="form-group">
                 <label htmlFor="base_rate" className="form-label required">Giá cơ bản (VNĐ)</label>
                 <input
@@ -258,6 +262,7 @@ const AddRoomType: React.FC = () => {
                     </>
                   )}
                 </button>
+
                 <button
                   onClick={handleCancel}
                   disabled={loading}

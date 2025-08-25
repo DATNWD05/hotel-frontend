@@ -942,3 +942,29 @@
     margin: 20px;
   }
 }
+.selected-service-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background-color: #f9f9f9;
+}
+
+.total-selected-services {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.service-card:hover {
+  background-color: #f0f0f0;
+  cursor: pointer;
+}
+
+.service-card-selected {
+  border: 2px solid #1976d2;
+  background-color: #e3f2fd;
+}

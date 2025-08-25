@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -35,11 +36,12 @@ import { SearchIcon } from "lucide-react";
 import api from "../../api/axios";
 import "../../css/Promotion.css";
 import { Link } from "react-router-dom";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 
 interface Employee {
   id: number;
   name: string;
+  department_id?: number; // Thêm field department_id để filter
 }
 
 interface Department {
@@ -63,7 +65,9 @@ interface ValidationErrors {
 const Departments: React.FC = () => {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [allDepartments, setAllDepartments] = useState<Department[]>([]);
-  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
+  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>(
+    []
+  );
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,11 +75,16 @@ const Departments: React.FC = () => {
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Department>>({});
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]); // Thêm state để lưu tất cả employees
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
+    {}
+  );
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [lastPage, setLastPage] = useState<number>(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [departmentToDelete, setDepartmentToDelete] = useState<number | null>(null);
+  const [departmentToDelete, setDepartmentToDelete] = useState<number | null>(
+    null
+  );
 
   const fetchAllDepartments = async () => {
     try {
@@ -108,35 +117,40 @@ const Departments: React.FC = () => {
     }
   };
 
-  const fetchEmployees = async (departmentId: number) => {
+  const fetchAllEmployees = async () => {
     try {
       setLoading(true);
-      console.log("Fetching employees for department ID:", departmentId);
       const response = await api.get<{ status: string; data: Employee[] }>(
-        `/departments/${departmentId}/employees`
+        "/employees"
       );
-      console.log("API Response:", response);
       if (response.status === 200) {
-        setEmployees(response.data.data || []);
+        setAllEmployees(response.data.data || []);
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      console.error("Error fetching employees:", err);
+      console.error("Error fetching all employees:", err);
       const errorMessage =
-        err.response?.data?.message ||
-        "Không thể tải danh sách nhân viên";
+        err.response?.data?.message || "Không thể tải danh sách nhân viên";
       setError(errorMessage);
       toast.error(errorMessage);
-      setEmployees([]);
+      setAllEmployees([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchEmployees = (departmentId: number) => {
+    // Filter từ danh sách allEmployees thay vì gọi API mới
+    const filteredEmployees = allEmployees.filter(
+      (emp) => emp.department_id === departmentId
+    );
+    setEmployees(filteredEmployees);
+  };
+
   useEffect(() => {
     fetchAllDepartments();
+    fetchAllEmployees(); // Fetch tất cả employees một lần khi component mount
   }, [currentPage]);
 
   useEffect(() => {
@@ -181,7 +195,7 @@ const Departments: React.FC = () => {
       manager_name: department.manager_name,
     });
     setValidationErrors({});
-    fetchEmployees(department.id);
+    fetchEmployees(department.id); // Filter employees cho department này
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -242,7 +256,6 @@ const Departments: React.FC = () => {
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message || "Không thể cập nhật phòng ban";
@@ -278,7 +291,6 @@ const Departments: React.FC = () => {
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${response.status}`);
       }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message || "Không thể xóa phòng ban";
@@ -529,7 +541,10 @@ const Departments: React.FC = () => {
                                           <InputLabel>Trưởng phòng</InputLabel>
                                           <Select
                                             name="manager_id"
-                                            value={editedDetail.manager_id?.toString() || ""}
+                                            value={
+                                              editedDetail.manager_id?.toString() ||
+                                              ""
+                                            }
                                             onChange={handleSelectChange}
                                             label="Trưởng phòng"
                                             sx={{

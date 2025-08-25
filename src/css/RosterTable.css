@@ -39,7 +39,7 @@
 }
 
 .nav-button, .export-button {
-  border-radius: 20px !important;
+  border-radius: 6px !important;
   padding: 6px 16px !important;
   transition: all 0.3s ease;
 }

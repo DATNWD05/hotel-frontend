@@ -55,12 +55,10 @@ interface RoomType {
   hourly_rate: number; // ✅ THEO GIỜ
   amenities: Amenity[];
 }
-
 interface ApiResponse {
   data: RoomType[];
   meta: { last_page: number };
 }
-
 interface ValidationErrors {
   code?: string;
   name?: string;
@@ -74,6 +72,7 @@ interface AmenityPayload {
   id: number;
   quantity: number;
 }
+interface AmenityPayload { id: number; quantity: number; }
 
 // Helper định dạng VND giống Customer.tsx
 const vnd = (n: number | string) => {
@@ -229,8 +228,7 @@ const RoomTypesList: React.FC = () => {
           : value,
       } as RoomType;
       setEditFormData(updatedData);
-      const errors = validateForm(updatedData);
-      setValidationErrors(errors);
+      setValidationErrors(validateForm(updatedData));
     }
   };
 
@@ -669,6 +667,7 @@ const RoomTypesList: React.FC = () => {
 
   return (
     <div className="promotions-wrapper">
+      {/* header */}
       <div className="promotions-title">
         <Typography variant="body2" sx={{ color: "gray", mb: 1 }}>
           Loại phòng {">"} Danh sách
@@ -720,19 +719,16 @@ const RoomTypesList: React.FC = () => {
         </Box>
       </div>
 
+      {/* table */}
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" p={4}>
           <CircularProgress />
           <Typography ml={2}>Đang tải danh sách loại phòng...</Typography>
         </Box>
       ) : error ? (
-        <Typography color="error" p={2} textAlign="center">
-          {error}
-        </Typography>
+        <Typography color="error" p={2} textAlign="center">{error}</Typography>
       ) : roomTypes.length === 0 ? (
-        <Typography p={2} textAlign="center">
-          Không tìm thấy loại phòng nào.
-        </Typography>
+        <Typography p={2} textAlign="center">Không tìm thấy loại phòng nào.</Typography>
       ) : (
         <>
           <TableContainer
@@ -894,6 +890,7 @@ const RoomTypesList: React.FC = () => {
                                       helperText={validationErrors.name}
                                     />
                                   </Box>
+
                                   <Box display="flex" gap={2}>
                                     <TextField
                                       label="Số người tối đa"
@@ -1220,6 +1217,7 @@ const RoomTypesList: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
+
           {lastPage > 1 && (
             <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
               <Pagination
