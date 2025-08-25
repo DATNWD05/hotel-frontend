@@ -13,8 +13,6 @@ import {
   Typography,
   Box,
   TextField,
-  Snackbar,
-  Alert,
   Card,
   CardContent,
   InputAdornment,
@@ -26,6 +24,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Pagination,
 } from "@mui/material";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import AppsIcon from "@mui/icons-material/Apps";
@@ -49,11 +48,11 @@ interface Invoice {
   invoice_code: string;
   booking_id: number;
   issued_date: string;
-  room_amount: number; // đổi string -> number
-  service_amount: number; // đổi string -> number
-  discount_amount: number; // đổi string -> number
-  deposit_amount: number; // đổi string -> number
-  total_amount: number; // đổi string -> number
+  room_amount: number;
+  service_amount: number;
+  discount_amount: number;
+  deposit_amount: number;
+  total_amount: number;
   created_at: string;
   updated_at: string;
   booking: {
@@ -66,10 +65,10 @@ interface Invoice {
     check_out_at: string;
     status: string;
     note: string | null;
-    deposit_amount: number; // đổi string -> number
-    raw_total: number; // đổi string -> number
-    discount_amount: number; // đổi string -> number
-    total_amount: number; // đổi string -> number
+    deposit_amount: number;
+    raw_total: number;
+    discount_amount: number;
+    total_amount: number;
     created_at: string;
     updated_at: string;
   };
@@ -205,7 +204,7 @@ interface Booking {
   room: Room;
   rooms?: Room[];
   promotions: Promotion[];
-  is_hourly: boolean; // Thêm thuộc tính này
+  is_hourly: boolean;
 }
 
 interface CheckoutInfo {
@@ -299,6 +298,8 @@ const ListBookings: React.FC = () => {
     null
   );
   const [isPaying, setWorking] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [lastPage, setLastPage] = useState<number>(1);
   const callbackProcessed = useRef(false);
   const navigate = useNavigate();
 
@@ -528,19 +529,16 @@ const ListBookings: React.FC = () => {
       setSelectedBookingId(bookingId);
       setOpenInvoiceDialog(true);
 
-      // 1) Thử endpoint theo booking_id (nếu BE đã có)
       try {
         const { data } = await api.get(`/invoices/booking/${bookingId}`);
         setInvoiceInfo(data);
-        return; // xong sớm
+        return;
       } catch (err: any) {
-        // tiếp tục fallback ở dưới
         if (!(err?.response?.status === 404 || err?.response?.status === 405)) {
           throw err;
         }
       }
 
-      // 2) Fallback FE-only: lấy list rồi tìm invoice theo booking_id
       const listRes = await api.get(`/invoices`);
       const invoices: any[] = Array.isArray(listRes.data)
         ? listRes.data
@@ -555,7 +553,6 @@ const ListBookings: React.FC = () => {
         throw new Error("Không có hóa đơn cho booking này");
       }
 
-      // Gọi chi tiết theo invoice_id (route hiện tại của bạn)
       const detailRes = await api.get(`/invoices/${inv.id}`);
       setInvoiceInfo(detailRes.data);
     } catch (error) {
@@ -636,7 +633,7 @@ const ListBookings: React.FC = () => {
           return {
             ...item,
             status: updatedStatus,
-            is_hourly: item.is_hourly ?? false, // Đảm bảo is_hourly luôn có giá trị
+            is_hourly: item.is_hourly ?? false,
             check_in_date:
               item.check_in_date && isValid(parseISO(item.check_in_date))
                 ? item.check_in_date
@@ -687,7 +684,9 @@ const ListBookings: React.FC = () => {
         });
 
         setAllBookings(sanitizedData);
-        setBookings(sanitizedData);
+        setFilteredBookings(sanitizedData);
+        setBookings(sanitizedData.slice(0, 10));
+        setLastPage(Math.ceil(sanitizedData.length / 10));
       } else {
         throw new Error(`Lỗi HTTP! Mã trạng thái: ${status}`);
       }
@@ -729,8 +728,9 @@ const ListBookings: React.FC = () => {
       });
     }
     setFilteredBookings(filtered);
-    setBookings(filtered);
-  }, [searchQuery, statusFilters, allBookings]);
+    setLastPage(Math.ceil(filtered.length / 10));
+    setBookings(filtered.slice((currentPage - 1) * 10, currentPage * 10));
+  }, [searchQuery, statusFilters, allBookings, currentPage]);
 
   const handleViewDetail = (id: number) => {
     navigate(`/listbookings/detail/${id}`);
@@ -758,7 +758,15 @@ const ListBookings: React.FC = () => {
         return [...prev, status];
       }
     });
+    setCurrentPage(1); // Reset về trang đầu khi thay đổi bộ lọc
     handleFilterClose();
+  };
+
+  const handlePageChange = (
+    event: React.ChangeEvent<unknown>,
+    page: number
+  ) => {
+    setCurrentPage(page);
   };
 
   const statusOptions = [
@@ -915,198 +923,229 @@ const ListBookings: React.FC = () => {
                 : "Không tìm thấy đặt phòng nào."}
             </Typography>
           ) : (
-            <TableContainer
-              component={Paper}
-              className="booking-table-container"
-            >
-              <Table className="booking-table" sx={{ width: "100%" }}>
-                <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
-                  <TableRow>
-                    <TableCell>
-                      <b>Khách hàng</b>
-                    </TableCell>
-                    <TableCell>
-                      <b>Số phòng</b>
-                    </TableCell>
-                    <TableCell>
-                      <b>Ngày nhận phòng</b>
-                    </TableCell>
-                    <TableCell>
-                      <b>Ngày trả phòng</b>
-                    </TableCell>
-                    <TableCell>
-                      <b>Loại đặt phòng</b>
-                    </TableCell>
-                    <TableCell>
-                      <b>Tổng tiền</b>
-                    </TableCell>
-                    <TableCell>
-                      <b>Trạng thái</b>
-                    </TableCell>
-                    <TableCell align="center">
-                      <b>Hành động</b>
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {bookings.map((booking) => {
-                    const { status, color } = getBookingStatus(booking.status);
-                    return (
-                      <TableRow key={booking.id} hover sx={{ opacity: 1 }}>
-                        <TableCell>{booking.customer.name}</TableCell>
-                        <TableCell>
-                          {booking.rooms && booking.rooms.length > 0
-                            ? booking.rooms.length > 3
-                              ? `${booking.rooms
-                                  .slice(0, 2)
-                                  .map((room) => room.room_number)
-                                  .join(", ")} ...và ${
-                                  booking.rooms.length - 3
-                                } phòng khác`
-                              : booking.rooms
-                                  .map((room) => room.room_number)
-                                  .join(", ")
-                            : booking.room.room_number || "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          {formatDateTime(
-                            booking.check_in_date,
-                            booking.is_hourly
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {formatDateTime(
-                            booking.check_out_date,
-                            booking.is_hourly
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={booking.is_hourly ? "Theo giờ" : "Theo ngày"}
-                            color={booking.is_hourly ? "warning" : "success"}
-                            size="small"
-                            sx={{ fontWeight: "bold" }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {formatCurrency(booking.total_amount)}
-                        </TableCell>
-                        <TableCell>
-                          <span style={{ color, fontWeight: "bold" }}>
-                            {status}
-                          </span>
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            title="Xem chi tiết"
-                            sx={{
-                              color: "#1976d2",
-                              bgcolor: "#e3f2fd",
-                              "&:hover": { bgcolor: "#bbdefb" },
-                            }}
-                            onClick={() => handleViewDetail(booking.id)}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                          {["Chờ xác nhận", "Đã xác nhận"].includes(status) && (
-                            <IconButton
-                              title="Sửa đặt phòng"
-                              onClick={() => handleEditDialog(booking)}
-                              sx={{
-                                ml: 1,
-                                color: "#0288d1",
-                                bgcolor: "#e1f5fe",
-                                "&:hover": { bgcolor: "#b3e5fc" },
-                              }}
-                            >
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                          {["Chờ xác nhận", "Đã xác nhận"].includes(status) && (
-                            <IconButton
-                              title="Xác nhận Check-in"
-                              onClick={() => handleCheckinDialog(booking.id)}
-                              sx={{
-                                ml: 1,
-                                color: "#4caf50",
-                                bgcolor: "#e8f5e9",
-                                "&:hover": { bgcolor: "#c8e6c9" },
-                              }}
-                            >
-                              <AppsIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                          {["Chờ xác nhận", "Đã xác nhận"].includes(status) && (
-                            <IconButton
-                              title="Hủy đặt phòng"
-                              onClick={() => handleCancelBooking(booking.id)}
-                              sx={{
-                                ml: 1,
-                                color: "#d32f2f",
-                                bgcolor: "#fbe9e7",
-                                "&:hover": { bgcolor: "#ffcdd2" },
-                              }}
-                            >
-                              <HighlightOffIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                          {status === "Đã nhận phòng" && (
-                            <IconButton
-                              title="Thanh toán và trả phòng"
-                              onClick={() =>
-                                handleOpenCheckoutDialog(booking.id)
+            <>
+              <TableContainer
+                component={Paper}
+                className="booking-table-container"
+              >
+                <Table className="booking-table" sx={{ width: "100%" }}>
+                  <TableHead sx={{ backgroundColor: "#f4f6fa" }}>
+                    <TableRow>
+                      <TableCell>
+                        <b>Khách hàng</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Số phòng</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Ngày nhận phòng</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Ngày trả phòng</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Loại đặt phòng</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Tổng tiền</b>
+                      </TableCell>
+                      <TableCell>
+                        <b>Trạng thái</b>
+                      </TableCell>
+                      <TableCell align="center">
+                        <b>Hành động</b>
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {bookings.map((booking) => {
+                      const { status, color } = getBookingStatus(
+                        booking.status
+                      );
+                      return (
+                        <TableRow key={booking.id} hover sx={{ opacity: 1 }}>
+                          <TableCell>{booking.customer.name}</TableCell>
+                          <TableCell>
+                            {booking.rooms && booking.rooms.length > 0
+                              ? booking.rooms.length > 3
+                                ? `${booking.rooms
+                                    .slice(0, 2)
+                                    .map((room) => room.room_number)
+                                    .join(", ")} ...và ${
+                                    booking.rooms.length - 3
+                                  } phòng khác`
+                                : booking.rooms
+                                    .map((room) => room.room_number)
+                                    .join(", ")
+                              : booking.room.room_number || "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            {formatDateTime(
+                              booking.check_in_date,
+                              booking.is_hourly
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {formatDateTime(
+                              booking.check_out_date,
+                              booking.is_hourly
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={
+                                booking.is_hourly ? "Theo giờ" : "Theo ngày"
                               }
-                              sx={{
-                                ml: 1,
-                                color: "#ff9800",
-                                bgcolor: "#fff3e0",
-                                "&:hover": { bgcolor: "#ffe0b2" },
-                              }}
-                            >
-                              <AppsIcon fontSize="small" />
-                            </IconButton>
-                          )}
-                          {status === "Đã trả phòng" && (
+                              color={booking.is_hourly ? "warning" : "success"}
+                              size="small"
+                              sx={{ fontWeight: "bold" }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {formatCurrency(booking.total_amount)}
+                          </TableCell>
+                          <TableCell>
+                            <span style={{ color, fontWeight: "bold" }}>
+                              {status}
+                            </span>
+                          </TableCell>
+                          <TableCell align="center">
                             <IconButton
-                              title="In hóa đơn"
-                              onClick={() =>
-                                handleOpenInvoiceDialog(booking.id)
-                              }
+                              title="Xem chi tiết"
                               sx={{
-                                ml: 1,
-                                color: "#0288d1",
-                                bgcolor: "#e1f5fe",
-                                "&:hover": { bgcolor: "#b3e5fc" },
+                                color: "#1976d2",
+                                bgcolor: "#e3f2fd",
+                                "&:hover": { bgcolor: "#bbdefb" },
                               }}
+                              onClick={() => handleViewDetail(booking.id)}
                             >
-                              <PrintIcon fontSize="small" />
+                              <VisibilityIcon fontSize="small" />
                             </IconButton>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                            {["Chờ xác nhận", "Đã xác nhận"].includes(
+                              status
+                            ) && (
+                              <IconButton
+                                title="Sửa đặt phòng"
+                                onClick={() => handleEditDialog(booking)}
+                                sx={{
+                                  ml: 1,
+                                  color: "#0288d1",
+                                  bgcolor: "#e1f5fe",
+                                  "&:hover": { bgcolor: "#b3e5fc" },
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                            {["Chờ xác nhận", "Đã xác nhận"].includes(
+                              status
+                            ) && (
+                              <IconButton
+                                title="Xác nhận Check-in"
+                                onClick={() => handleCheckinDialog(booking.id)}
+                                sx={{
+                                  ml: 1,
+                                  color: "#4caf50",
+                                  bgcolor: "#e8f5e9",
+                                  "&:hover": { bgcolor: "#c8e6c9" },
+                                }}
+                              >
+                                <AppsIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                            {["Chờ xác nhận", "Đã xác nhận"].includes(
+                              status
+                            ) && (
+                              <IconButton
+                                title="Hủy đặt phòng"
+                                onClick={() => handleCancelBooking(booking.id)}
+                                sx={{
+                                  ml: 1,
+                                  color: "#d32f2f",
+                                  bgcolor: "#fbe9e7",
+                                  "&:hover": { bgcolor: "#ffcdd2" },
+                                }}
+                              >
+                                <HighlightOffIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                            {status === "Đã nhận phòng" && (
+                              <IconButton
+                                title="Thanh toán và trả phòng"
+                                onClick={() =>
+                                  handleOpenCheckoutDialog(booking.id)
+                                }
+                                sx={{
+                                  ml: 1,
+                                  color: "#ff9800",
+                                  bgcolor: "#fff3e0",
+                                  "&:hover": { bgcolor: "#ffe0b2" },
+                                }}
+                              >
+                                <AppsIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                            {status === "Đã trả phòng" && (
+                              <IconButton
+                                title="In hóa đơn"
+                                onClick={() =>
+                                  handleOpenInvoiceDialog(booking.id)
+                                }
+                                sx={{
+                                  ml: 1,
+                                  color: "#0288d1",
+                                  bgcolor: "#e1f5fe",
+                                  "&:hover": { bgcolor: "#b3e5fc" },
+                                }}
+                              >
+                                <PrintIcon fontSize="small" />
+                              </IconButton>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+                <Pagination
+                  count={lastPage}
+                  page={currentPage}
+                  onChange={handlePageChange}
+                  shape="rounded"
+                  showFirstButton
+                  showLastButton
+                  siblingCount={0}
+                  boundaryCount={1}
+                  sx={{
+                    "& .MuiPaginationItem-root": {
+                      color: "#888",
+                      fontWeight: 500,
+                      minWidth: "36px",
+                      height: "36px",
+                      borderRadius: "8px",
+                      border: "none",
+                    },
+                    "& .Mui-selected": {
+                      backgroundColor: "#5B3EFF",
+                      color: "#fff",
+                      fontWeight: "bold",
+                      "&:hover": {
+                        backgroundColor: "#5B3EFF",
+                      },
+                    },
+                    "& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast":
+                      {
+                        color: "#bbb",
+                      },
+                  }}
+                />
+              </Box>
+            </>
           )}
         </CardContent>
       </Card>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <Alert
-          onClose={handleSnackbarClose}
-          severity={successMessage ? "success" : "error"}
-          sx={{ width: "100%" }}
-        >
-          {successMessage || error}
-        </Alert>
-      </Snackbar>
 
       <Dialog
         open={openCancelDialog}

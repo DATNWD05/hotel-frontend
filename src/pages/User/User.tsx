@@ -80,25 +80,31 @@ const api = axios.create({
 const User: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
+
   const [errors, setErrors] = useState<Partial<Record<keyof Employee, string>>>(
     {}
   );
   const [generalError, setGeneralError] = useState<string | null>(null);
+
   const [credentialErrors, setCredentialErrors] = useState<
     Partial<Record<keyof User, string>>
   >({});
   const [generalCredentialError, setGeneralCredentialError] = useState<
     string | null
   >(null);
+
   const [departments, setDepartments] = useState<Department[]>([]);
   const [roles, setRoles] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
   const [editedDetail, setEditedDetail] = useState<Partial<Employee>>({});
+
   const [viewCredentialsId, setViewCredentialsId] = useState<number | null>(
     null
   );
@@ -106,33 +112,42 @@ const User: React.FC = () => {
     number | null
   >(null);
   const [editedCredentials, setEditedCredentials] = useState<Partial<User>>({});
+
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [snackbarOpen, setSnackbarOpen] = useState<boolean>(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string>("");
+
   const currentUserId = Number(localStorage.getItem("auth_user_id"));
 
+  // ===== Fetch all data once (client-side pagination) =====
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setGeneralError(null);
 
+        // Lấy nhiều bản ghi để đủ phân trang ở client
+        const paramsAll = { per_page: 1000 };
+
         const [employeeRes, userRes, departmentRes, roleRes] =
           await Promise.all([
-            api.get("/employees"),
-            api.get("/users"),
-            api.get("/departments"),
+            api.get("/employees", { params: paramsAll }),
+            api.get("/users", { params: paramsAll }),
+            api.get("/departments", { params: paramsAll }),
             api.get("/role"),
           ]);
 
-        const rolesFromApi = roleRes.data.roles ?? [];
+        const rolesFromApi = roleRes.data?.roles ?? [];
         setRoles(rolesFromApi);
-        const departments = departmentRes.data.data;
-        const users = userRes.data.data;
-        const employees = employeeRes.data.data;
 
-        const merged = employees.map((emp: Employee) => {
-          const user = users.find((u: User) => u.id === emp.user_id);
+        // Chuẩn hoá đa hình dữ liệu (có API trả {data: []}, có API trả [])
+        const departmentsResp =
+          departmentRes.data?.data ?? departmentRes.data ?? [];
+        const usersResp = userRes.data?.data ?? userRes.data ?? [];
+        const employeesResp = employeeRes.data?.data ?? employeeRes.data ?? [];
+
+        const merged = (employeesResp as Employee[]).map((emp) => {
+          const user = (usersResp as User[]).find((u) => u.id === emp.user_id);
           return {
             ...emp,
             user: user || undefined,
@@ -142,7 +157,7 @@ const User: React.FC = () => {
 
         setEmployees(merged);
         setFilteredEmployees(merged);
-        setDepartments(departments);
+        setDepartments(departmentsResp);
       } catch (err) {
         console.error(err);
         setGeneralError("Lỗi khi tải dữ liệu");
@@ -156,21 +171,24 @@ const User: React.FC = () => {
     fetchData();
   }, []);
 
+  // ===== Search / Filter + clamp trang =====
   useEffect(() => {
     let filtered = [...employees];
 
     if (searchQuery.trim() !== "") {
+      const q = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (employee) =>
-          employee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (employee.user?.email || "")
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
+          employee.name.toLowerCase().includes(q) ||
+          (employee.user?.email || "").toLowerCase().includes(q)
       );
     }
 
     setFilteredEmployees(filtered);
-    setCurrentPage(1);
+
+    // Clamp currentPage theo tổng trang mới (tránh rỗng)
+    const newTotalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+    setCurrentPage((prev) => Math.min(prev, newTotalPages));
   }, [searchQuery, employees]);
 
   const handleEditDetail = (employee: Employee) => {
@@ -178,7 +196,7 @@ const User: React.FC = () => {
     setViewDetailId(employee.id);
     setEditedDetail({
       name: employee.name || "",
-      email: employee.email || "",
+      email: employee.user?.email || employee.email || "",
       role: employee.user?.role_id
         ? roleIdToLabel(employee.user.role_id)
         : "Không xác định",
@@ -188,7 +206,7 @@ const User: React.FC = () => {
       gender: employee.gender || "",
       birthday: employee.birthday || "",
       department_id: employee.department_id ?? null,
-      status: employee.status || "Làm việc",
+      status: employee.status || "active",
       hire_date: employee.hire_date || "",
     });
     setErrors({});
@@ -242,7 +260,7 @@ const User: React.FC = () => {
 
       if (!editedDetail.name) {
         newErrors.name = "Tên nhân viên không được để trống.";
-      } else if (editedDetail.name.length > 100) {
+      } else if ((editedDetail.name as string).length > 100) {
         newErrors.name = "Tên không được dài quá 100 ký tự.";
       }
 
@@ -250,17 +268,17 @@ const User: React.FC = () => {
         newErrors.email = "Email không được để trống.";
       } else {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(editedDetail.email)) {
+        if (!emailRegex.test(String(editedDetail.email))) {
           newErrors.email = "Email không đúng định dạng.";
         }
       }
 
-      if (editedDetail.phone && !/^\d{10,11}$/.test(editedDetail.phone)) {
+      if (editedDetail.phone && !/^\d{10,11}$/.test(String(editedDetail.phone))) {
         newErrors.phone = "Số điện thoại không hợp lệ.";
       }
 
       if (editedDetail.birthday) {
-        const date = new Date(editedDetail.birthday);
+        const date = new Date(String(editedDetail.birthday));
         if (isNaN(date.getTime())) {
           newErrors.birthday = "Ngày sinh không đúng định dạng.";
         }
@@ -268,16 +286,16 @@ const User: React.FC = () => {
 
       if (
         editedDetail.gender &&
-        !["Nam", "Nữ", "Khác"].includes(editedDetail.gender)
+        !["Nam", "Nữ", "Khác"].includes(String(editedDetail.gender))
       ) {
         newErrors.gender = "Giới tính phải là Nam, Nữ hoặc Khác.";
       }
 
-      if (editedDetail.address && editedDetail.address.length > 255) {
+      if (editedDetail.address && String(editedDetail.address).length > 255) {
         newErrors.address = "Địa chỉ không được vượt quá 255 ký tự.";
       }
 
-      if (editedDetail.cccd && !/^\d{12}$/.test(editedDetail.cccd)) {
+      if (editedDetail.cccd && !/^\d{12}$/.test(String(editedDetail.cccd))) {
         newErrors.cccd = "CCCD phải là dãy số gồm 12 chữ số.";
       }
 
@@ -295,7 +313,7 @@ const User: React.FC = () => {
       if (!editedDetail.hire_date) {
         newErrors.hire_date = "Ngày tuyển dụng không được để trống.";
       } else {
-        const hireDate = new Date(editedDetail.hire_date);
+        const hireDate = new Date(String(editedDetail.hire_date));
         if (isNaN(hireDate.getTime())) {
           newErrors.hire_date = "Ngày tuyển dụng không đúng định dạng.";
         }
@@ -304,10 +322,10 @@ const User: React.FC = () => {
       if (!editedDetail.status) {
         newErrors.status = "Trạng thái không được để trống.";
       } else if (
-        !["active", "not_active", "pending"].includes(editedDetail.status)
+        !["active", "not_active", "pending"].includes(String(editedDetail.status))
       ) {
         newErrors.status =
-          "Trạng thái phải là Đang làm việc, Nghỉ làm hoặc Chờ xét duyệt.";
+          "Trạng thái phải là Làm việc, Nghỉ làm hoặc Chờ xét duyệt.";
       }
 
       if (Object.keys(newErrors).length > 0) {
@@ -316,16 +334,19 @@ const User: React.FC = () => {
       }
 
       const payload = {
-        name: editedDetail.name?.trim() ?? "",
-        phone: editedDetail.phone?.trim() ?? null,
+        name: String(editedDetail.name ?? "").trim(),
+        phone: editedDetail.phone ? String(editedDetail.phone).trim() : null,
         birthday: editedDetail.birthday ?? null,
         gender: editedDetail.gender ?? null,
-        address: editedDetail.address?.trim() ?? null,
-        cccd: editedDetail.cccd?.trim() ?? null,
+        address: editedDetail.address
+          ? String(editedDetail.address).trim()
+          : null,
+        cccd: editedDetail.cccd ? String(editedDetail.cccd).trim() : null,
         department_id: Number(editedDetail.department_id),
         hire_date: editedDetail.hire_date ?? null,
         status: editedDetail.status ?? null,
-        email: editedDetail.email ?? currentEmployee?.user?.email ?? "",
+        email:
+          String(editedDetail.email ?? currentEmployee?.user?.email ?? "").trim(),
       };
 
       const res = await api.put(`/employees/${id}`, payload);
@@ -458,33 +479,40 @@ const User: React.FC = () => {
   };
 
   const handleDelete = async (id: number, user_id?: number) => {
-    const currentUserId = Number(localStorage.getItem("auth_user_id"));
     const user = employees.find((e) => e.user_id === user_id)?.user;
 
-    // Ngăn không cho xóa chính mình
+    // Không xoá chính mình
     if (user_id === currentUserId) {
       setSnackbarMessage("Bạn không thể tự xóa tài khoản của chính mình.");
       setSnackbarOpen(true);
       return;
     }
 
-    // Ngăn không cho xóa tài khoản owner (admin cao nhất)
+    // Không xoá owner
     if (user?.role_id === 1) {
       setSnackbarMessage("Không thể xóa tài khoản owner.");
       setSnackbarOpen(true);
       return;
     }
 
-    const confirmed = window.confirm(
-      "Bạn có chắc chắn muốn xóa nhân viên này?"
-    );
+    const confirmed = window.confirm("Bạn có chắc chắn muốn xóa nhân viên này?");
     if (confirmed) {
       try {
         await api.delete(`/users/${user_id}`);
+
+        // Cập nhật list
         setEmployees((prev) => prev.filter((e) => e.user_id !== user_id));
         setFilteredEmployees((prev) =>
           prev.filter((e) => e.user_id !== user_id)
         );
+
+        // ⭐ Clamp lại page sau khi xóa phần tử
+        const newTotalPages = Math.max(
+          1,
+          Math.ceil((filteredEmployees.length - 1) / rowsPerPage)
+        );
+        setCurrentPage((prev) => Math.min(prev, newTotalPages));
+
         setSnackbarMessage("Xóa nhân viên thành công!");
         setSnackbarOpen(true);
       } catch (err: unknown) {
@@ -548,12 +576,16 @@ const User: React.FC = () => {
     setCurrentPage(page);
   };
 
+  // ===== Client-side pagination slice =====
   const paginatedEmployees = filteredEmployees.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
 
-  const totalPages = Math.ceil(filteredEmployees.length / rowsPerPage);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredEmployees.length / rowsPerPage)
+  );
 
   const renderStatusLabel = (status: string | undefined) => {
     switch (status) {
@@ -1530,34 +1562,37 @@ const User: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
-              <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
-                <Pagination
-                  count={totalPages}
-                  page={currentPage}
-                  onChange={handlePageChange}
-                  shape="rounded"
-                  color="primary"
-                  siblingCount={0}
-                  boundaryCount={1}
-                  showFirstButton
-                  showLastButton
-                  sx={{
-                    "& .MuiPaginationItem-root": {
-                      color: "#444",
-                      minWidth: "32px",
-                      height: "32px",
-                      fontSize: "14px",
-                      fontWeight: 500,
-                      borderRadius: "8px",
-                    },
-                    "& .Mui-selected": {
-                      backgroundColor: "#5B3EFF",
-                      color: "#fff",
-                      fontWeight: "bold",
-                    },
-                  }}
-                />
-              </Box>
+
+              {totalPages > 1 && (
+                <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
+                  <Pagination
+                    count={totalPages}
+                    page={currentPage}
+                    onChange={handlePageChange}
+                    shape="rounded"
+                    color="primary"
+                    siblingCount={0}
+                    boundaryCount={1}
+                    showFirstButton
+                    showLastButton
+                    sx={{
+                      "& .MuiPaginationItem-root": {
+                        color: "#444",
+                        minWidth: "32px",
+                        height: "32px",
+                        fontSize: "14px",
+                        fontWeight: 500,
+                        borderRadius: "8px",
+                      },
+                      "& .Mui-selected": {
+                        backgroundColor: "#5B3EFF",
+                        color: "#fff",
+                        fontWeight: "bold",
+                      },
+                    }}
+                  />
+                </Box>
+              )}
             </>
           )}
         </CardContent>

@@ -36,6 +36,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios, { AxiosError } from "axios";
 import "../../css/Amenities.css";
+// tái dùng layout hiển thị chi tiết giống trang Customer
+import "../../css/Customer.css";
 
 interface ServiceCategory {
   id: string;
@@ -82,12 +84,8 @@ const ServiceCategoryList: React.FC = () => {
     null
   );
   const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
-  const [editFormData, setEditFormData] = useState<ServiceCategory | null>(
-    null
-  );
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
+  const [editFormData, setEditFormData] = useState<ServiceCategory | null>(null);
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [editLoading, setEditLoading] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -148,7 +146,8 @@ const ServiceCategoryList: React.FC = () => {
           ? err.response?.status === 401
             ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
             : `Không thể tải danh mục dịch vụ: ${
-                err.response?.data?.message || err.message
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (err.response?.data as any)?.message || err.message
               }`
           : err instanceof Error
           ? err.message
@@ -167,6 +166,7 @@ const ServiceCategoryList: React.FC = () => {
   useEffect(() => {
     document.title = "Danh sách Danh mục Dịch vụ";
     fetchCategories(page, searchQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, searchQuery]);
 
   useEffect(() => {
@@ -179,14 +179,12 @@ const ServiceCategoryList: React.FC = () => {
     }
 
     if (activeFilters.length > 0 && !activeFilters.includes("all")) {
-      // Placeholder cho lọc trạng thái nếu API hỗ trợ
+      // Chỗ này để sẵn nếu BE thêm status cho category
     }
 
     setCategories(filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE));
     setMeta((prev) =>
-      prev
-        ? { ...prev, last_page: Math.ceil(filtered.length / PER_PAGE) }
-        : null
+      prev ? { ...prev, last_page: Math.ceil(filtered.length / PER_PAGE) } : null
     );
   }, [searchQuery, activeFilters, page, allCategories]);
 
@@ -266,7 +264,8 @@ const ServiceCategoryList: React.FC = () => {
         err instanceof AxiosError
           ? err.response?.status === 401
             ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
-            : err.response?.data?.message ||
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            : (err.response?.data as any)?.message ||
               `Không thể cập nhật danh mục: ${err.message}`
           : err instanceof Error
           ? err.message
@@ -310,15 +309,6 @@ const ServiceCategoryList: React.FC = () => {
       }
 
       const category = allCategories.find((cat) => cat.id === id);
-      console.log(
-        `Kiểm tra dịch vụ liên kết cho danh mục ID: ${id}, Tên: ${
-          category?.name || "Không xác định"
-        }`
-      );
-      console.log(
-        `Gọi API: ${SERVICE_API_URL}?category_id=${id}&t=${Date.now()}`
-      );
-
       const checkResponse = await axios.get<ServiceApiResponse>(
         `${SERVICE_API_URL}?category_id=${id}&t=${Date.now()}`,
         {
@@ -327,11 +317,6 @@ const ServiceCategoryList: React.FC = () => {
             Authorization: `Bearer ${token}`,
           },
         }
-      );
-
-      console.log(
-        "Phản hồi API kiểm tra dịch vụ:",
-        JSON.stringify(checkResponse.data, null, 2)
       );
 
       if (checkResponse.data.status !== "success") {
@@ -345,31 +330,11 @@ const ServiceCategoryList: React.FC = () => {
         Array.isArray(checkResponse.data.data) &&
         checkResponse.data.data.length > 0
       ) {
-        // Kiểm tra xem các dịch vụ có thực sự thuộc category_id yêu cầu
         const validServices = checkResponse.data.data.filter(
           (service) => service.category_id && service.category_id === id
         );
-        const invalidServices = checkResponse.data.data.filter(
-          (service) => !service.category_id || service.category_id !== id
-        );
-
-        if (invalidServices.length > 0) {
-          console.warn(
-            "Cảnh báo: API trả về dịch vụ không thuộc category_id yêu cầu:",
-            invalidServices
-          );
-          toast.error(
-            `API trả về dữ liệu sai: Một số dịch vụ không thuộc danh mục "${
-              category?.name || "Không xác định"
-            }". Vui lòng kiểm tra backend.`
-          );
-          return;
-        }
-
         if (validServices.length > 0) {
-          const serviceNames = validServices
-            .map((service) => service.name)
-            .join(", ");
+          const serviceNames = validServices.map((s) => s.name).join(", ");
           toast.error(
             `Không thể xóa danh mục "${
               category?.name || "Không xác định"
@@ -386,12 +351,12 @@ const ServiceCategoryList: React.FC = () => {
         err instanceof AxiosError
           ? err.response?.status === 401
             ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
-            : err.response?.data?.message ||
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            : (err.response?.data as any)?.message ||
               `Không thể kiểm tra dịch vụ liên kết: ${err.message}`
           : err instanceof Error
           ? err.message
           : "Lỗi không xác định";
-      console.error("Lỗi trong handleDelete:", errorMessage, err);
       setError(errorMessage);
       toast.error(errorMessage);
       if (err instanceof AxiosError && err.response?.status === 401) {
@@ -413,11 +378,6 @@ const ServiceCategoryList: React.FC = () => {
       }
 
       const category = allCategories.find((cat) => cat.id === categoryToDelete);
-      console.log(
-        `Xóa danh mục ID: ${categoryToDelete}, Tên: ${
-          category?.name || "Không xác định"
-        }`
-      );
 
       const response = await axios.delete(`${API_URL}/${categoryToDelete}`, {
         headers: {
@@ -450,12 +410,12 @@ const ServiceCategoryList: React.FC = () => {
         err instanceof AxiosError
           ? err.response?.status === 401
             ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
-            : err.response?.data?.message ||
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            : (err.response?.data as any)?.message ||
               `Không thể xóa danh mục: ${err.message}`
           : err instanceof Error
           ? `Không thể xóa danh mục: ${err.message}`
           : "Lỗi không xác định";
-      console.error("Lỗi trong confirmDelete:", errorMessage, err);
       setError(errorMessage);
       toast.error(errorMessage);
       if (err instanceof AxiosError && err.response?.status === 401) {
@@ -640,12 +600,7 @@ const ServiceCategoryList: React.FC = () => {
       <Card elevation={3} sx={{ p: 0, mt: 0, borderRadius: "8px" }}>
         <CardContent sx={{ p: 0 }}>
           {loading ? (
-            <Box
-              display="flex"
-              justifyContent="center"
-              alignItems="center"
-              p={4}
-            >
+            <Box display="flex" justifyContent="center" alignItems="center" p={4}>
               <CircularProgress />
               <Typography ml={2}>Đang tải danh sách danh mục...</Typography>
             </Box>
@@ -752,65 +707,60 @@ const ServiceCategoryList: React.FC = () => {
                             </Box>
                           </TableCell>
                         </TableRow>
+
+                        {/* Chi tiết hiển thị giống Customer.tsx */}
                         <TableRow>
                           <TableCell colSpan={3} style={{ padding: 0 }}>
                             <Collapse in={selectedCategoryId === cat.id}>
-                              <div className="promotion-detail-container">
-                                {editCategoryId === cat.id && editFormData ? (
-                                  <Box
-                                    sx={{
-                                      p: 2,
-                                      bgcolor: "#fff",
-                                      borderRadius: "8px",
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="h6"
-                                      gutterBottom
-                                      sx={{ fontWeight: 600, color: "#333" }}
-                                    >
-                                      Chỉnh sửa danh mục
-                                    </Typography>
-                                    <Box
-                                      display="flex"
-                                      flexDirection="column"
-                                      gap={2}
-                                    >
-                                      <TextField
-                                        label="Tên danh mục"
-                                        name="name"
-                                        value={editFormData.name}
-                                        onChange={handleChange}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.name}
-                                        helperText={validationErrors.name}
-                                        sx={{
-                                          bgcolor: "#fff",
-                                          borderRadius: "4px",
-                                        }}
-                                      />
-                                      <TextField
-                                        label="Mô tả"
-                                        name="description"
-                                        value={editFormData.description}
-                                        onChange={handleChange}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        multiline
-                                        rows={3}
-                                        error={!!validationErrors.description}
-                                        helperText={
-                                          validationErrors.description
-                                        }
-                                        sx={{
-                                          bgcolor: "#fff",
-                                          borderRadius: "4px",
-                                        }}
-                                      />
-                                      <Box mt={2} display="flex" gap={2}>
+                              <Box
+                                sx={{
+                                  width: "100%",
+                                  bgcolor: "#f9f9f9",
+                                  px: 3,
+                                  py: 2,
+                                  borderTop: "1px solid #ddd",
+                                }}
+                              >
+                                <div className="customer-detail-container">
+                                  {editCategoryId === cat.id && editFormData ? (
+                                    <>
+                                      <h3>Chỉnh sửa danh mục</h3>
+                                      <Box
+                                        display="flex"
+                                        flexDirection="column"
+                                        gap={2}
+                                      >
+                                        <TextField
+                                          label="Tên danh mục"
+                                          name="name"
+                                          value={editFormData.name}
+                                          onChange={handleChange}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={!!validationErrors.name}
+                                          helperText={validationErrors.name}
+                                        />
+                                        <TextField
+                                          label="Mô tả"
+                                          name="description"
+                                          value={editFormData.description}
+                                          onChange={handleChange}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          multiline
+                                          rows={3}
+                                          error={
+                                            !!validationErrors.description
+                                          }
+                                          helperText={
+                                            validationErrors.description
+                                          }
+                                        />
+                                      </Box>
+
+                                      <Box pb={3} mt={2} display="flex" gap={2}>
                                         <Button
                                           variant="contained"
                                           onClick={handleSave}
@@ -867,36 +817,28 @@ const ServiceCategoryList: React.FC = () => {
                                           {editError}
                                         </Typography>
                                       )}
-                                    </Box>
-                                  </Box>
-                                ) : (
-                                  <Box
-                                    sx={{
-                                      p: 2,
-                                      bgcolor: "#fff",
-                                      borderRadius: "8px",
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="h6"
-                                      gutterBottom
-                                      sx={{ fontWeight: 600, color: "#333" }}
-                                    >
-                                      Thông tin danh mục
-                                    </Typography>
-                                    <Box display="grid" gap={1}>
-                                      <Typography>
-                                        <strong>Tên danh mục:</strong>{" "}
-                                        {cat.name}
-                                      </Typography>
-                                      <Typography>
-                                        <strong>Mô tả:</strong>{" "}
-                                        {cat.description}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-                                )}
-                              </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <h3>Thông tin danh mục</h3>
+                                      <Table className="customer-detail-table">
+                                        <TableBody>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Tên danh mục:</strong>{" "}
+                                              {cat.name}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Mô tả:</strong>{" "}
+                                              {cat.description}
+                                            </TableCell>
+                                          </TableRow>
+                                        </TableBody>
+                                      </Table>
+                                    </>
+                                  )}
+                                </div>
+                              </Box>
                             </Collapse>
                           </TableCell>
                         </TableRow>
@@ -905,6 +847,7 @@ const ServiceCategoryList: React.FC = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
+
               {meta && meta.last_page > 1 && (
                 <Box mt={2} pr={3} display="flex" justifyContent="flex-end">
                   <Pagination
@@ -929,9 +872,7 @@ const ServiceCategoryList: React.FC = () => {
                         fontWeight: "bold",
                       },
                       "& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast":
-                        {
-                          color: "#999",
-                        },
+                        { color: "#999" },
                     }}
                   />
                 </Box>
