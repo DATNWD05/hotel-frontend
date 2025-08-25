@@ -16,7 +16,6 @@ import {
 import {
   CalendarDays,
   Clock,
-  CreditCard,
   MapPin,
   Phone,
   Mail,
@@ -149,9 +148,6 @@ interface Booking {
   status: string;
   deposit_amount: string;
   is_deposit_paid: number;
-  raw_total: string;
-  discount_amount: string;
-  total_amount: string;
   customer: Customer;
   rooms: Room[];
   creator: Creator;
@@ -227,9 +223,6 @@ const BookingManagement = () => {
           check_out_at: data.check_out_at || null,
           deposit_amount: data.deposit_amount || "0.00",
           is_deposit_paid: data.is_deposit_paid || 0,
-          raw_total: data.raw_total || "0.00",
-          discount_amount: data.discount_amount || "0.00",
-          total_amount: data.total_amount || "0.00",
           status: [
             "Pending",
             "Confirmed",
@@ -492,9 +485,6 @@ const BookingManagement = () => {
             return {
               ...prev,
               services: [...prev.services, ...newServices],
-              raw_total: response.data.data?.raw_total || prev.raw_total,
-              total_amount:
-                response.data.data?.total_amount || prev.total_amount,
             };
           });
 
@@ -546,9 +536,6 @@ const BookingManagement = () => {
             return {
               ...prev,
               services: updatedServices,
-              raw_total: response.data.data?.raw_total || prev.raw_total,
-              total_amount:
-                response.data.data?.total_amount || prev.total_amount,
             };
           });
 
@@ -729,22 +716,9 @@ const BookingManagement = () => {
     }
   };
 
-  const calculateAllServicesTotal = () => {
-    return Object.values(roomServices).reduce((total, services) => {
-      return (
-        total +
-        services.reduce(
-          (roomTotal, service) => roomTotal + (service.total || 0),
-          0
-        )
-      );
-    }, 0);
-  };
-
-  const calculateGrandTotal = () => {
-    const roomTotal = Number.parseFloat(booking?.raw_total || "0");
-    const servicesTotal = calculateAllServicesTotal();
-    return roomTotal + servicesTotal;
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
+    setSnackbarMessage("");
   };
 
   const RoomAmenities = ({ amenities = [] }: { amenities?: Amenity[] }) => {
@@ -838,7 +812,7 @@ const BookingManagement = () => {
       <div className="modal-content">
         <div className="service-selection">
           <label className="section-label">
-            Chọn dịch vụ ({selectedServices.length} đã chọn)
+            Ch Ascolher dịch vụ ({selectedServices.length} đã chọn)
           </label>
           <div className="services-container">
             {Object.entries(groupedServices).map(
@@ -1023,13 +997,6 @@ const BookingManagement = () => {
       icon: amenity.icon || iconMap[amenity.name] || Coffee,
     }));
 
-    const calculateRoomServicesTotal = () => {
-      return services.reduce(
-        (total, service) => total + (service.total || 0),
-        0
-      );
-    };
-
     return (
       <div className="room-detail-container">
         <div className="room-info">
@@ -1137,9 +1104,6 @@ const BookingManagement = () => {
                     </div>
                   </div>
                   <div className="service-item-actions">
-                    <span className="service-total">
-                      {formatCurrency((service.total || 0).toString())}
-                    </span>
                     <button
                       title="Xóa dịch vụ"
                       className="icon-btn icon-btn-danger"
@@ -1157,12 +1121,6 @@ const BookingManagement = () => {
                   </div>
                 </div>
               ))}
-              <div className="services-total">
-                <span>Tổng dịch vụ phòng {room.room_number}:</span>
-                <span className="total-amount">
-                  {formatCurrency(calculateRoomServicesTotal().toString())}
-                </span>
-              </div>
             </div>
           ) : (
             <div className="empty-state">
@@ -1472,57 +1430,6 @@ const BookingManagement = () => {
                         </p>
                       )}
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="card">
-                <h2 className="section-title">
-                  <CreditCard className="icon-small" /> Thông tin thanh toán
-                </h2>
-                <div className="payment-details">
-                  <div className="payment-row">
-                    <span>Chi phí phòng:</span>
-                    <span className="payment-amount">
-                      {formatCurrency(booking.raw_total)}
-                    </span>
-                  </div>
-                  {calculateAllServicesTotal() > 0 && (
-                    <div className="payment-row">
-                      <span>Chi phí dịch vụ:</span>
-                      <span className="payment-amount">
-                        {formatCurrency(calculateAllServicesTotal().toString())}
-                      </span>
-                    </div>
-                  )}
-                  <hr className="separator" />
-                  <div className="payment-row payment-total">
-                    <span>Tổng cộng:</span>
-                    <span className="payment-amount payment-amount-large">
-                      {formatCurrency(calculateGrandTotal().toString())}
-                    </span>
-                  </div>
-                  <div className="payment-actions">
-                    {booking.status === "Confirmed" && (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleCheckIn}
-                        className="btn-primary"
-                      >
-                        Check-in
-                      </Button>
-                    )}
-                    {booking.status === "Checked-in" && (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleCheckOut}
-                        className="btn-primary"
-                      >
-                        Check-out
-                      </Button>
-                    )}
                   </div>
                 </div>
               </div>

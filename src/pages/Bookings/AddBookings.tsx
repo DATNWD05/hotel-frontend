@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, ChangeEvent } from "react";
+import { useState, useEffect, ChangeEvent, useRef } from "react";
 import {
   User,
   Hotel,
@@ -13,18 +13,14 @@ import {
   AlertCircle,
   AlertTriangle,
   Upload,
+  ChevronDown,
 } from "lucide-react";
 import "../../css/AddBookings.css";
 import api from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 
-// ⬇️ Thêm import MUI cho Autocomplete
-import { Autocomplete, TextField, GlobalStyles } from "@mui/material";
-import { styled } from "@mui/material/styles";
-import Popper from "@mui/material/Popper";
-
-/** ====== Types ====== */
+// ====== Types ======
 interface Customer {
   cccd: string;
   name: string;
@@ -108,62 +104,107 @@ interface RoomNumber {
   status: string;
 }
 
-/** ====== Popper tĩnh & SelectCompact (UI giống CheckoutDialog) ====== */
-const StaticPopper = styled(Popper)({
-  position: "static !important",
-  transform: "none !important",
-  left: "0 !important",
-  top: "auto !important",
-  width: "100% !important",
-  zIndex: "auto",
-  transition: "none !important",
-  animation: "none !important",
-});
-
-type Option = { value: string; label: string };
-
-const SelectCompact: React.FC<{
-  id: string;
+// ====== CustomSelect Component ======
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled = false,
+  id,
+  validationErrors = {}, // Thêm prop validationErrors
+}: {
   value: string;
-  onChange: (v: string) => void;
-  options: Option[];
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
   placeholder: string;
   disabled?: boolean;
-}> = ({ id, value, onChange, options, placeholder, disabled }) => {
-  const selected = options.find((o) => o.value === value) || null;
+  id: string;
+  validationErrors?: { [key: string]: string };
+}) => {
+  const [openDropdowns, setOpenDropdowns] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [dropdownPosition, setDropdownPosition] = useState<"below" | "above">(
+    "below"
+  );
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const toggleDropdown = (key: string) => {
+    setOpenDropdowns((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const isOpen = openDropdowns[id] || false;
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current && dropdownRef.current) {
+      const triggerRect = triggerRef.current.getBoundingClientRect();
+      const dropdownHeight = dropdownRef.current.offsetHeight || 200; // Fallback nếu chưa render
+      const viewportHeight = window.innerHeight;
+
+      // Tính không gian dưới và trên
+      const spaceBelow = viewportHeight - triggerRect.bottom;
+      const spaceAbove = triggerRect.top;
+
+      // Mở lên trên nếu không đủ không gian dưới và đủ không gian trên
+      if (spaceBelow < dropdownHeight && spaceAbove > dropdownHeight) {
+        setDropdownPosition("above");
+      } else {
+        setDropdownPosition("below");
+      }
+    }
+  }, [isOpen]);
+
   return (
-    <Autocomplete
-      disablePortal
-      openOnFocus
-      options={options}
-      getOptionLabel={(o) => o.label}
-      isOptionEqualToValue={(o, v) => o.value === v.value}
-      value={selected}
-      onChange={(_, opt) => onChange(opt?.value ?? "")}
-      components={{ Popper: StaticPopper }}
-      ListboxProps={{
-        style: {
-          maxHeight: 260,
-          overflowY: "auto",
-          whiteSpace: "normal", // cho label dài xuống dòng
-          lineHeight: 1.28,
-        },
-      }}
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          placeholder={placeholder}
-          size="small"
-          sx={{ "& .MuiInputBase-input": { fontSize: 12 } }}
-        />
+    <div className="custom-select">
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`select-trigger ${disabled ? "disabled" : ""} ${
+          validationErrors[id] ? "error" : ""
+        }`}
+        onClick={() => !disabled && toggleDropdown(id)}
+        disabled={disabled}
+        aria-label={
+          value
+            ? options.find((opt) => opt.value === value)?.label
+            : placeholder
+        }
+      >
+        <span className={value ? "" : "select-placeholder"}>
+          {value
+            ? options.find((opt) => opt.value === value)?.label
+            : placeholder}
+        </span>
+        <ChevronDown className={`select-chevron ${isOpen ? "open" : ""}`} />
+      </button>
+      {isOpen && !disabled && (
+        <div
+          ref={dropdownRef}
+          className={`select-dropdown ${
+            dropdownPosition === "above" ? "dropdown-above" : ""
+          }`}
+        >
+          {options.map((option) => (
+            <div
+              key={option.value}
+              className="select-option"
+              onClick={() => {
+                onChange(option.value);
+                toggleDropdown(id);
+              }}
+            >
+              {option.label}
+            </div>
+          ))}
+        </div>
       )}
-      disabled={!!disabled}
-      id={id}
-    />
+    </div>
   );
 };
 
-/** ====== Component ====== */
+// ====== Component ======
 export default function HotelBooking() {
   const navigate = useNavigate();
   const [bookingData, setBookingData] = useState<BookingData>({
@@ -553,7 +594,6 @@ export default function HotelBooking() {
         }
         break;
       }
-
       case "checkOutDate": {
         if (!value) {
           errors.booking.checkOutDate = "Vui lòng chọn thời gian trả phòng";
@@ -692,10 +732,8 @@ export default function HotelBooking() {
     }
 
     if (isCheckIn) {
-      // Theo ngày + check-in: giữ nguyên giờ người dùng chọn
       return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
     } else {
-      // Theo ngày + check-out: luôn ép 12:00:00
       return dayjs(date).format("YYYY-MM-DD 12:00:00");
     }
   };
@@ -706,11 +744,9 @@ export default function HotelBooking() {
       const checkOut = dayjs(formatDateTime(bookingData.checkOutDate, false));
 
       if (bookingData.is_hourly) {
-        // Theo giờ: làm tròn lên theo giờ như cũ
         const hours = Math.ceil(checkOut.diff(checkIn, "minute") / 60);
         return Math.max(1, hours);
       } else {
-        // ✅ Theo ngày: tính số ĐÊM theo ngày lịch, không phụ thuộc giờ
         const nights = checkOut
           .startOf("day")
           .diff(checkIn.startOf("day"), "day");
@@ -806,7 +842,6 @@ export default function HotelBooking() {
         [field]: value,
       };
       if (field === "is_hourly" && value === true) {
-        // Reset khi chuyển sang đặt theo giờ
         newData.checkInDate = "";
         newData.checkOutDate = "";
         newData.rooms = prev.rooms.map((room) => ({
@@ -1013,7 +1048,6 @@ export default function HotelBooking() {
     setIsSubmitting(true);
     setErrorMessage("");
     try {
-      // ⛔ Chặn đặt nếu thời gian đã qua ngay tại thời điểm submit
       const now = new Date();
       const checkIn = new Date(formatDateTime(bookingData.checkInDate, true));
       const checkOut = new Date(
@@ -1301,6 +1335,7 @@ export default function HotelBooking() {
                             { value: "other", label: "Khác" },
                           ]}
                           placeholder="Chọn giới tính"
+                          validationErrors={validationErrors.customer}
                         />
                         {touchedFields["customer.gender"] &&
                           validationErrors.customer.gender && (
@@ -1496,6 +1531,7 @@ export default function HotelBooking() {
                           { value: "hourly", label: "Theo giờ" },
                         ]}
                         placeholder="Chọn loại đặt phòng"
+                        validationErrors={validationErrors.booking}
                       />
                       {touchedFields["booking.is_hourly"] &&
                         validationErrors.booking.is_hourly && (
@@ -1721,6 +1757,9 @@ export default function HotelBooking() {
                                   !bookingData.checkInDate ||
                                   !bookingData.checkOutDate
                                 }
+                                validationErrors={
+                                  validationErrors.rooms[room.id] || {}
+                                }
                               />
                             )}
                             {touchedFields[`rooms.${room.id}.type`] &&
@@ -1757,6 +1796,9 @@ export default function HotelBooking() {
                                   !room.type ||
                                   !bookingData.checkInDate ||
                                   !bookingData.checkOutDate
+                                }
+                                validationErrors={
+                                  validationErrors.rooms[room.id] || {}
                                 }
                               />
                             )}
@@ -1879,6 +1921,7 @@ export default function HotelBooking() {
                         })),
                       ].sort((a, b) => a.label.localeCompare(b.label))}
                       placeholder="Chọn khuyến mãi"
+                      validationErrors={validationErrors.booking}
                     />
                     {touchedFields["booking.promotion"] &&
                       validationErrors.booking.promotion && (
