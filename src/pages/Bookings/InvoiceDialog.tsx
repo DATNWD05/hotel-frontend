@@ -499,9 +499,7 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
         {invoiceLoading ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress />
-            <Typography sx={{ ml: 2 }}>
-              Đang tải thông tin hóa đơn...
-            </Typography>
+            <Typography sx={{ ml: 2 }}>Đang tải thông tin hóa đơn...</Typography>
           </Box>
         ) : vm ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>

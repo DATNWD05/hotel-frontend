@@ -176,7 +176,6 @@ const AddRoomType: React.FC = () => {
             </span>
           </div>
         )}
-
         <h3 className="inline-block pb-1 mb-4 text-3xl font-bold text-gray-800 border-b-4 border-blue-500">
           Thêm Loại Phòng
         </h3>
