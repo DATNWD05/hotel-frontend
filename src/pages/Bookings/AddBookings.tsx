@@ -320,7 +320,6 @@ export default function HotelBooking() {
     };
 
     fetchAvailableRooms();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     bookingData.checkInDate,
     bookingData.checkOutDate,
@@ -338,7 +337,12 @@ export default function HotelBooking() {
       ...prev,
       depositAmount: calculatedDeposit > 0 ? calculatedDeposit : "",
     }));
-  }, [bookingData.rooms, bookingData.checkInDate, bookingData.checkOutDate, bookingData.is_hourly, calculateDuration]);
+  }, [
+    bookingData.rooms,
+    bookingData.checkInDate,
+    bookingData.checkOutDate,
+    bookingData.is_hourly,
+  ]);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -696,7 +700,6 @@ export default function HotelBooking() {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const calculateDuration = () => {
     if (bookingData.checkInDate && bookingData.checkOutDate) {
       const checkIn = dayjs(formatDateTime(bookingData.checkInDate, true));
