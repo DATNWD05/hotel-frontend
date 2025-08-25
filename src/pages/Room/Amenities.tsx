@@ -37,6 +37,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import api from '../../api/axios';
 import { AxiosError } from 'axios';
 import '../../css/Amenities.css';
+// tái dùng style layout chi tiết như Customer.tsx
+import '../../css/Customer.css';
 
 interface Amenity {
   id: string;
@@ -92,6 +94,12 @@ interface ValidationErrors {
   default_quantity?: string;
 }
 
+// helper format tiền VND
+const vnd = (n: number | string) => {
+  const num = typeof n === 'string' ? Number(n) : n;
+  return isNaN(num) ? '0 đ' : num.toLocaleString('vi-VN') + ' đ';
+};
+
 const Amenities: React.FC = () => {
   const [amenities, setAmenities] = useState<Amenity[]>([]);
   const [allAmenities, setAllAmenities] = useState<Amenity[]>([]);
@@ -144,8 +152,18 @@ const Amenities: React.FC = () => {
             name: item.name || 'Không xác định',
             description: item.description || '–',
             icon: item.icon || '',
-            price: typeof item.price === 'string' ? parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 10000 : item.price != null ? Number(item.price) : 10000,
-            default_quantity: typeof item.default_quantity === 'string' ? parseInt(item.default_quantity, 10) || 1 : item.default_quantity != null ? Number(item.default_quantity) : 1,
+            price:
+              typeof item.price === 'string'
+                ? parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 10000
+                : item.price != null
+                ? Number(item.price)
+                : 10000,
+            default_quantity:
+              typeof item.default_quantity === 'string'
+                ? parseInt(item.default_quantity, 10) || 1
+                : item.default_quantity != null
+                ? Number(item.default_quantity)
+                : 1,
             status: item.status || 'active',
           };
         });
@@ -165,7 +183,8 @@ const Amenities: React.FC = () => {
         err instanceof AxiosError
           ? err.response?.status === 401
             ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
-            : err.response?.data?.message || `Không thể tải danh sách tiện ích: ${err.message}`
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            : (err.response?.data as any)?.message || `Không thể tải danh sách tiện ích: ${err.message}`
           : err instanceof Error
           ? `Không thể tải danh sách tiện ích: ${err.message}`
           : 'Lỗi không xác định';
@@ -206,7 +225,8 @@ const Amenities: React.FC = () => {
           err instanceof AxiosError
             ? err.response?.status === 401
               ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
-              : err.response?.data?.message || `Không thể tải danh mục tiện ích: ${err.message}`
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              : (err.response?.data as any)?.message || `Không thể tải danh mục tiện ích: ${err.message}`
             : err instanceof Error
             ? `Không thể tải danh mục tiện ích: ${err.message}`
             : 'Lỗi không xác định';
@@ -221,15 +241,17 @@ const Amenities: React.FC = () => {
 
     fetchCategories();
     fetchAllAmenities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   useEffect(() => {
     let filtered = [...allAmenities];
 
     if (searchQuery.trim() !== '') {
-      filtered = filtered.filter((amenity) =>
-        amenity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        amenity.code.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(
+        (amenity) =>
+          amenity.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          amenity.code.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -257,7 +279,10 @@ const Amenities: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     if (editFormData) {
-      const updatedData = { ...editFormData, [name]: name === 'price' || name === 'default_quantity' ? Number(value) : value };
+      const updatedData = {
+        ...editFormData,
+        [name]: name === 'price' || name === 'default_quantity' ? Number(value) : value,
+      } as Amenity;
       setEditFormData(updatedData);
       const errors = validateForm(updatedData);
       setValidationErrors(errors);
@@ -301,15 +326,9 @@ const Amenities: React.FC = () => {
       });
 
       if (response.status === 200 || response.status === 201) {
-        setAllAmenities((prev) =>
-          prev.map((a) => (a.id === editFormData.id ? { ...editFormData } : a))
-        );
-        setFilteredAmenities((prev) =>
-          prev.map((a) => (a.id === editFormData.id ? { ...editFormData } : a))
-        );
-        setAmenities((prev) =>
-          prev.map((a) => (a.id === editFormData.id ? { ...editFormData } : a))
-        );
+        setAllAmenities((prev) => prev.map((a) => (a.id === editFormData.id ? { ...editFormData } : a)));
+        setFilteredAmenities((prev) => prev.map((a) => (a.id === editFormData.id ? { ...editFormData } : a)));
+        setAmenities((prev) => prev.map((a) => (a.id === editFormData.id ? { ...editFormData } : a)));
         setEditAmenityId(null);
         setEditFormData(null);
         setSelectedAmenityId(null);
@@ -322,7 +341,8 @@ const Amenities: React.FC = () => {
         err instanceof AxiosError
           ? err.response?.status === 401
             ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
-            : err.response?.data?.message || `Không thể cập nhật tiện ích: ${err.message}`
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            : (err.response?.data as any)?.message || `Không thể cập nhật tiện ích: ${err.message}`
           : err instanceof Error
           ? `Không thể cập nhật tiện ích: ${err.message}`
           : 'Lỗi không xác định';
@@ -388,7 +408,8 @@ const Amenities: React.FC = () => {
         err instanceof AxiosError
           ? err.response?.status === 401
             ? 'Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
-            : err.response?.data?.message || `Không thể xóa tiện ích: ${err.message}`
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            : (err.response?.data as any)?.message || `Không thể xóa tiện ích: ${err.message}`
           : err instanceof Error
           ? `Không thể xóa tiện ích: ${err.message}`
           : 'Lỗi không xác định';
@@ -551,7 +572,9 @@ const Amenities: React.FC = () => {
           ) : filteredAmenities.length === 0 ? (
             <Typography p={2} textAlign="center">
               {searchQuery || activeCategories.length > 0
-                ? `Không tìm thấy tiện ích phù hợp trong danh mục: ${amenityCategories.find((c) => activeCategories.includes(c.id))?.name || 'Tất cả'}`
+                ? `Không tìm thấy tiện ích phù hợp trong danh mục: ${
+                    amenityCategories.find((c) => activeCategories.includes(c.id))?.name || 'Tất cả'
+                  }`
                 : 'Không tìm thấy tiện ích nào.'}
             </Typography>
           ) : (
@@ -576,7 +599,7 @@ const Amenities: React.FC = () => {
                           <TableCell>{amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</TableCell>
                           <TableCell>{amenity.code}</TableCell>
                           <TableCell>{amenity.name}</TableCell>
-                          <TableCell>{amenity.price.toLocaleString('vi-VN')} đ</TableCell>
+                          <TableCell>{vnd(amenity.price)}</TableCell>
                           <TableCell>{amenity.default_quantity}</TableCell>
                           <TableCell>
                             <span style={{ color: amenity.status === 'active' ? '#388E3C' : '#D32F2F', fontWeight: 'bold' }}>
@@ -624,69 +647,82 @@ const Amenities: React.FC = () => {
                             </Box>
                           </TableCell>
                         </TableRow>
+
+                        {/* Chi tiết (giống layout Customer.tsx) */}
                         <TableRow>
                           <TableCell colSpan={7} style={{ padding: 0 }}>
                             <Collapse in={selectedAmenityId === amenity.id}>
-                              <div className="promotion-detail-container">
-                                {editAmenityId === amenity.id && editFormData ? (
-                                  <Box sx={{ p: 2, bgcolor: '#fff' }}>
-                                    <Typography variant="h6" gutterBottom>
-                                      Chỉnh sửa Tiện ích
-                                    </Typography>
-                                    <Box display="flex" flexDirection="column" gap={2}>
-                                      <TextField
-                                        label="Tên"
-                                        name="name"
-                                        value={editFormData.name}
-                                        onChange={handleChange}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.name}
-                                        helperText={validationErrors.name}
-                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
-                                      />
-                                      <TextField
-                                        label="Mô tả"
-                                        name="description"
-                                        value={editFormData.description}
-                                        onChange={handleChange}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        multiline
-                                        rows={3}
-                                        error={!!validationErrors.description}
-                                        helperText={validationErrors.description}
-                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
-                                      />
-                                      <TextField
-                                        label="Giá"
-                                        name="price"
-                                        type="number"
-                                        value={editFormData.price}
-                                        onChange={handleChange}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.price}
-                                        helperText={validationErrors.price}
-                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
-                                      />
-                                      <TextField
-                                        label="Số lượng mặc định"
-                                        name="default_quantity"
-                                        type="number"
-                                        value={editFormData.default_quantity}
-                                        onChange={handleChange}
-                                        fullWidth
-                                        variant="outlined"
-                                        size="small"
-                                        error={!!validationErrors.default_quantity}
-                                        helperText={validationErrors.default_quantity}
-                                        sx={{ bgcolor: '#fff', borderRadius: '4px' }}
-                                      />
-                                      <Box mt={2} display="flex" gap={2}>
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  bgcolor: '#f9f9f9',
+                                  px: 3,
+                                  py: 2,
+                                  borderTop: '1px solid #ddd',
+                                }}
+                              >
+                                <div className="customer-detail-container">
+                                  {editAmenityId === amenity.id && editFormData ? (
+                                    // EDIT MODE
+                                    <>
+                                      <h3>Chỉnh sửa Tiện ích</h3>
+                                      <Box display="flex" flexDirection="column" gap={2}>
+                                        <TextField
+                                          label="Tên"
+                                          name="name"
+                                          value={editFormData.name}
+                                          onChange={handleChange}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          error={!!validationErrors.name}
+                                          helperText={validationErrors.name}
+                                        />
+                                        <TextField
+                                          label="Mô tả"
+                                          name="description"
+                                          value={editFormData.description}
+                                          onChange={handleChange}
+                                          fullWidth
+                                          variant="outlined"
+                                          size="small"
+                                          multiline
+                                          rows={3}
+                                          error={!!validationErrors.description}
+                                          helperText={validationErrors.description}
+                                        />
+                                        <Box display="flex" gap={2}>
+                                          <TextField
+                                            label="Giá"
+                                            name="price"
+                                            type="number"
+                                            value={editFormData.price}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.price}
+                                            helperText={validationErrors.price}
+                                            InputProps={{
+                                              endAdornment: <InputAdornment position="end">đ</InputAdornment>,
+                                            }}
+                                          />
+                                          <TextField
+                                            label="Số lượng mặc định"
+                                            name="default_quantity"
+                                            type="number"
+                                            value={editFormData.default_quantity}
+                                            onChange={handleChange}
+                                            fullWidth
+                                            variant="outlined"
+                                            size="small"
+                                            error={!!validationErrors.default_quantity}
+                                            helperText={validationErrors.default_quantity}
+                                          />
+                                        </Box>
+                                      </Box>
+
+                                      <Box pb={3} mt={2} display="flex" gap={2}>
                                         <Button
                                           variant="contained"
                                           onClick={handleSave}
@@ -705,6 +741,7 @@ const Amenities: React.FC = () => {
                                         >
                                           {editLoading ? <CircularProgress size={24} /> : 'Lưu'}
                                         </Button>
+
                                         <Button
                                           variant="outlined"
                                           color="secondary"
@@ -725,27 +762,80 @@ const Amenities: React.FC = () => {
                                           Hủy
                                         </Button>
                                       </Box>
-                                      {editError && <Typography color="error" mt={1}>{editError}</Typography>}
-                                    </Box>
-                                  </Box>
-                                ) : (
-                                  <Box sx={{ p: 2, bgcolor: '#fff' }}>
-                                    <Typography variant="h6" gutterBottom>
-                                      Thông tin Tiện ích
-                                    </Typography>
-                                    <Box display="grid" gap={1}>
-                                      <Typography><strong>Nhóm:</strong> {amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}</Typography>
-                                      <Typography><strong>Mã:</strong> {amenity.code}</Typography>
-                                      <Typography><strong>Tên:</strong> {amenity.name}</Typography>
-                                      <Typography><strong>Mô tả:</strong> {amenity.description}</Typography>
-                                      <Typography><strong>Biểu tượng:</strong> {amenity.icon ? <img src={amenity.icon} alt={amenity.name} width="24" /> : 'Không có'}</Typography>
-                                      <Typography><strong>Giá:</strong> {amenity.price.toLocaleString('vi-VN')} đ</Typography>
-                                      <Typography><strong>Số lượng mặc định:</strong> {amenity.default_quantity}</Typography>
-                                      <Typography><strong>Trạng thái:</strong> {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}</Typography>
-                                    </Box>
-                                  </Box>
-                                )}
-                              </div>
+                                      {editError && (
+                                        <Typography color="error" mt={1}>
+                                          {editError}
+                                        </Typography>
+                                      )}
+                                    </>
+                                  ) : (
+                                    // VIEW MODE: bảng 2 cột giống Customer.tsx
+                                    <>
+                                      <h3>Thông tin Tiện ích</h3>
+                                      <Table className="customer-detail-table" sx={{ mb: 2 }}>
+                                        <TableBody>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Danh mục:</strong>{' '}
+                                              {amenityCategories.find((c) => c.id === amenity.category_id)?.name || 'Không xác định'}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Mã:</strong> {amenity.code}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Tên:</strong> {amenity.name}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Giá:</strong> {vnd(amenity.price)}
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Số lượng mặc định:</strong> {amenity.default_quantity}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Trạng thái:</strong>{' '}
+                                              <Typography
+                                                component="span"
+                                                sx={{
+                                                  color: amenity.status === 'active' ? '#388E3C' : '#D32F2F',
+                                                  fontWeight: 'bold',
+                                                }}
+                                              >
+                                                {amenity.status === 'active' ? 'Hoạt động' : 'Không hoạt động'}
+                                              </Typography>
+                                            </TableCell>
+                                          </TableRow>
+                                          <TableRow>
+                                            <TableCell>
+                                              <strong>Biểu tượng:</strong>{' '}
+                                              {amenity.icon ? (
+                                                <img
+                                                  src={amenity.icon}
+                                                  alt={amenity.name}
+                                                  width={24}
+                                                  height={24}
+                                                  style={{ objectFit: 'contain', verticalAlign: 'middle' }}
+                                                  onError={(e) => {
+                                                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                  }}
+                                                />
+                                              ) : (
+                                                'Không có'
+                                              )}
+                                            </TableCell>
+                                            <TableCell>
+                                              <strong>Mô tả:</strong> {amenity.description || '—'}
+                                            </TableCell>
+                                          </TableRow>
+                                        </TableBody>
+                                      </Table>
+                                    </>
+                                  )}
+                                </div>
+                              </Box>
                             </Collapse>
                           </TableCell>
                         </TableRow>

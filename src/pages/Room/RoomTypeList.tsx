@@ -150,6 +150,7 @@ const RoomTypesList: React.FC = () => {
         }
 
         const mappedRoomTypes: RoomType[] = roomTypesResponse.data.data.map(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (item: any) => ({
             id: item.id,
             code: item.code || "",
@@ -158,6 +159,7 @@ const RoomTypesList: React.FC = () => {
             max_occupancy: item.max_occupancy ?? 0,
             base_rate: Number(item.base_rate ?? 0),
             hourly_rate: Number(item.hourly_rate ?? 0), // ✅ MAP THEO GIỜ
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             amenities: (item.amenities || []).map((a: any) => ({
               id: a.id,
               name: a.name,
@@ -179,6 +181,7 @@ const RoomTypesList: React.FC = () => {
           err instanceof AxiosError
             ? err.response?.status === 401
               ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               : (err.response?.data as any)?.message ||
                 `Không thể tải dữ liệu: ${err.message}`
             : err instanceof Error
@@ -308,6 +311,7 @@ const RoomTypesList: React.FC = () => {
       );
 
       const updatedFromBE: Amenity[] = (amenRes?.data?.data || []).map(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (a: any) => ({
           id: a.id,
           name: a.name,
@@ -341,6 +345,7 @@ const RoomTypesList: React.FC = () => {
         err instanceof AxiosError
           ? err.response?.status === 401
             ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             : (err.response?.data as any)?.message ||
               `Không thể cập nhật loại phòng: ${err.message}`
           : err instanceof Error
@@ -427,6 +432,7 @@ const RoomTypesList: React.FC = () => {
         err instanceof AxiosError
           ? err.response?.status === 401
             ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             : (err.response?.data as any)?.message ||
               `Không thể xóa loại phòng: ${err.message}`
           : err instanceof Error
@@ -569,6 +575,7 @@ const RoomTypesList: React.FC = () => {
         updated.forEach((a) => {
           newQtyMap[a.id] = Math.max(
             1,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             Number((a as any)?.quantity ?? (a as any)?.pivot?.quantity ?? 1)
           );
         });
@@ -599,6 +606,7 @@ const RoomTypesList: React.FC = () => {
         err instanceof AxiosError
           ? err.response?.status === 401
             ? "Phiên đăng nhập hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại."
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             : (err.response?.data as any)?.message ||
               `Không thể cập nhật tiện nghi: ${err.message}`
           : err instanceof Error
