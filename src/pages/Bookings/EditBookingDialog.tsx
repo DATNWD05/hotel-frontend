@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -30,8 +29,7 @@ interface Room {
     base_rate: string;
   };
   room_type_id?: number;
-  status?: string; // "available" | "booked"
-  // available?: boolean; // nếu muốn giữ theo BE
+  status?: string;
 }
 
 interface Customer {
@@ -100,38 +98,26 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [roomDropdownOpen, setRoomDropdownOpen] = useState<boolean>(false);
   const [isHourly, setIsHourly] = useState<boolean>(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string[]>>({});
 
-  // utils nhỏ để chuẩn hoá
+  const firstError = (key: string): string | undefined =>
+    formErrors?.[key]?.[0];
+
   const toApiDate = (
     value: string,
     opts: { hourly: boolean; kind: "in" | "out" }
   ) => {
     if (!value) return value;
-    // hourly: FE đã là "yyyy-MM-ddTHH:mm" rồi, giữ nguyên
     if (opts.hourly) return value;
-
-    // daily:
-    // - check-in: nên gắn 14:00 để không thua now nếu là hôm nay
-    // - check-out: bắt buộc 12:00 theo BE
-    const isDateOnly = value.length === 10; // "yyyy-MM-dd"
+    const isDateOnly = value.length === 10;
     if (opts.kind === "in") return isDateOnly ? `${value}T14:00` : value;
     if (opts.kind === "out") return isDateOnly ? `${value}T12:00` : value;
     return value;
   };
 
-  // ⬇️ giữ lỗi từ backend (Laravel 422)
-  const [formErrors, setFormErrors] = React.useState<Record<string, string[]>>(
-    {}
-  );
-
-  const firstError = (key: string): string | undefined =>
-    formErrors?.[key]?.[0];
-
   const fetchAvailableRooms = async () => {
     try {
       setRoomsLoading(true);
-
-      // Nếu booking đã bắt đầu trong quá khứ, kẹp check_in_date = max(now, check_in_date cũ)
       const now = new Date();
       const pad = (n: number) => n.toString().padStart(2, "0");
       const toLocalDate = (d: Date) =>
@@ -151,18 +137,13 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         check_in_date: effectiveCheckIn,
         check_out_date: checkOutDate,
         is_hourly: isHourly,
-        // room_type_id: ... // nếu bạn muốn lọc theo loại phòng
       });
 
       const raw = Array.isArray(data) ? data : data?.data || [];
-
-      // Chuẩn hoá dữ liệu để khớp interface Room của FE
       const normalized: Room[] = raw.map((r: any) => ({
         id: r.id,
         room_number: r.room_number,
-        // BE chỉ trả room_type_id -> giữ lại để sau này có thể dùng
         room_type_id: r.room_type_id,
-        // FE mong đợi room_type có name/base_rate -> để undefined, khi render sẽ fallback
         room_type: r.room_type
           ? {
               id: r.room_type.id,
@@ -172,13 +153,9 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               ),
             }
           : undefined,
-        // FE đang trông chờ "status" -> map từ available (true -> "available")
         status: r.available ? "available" : "booked",
-        // giữ lại available nếu cần
-        // available: r.available ?? true,
       }));
 
-      // Thêm các phòng đang thuộc booking hiện tại (để vẫn chọn/sửa được)
       const merged = [...normalized];
       if (bookingInfo) {
         const currentRooms = bookingInfo.rooms || [bookingInfo.room];
@@ -233,7 +210,7 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         : [bookingInfo.room.id];
       setSelectedRoomIds(currentRoomIds);
       setError(null);
-      setFormErrors({}); // clear lỗi cũ khi mở booking mới
+      setFormErrors({});
     }
   }, [bookingInfo]);
 
@@ -249,11 +226,9 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     setSelectedRoomIds((prev) => prev.filter((id) => id !== roomIdToRemove));
   };
 
-
   const handleConfirm = async () => {
     if (!bookingInfo) return;
 
-    // Validate cơ bản
     if (selectedRoomIds.length === 0) {
       setError("Vui lòng chọn ít nhất một phòng hợp lệ");
       toast.error("Vui lòng chọn ít nhất một phòng hợp lệ");
@@ -275,11 +250,9 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       return;
     }
 
-    // Chuẩn hoá theo rule BE
     const ciForApi = toApiDate(checkInDate, { hourly: isHourly, kind: "in" });
     const coForApi = toApiDate(checkOutDate, { hourly: isHourly, kind: "out" });
 
-    // Re-validate với giá trị đã chuẩn hoá
     const ci = new Date(ciForApi);
     const co = new Date(coForApi);
     const today = new Date();
@@ -315,10 +288,8 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
     setLoading(true);
     setError(null);
     setFormErrors({});
-    setLoading(true);
 
     try {
-      // so sánh thay đổi
       const originalCheckIn = format(
         parseISO(bookingInfo.check_in_date),
         "yyyy-MM-dd"
@@ -341,18 +312,16 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       const currentRoomIds = selectedRoomIds.slice().sort((a, b) => a - b);
       const roomsChanged =
         JSON.stringify(originalRoomIds) !== JSON.stringify(currentRoomIds);
-        const depositChanged =
+      const depositChanged =
         Number.parseFloat(String(bookingInfo.deposit_amount)) !==
         Number.parseFloat(String(depositAmount));
 
-      // không có gì đổi -> báo và dừng
       if (!depositChanged && !roomsChanged && !ciChanged && !coChanged) {
         toast.info("Không có thay đổi nào để cập nhật");
         setLoading(false);
         return;
       }
 
-      // validate CÓ ĐIỀU KIỆN: chỉ check thứ gì đang thay đổi
       if (roomsChanged && selectedRoomIds.length === 0) {
         setError("Vui lòng chọn ít nhất một phòng hợp lệ");
         toast.error("Vui lòng chọn ít nhất một phòng hợp lệ");
@@ -387,14 +356,12 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         }
       }
 
-      // build payload: CHỈ gửi field đã đổi
       const updateData: any = {
         room_ids: selectedRoomIds,
         check_in_date: ciForApi,
         check_out_date: coForApi,
         is_hourly: isHourly,
       };
-      // Chỉ gửi deposit khi có giá trị
       if (depositAmount !== "")
         updateData.deposit_amount = Number(depositAmount);
 
@@ -414,9 +381,12 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         err?.response?.data?.message ||
         err?.response?.data?.error ||
         "Cập nhật đặt phòng thất bại";
-      console.error("Error updating booking:", err?.response || err);
-      setError(msg);
-      toast.error(msg);
+      if (err?.response?.status === 422 && err?.response?.data?.errors) {
+        setFormErrors(err.response.data.errors);
+      } else {
+        setError(msg);
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -456,7 +426,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
         )}
         {bookingInfo ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            {/* Loại đặt phòng */}
             <Paper
               sx={{
                 p: 2,
@@ -500,7 +469,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               </Box>
             </Paper>
 
-            {/* Thời gian */}
             <Paper
               sx={{
                 p: 2,
@@ -531,6 +499,8 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                     fullWidth
                     size="small"
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                    error={!!firstError("check_in_date")}
+                    helperText={firstError("check_in_date")}
                   />
                 </Box>
                 <Box sx={{ flex: 1 }}>
@@ -545,12 +515,13 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                     fullWidth
                     size="small"
                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                    error={!!firstError("check_out_date")}
+                    helperText={firstError("check_out_date")}
                   />
                 </Box>
               </Box>
             </Paper>
 
-            {/* Phòng */}
             <Paper
               sx={{
                 p: 2,
@@ -573,7 +544,13 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                         <Chip
                           key={roomId}
                           label={
-                            room ? getRoomDisplayName(room) : `Phòng ${roomId}`
+                            room
+                              ? `${getRoomDisplayName(
+                                  room
+                                )} - ${Number.parseInt(
+                                  room.room_type?.base_rate ?? "0"
+                                ).toLocaleString()} VNĐ`
+                              : `Phòng ${roomId}`
                           }
                           onDelete={() => removeRoom(roomId)}
                           sx={{
@@ -666,14 +643,13 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                                 </Typography>
                                 <Typography variant="body2" color="#6b7280">
                                   <b>Giá:</b>{" "}
-                                  {(() => {
-                                    const rate = Number.parseInt(
-                                      room.room_type?.base_rate ?? "0"
-                                    );
-                                    return rate > 0
-                                      ? `${rate.toLocaleString()} VNĐ`
-                                      : "—";
-                                  })()}
+                                  {room.room_type?.base_rate
+                                    ? `${Number.parseInt(
+                                        room.room_type.base_rate
+                                      ).toLocaleString()} VNĐ/${
+                                        isHourly ? "giờ" : "đêm"
+                                      }`
+                                    : "Không có thông tin giá"}
                                 </Typography>
                                 <Typography variant="body2" color="#6b7280">
                                   <b>Trạng thái:</b>{" "}
@@ -695,7 +671,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
               </Box>
             </Paper>
 
-            {/* Đặt cọc */}
             <Paper
               sx={{
                 p: 2,
@@ -721,6 +696,8 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
                 size="small"
                 placeholder="0 VNĐ"
                 sx={{ "& .MuiOutlinedInput-root": { borderRadius: 2 } }}
+                error={!!firstError("deposit_amount")}
+                helperText={firstError("deposit_amount")}
               />
             </Paper>
           </Box>

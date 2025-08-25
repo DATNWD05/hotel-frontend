@@ -245,11 +245,8 @@ const BookingManagement = () => {
             id: Number(room.id),
             services: (room.services || []).map((s: any) => ({
               ...s,
-              // ID thật để gọi API xóa (ưu tiên pivot)
               service_id: s.service_id ?? s.pivot?.service_id ?? s.id,
-              // Phòng gắn với dịch vụ
               room_id: s.room_id ?? s.pivot?.room_id ?? Number(room.id),
-              // Số lượng & total an toàn
               quantity: s.quantity ?? s.pivot?.quantity ?? 1,
               total:
                 s.total ??
@@ -477,7 +474,7 @@ const BookingManagement = () => {
         if (response.status === 200) {
           const newServices = services.map(({ service, quantity, note }) => ({
             ...service,
-            id: service.id, // giữ nguyên id gốc của dịch vụ
+            id: service.id,
             service_id: service.service_id ?? service.id,
             room_id: roomId,
             quantity,
@@ -581,6 +578,15 @@ const BookingManagement = () => {
   );
 
   const handleOpenRemoveServiceDialog = (roomId: number, serviceId: number) => {
+    if (booking?.status === "Checked-out" || booking?.status === "Cancelled") {
+      setSnackbarMessage(
+        booking.status === "Checked-out"
+          ? "Không thể xóa dịch vụ vì đơn đặt phòng đã được trả phòng."
+          : "Không thể xóa dịch vụ vì đơn đặt phòng đã bị hủy."
+      );
+      setSnackbarOpen(true);
+      return;
+    }
     setServiceToRemove({ roomId, serviceId });
     setOpenRemoveServiceDialog(true);
   };
@@ -593,64 +599,6 @@ const BookingManagement = () => {
     );
     setOpenRemoveServiceDialog(false);
     setServiceToRemove(null);
-  };
-
-  const handleCheckIn = async () => {
-    if (booking?.status !== "Confirmed") {
-      setSnackbarMessage("Chỉ có thể check-in cho đơn đặt phòng đã xác nhận.");
-      setSnackbarOpen(true);
-      return;
-    }
-
-    try {
-      const response = await api.post(`/check-in/${bookingId}`);
-      if (response.status === 200) {
-        setBooking((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: "Checked-in",
-                check_in_at: new Date().toISOString(),
-              }
-            : prev
-        );
-        setSnackbarMessage("Check-in thành công!");
-        setSnackbarOpen(true);
-      }
-    } catch (error: any) {
-      console.error("Lỗi khi check-in:", error);
-      setSnackbarMessage("Lỗi khi check-in. Vui lòng thử lại.");
-      setSnackbarOpen(true);
-    }
-  };
-
-  const handleCheckOut = async () => {
-    if (booking?.status !== "Checked-in") {
-      setSnackbarMessage("Chỉ có thể check-out cho đơn đặt phòng đang ở.");
-      setSnackbarOpen(true);
-      return;
-    }
-
-    try {
-      const response = await api.get(`/check-out/${bookingId}`);
-      if (response.status === 200) {
-        setBooking((prev) =>
-          prev
-            ? {
-                ...prev,
-                status: "Checked-out",
-                check_out_at: new Date().toISOString(),
-              }
-            : prev
-        );
-        setSnackbarMessage("Check-out thành công!");
-        setSnackbarOpen(true);
-      }
-    } catch (error: any) {
-      console.error("Lỗi khi check-out:", error);
-      setSnackbarMessage("Lỗi khi check-out. Vui lòng thử lại.");
-      setSnackbarOpen(true);
-    }
   };
 
   const handleCccdImageChange = async (
@@ -1177,7 +1125,12 @@ const BookingManagement = () => {
                     </span>
                     <button
                       title="Xóa dịch vụ"
-                      className="icon-btn icon-btn-danger"
+                      className={`icon-btn icon-btn-danger ${
+                        booking?.status === "Checked-out" ||
+                        booking?.status === "Cancelled"
+                          ? "icon-btn-disabled"
+                          : ""
+                      }`}
                       onClick={() =>
                         handleOpenRemoveServiceDialog(
                           room.id,
@@ -1185,6 +1138,10 @@ const BookingManagement = () => {
                             service.pivot?.service_id ??
                             service.id
                         )
+                      }
+                      disabled={
+                        booking?.status === "Checked-out" ||
+                        booking?.status === "Cancelled"
                       }
                     >
                       <Trash2 className="icon-small" />
@@ -1537,28 +1494,6 @@ const BookingManagement = () => {
                     <span className="payment-amount payment-amount-large">
                       {formatCurrency(calculateGrandTotal().toString())}
                     </span>
-                  </div>
-                  <div className="payment-actions">
-                    {booking.status === "Confirmed" && (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleCheckIn}
-                        className="btn-primary"
-                      >
-                        Check-in
-                      </Button>
-                    )}
-                    {booking.status === "Checked-in" && (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleCheckOut}
-                        className="btn-primary"
-                      >
-                        Check-out
-                      </Button>
-                    )}
                   </div>
                 </div>
               </div>

@@ -561,13 +561,16 @@ export default function HotelBooking() {
       );
       const diffHours =
         (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60);
+      const diffDays = Math.ceil(
+        (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
       if (bookingData.is_hourly && diffHours > 24) {
         errors.booking.dateRange =
           "Thời gian lưu trú theo giờ không được vượt quá 24 giờ";
-      } else if (!bookingData.is_hourly && diffHours < 24) {
+      } else if (!bookingData.is_hourly && diffDays < 1) {
         errors.booking.dateRange =
           "Thời gian lưu trú theo ngày phải ít nhất 1 đêm";
-      } else if (!bookingData.is_hourly && diffHours > 30 * 24) {
+      } else if (!bookingData.is_hourly && diffDays > 30) {
         errors.booking.dateRange =
           "Thời gian lưu trú theo ngày không được vượt quá 30 ngày";
       } else {
@@ -633,8 +636,10 @@ export default function HotelBooking() {
     if (bookingData.is_hourly) {
       return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
     }
-    const time = isCheckIn ? "14:00:00" : "12:00:00";
-    return dayjs(date).format(`YYYY-MM-DD ${time}`);
+    if (!isCheckIn) {
+      return dayjs(date).format("YYYY-MM-DD 12:00:00");
+    }
+    return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
   };
 
   const calculateDuration = () => {

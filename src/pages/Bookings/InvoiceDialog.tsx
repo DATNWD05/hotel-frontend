@@ -1,7 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useMemo } from "react";
 import {
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  Button, Box, Paper, Typography, Divider, CircularProgress, Chip, GlobalStyles,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Box,
+  Paper,
+  Typography,
+  Divider,
+  CircularProgress,
+  Chip,
+  GlobalStyles,
 } from "@mui/material";
 import { format, parseISO, isValid } from "date-fns";
 import numeral from "numeral";
@@ -10,7 +21,12 @@ import { toast } from "react-toastify";
 /* ===== Numeral locale VN ===== */
 numeral.register("locale", "vi", {
   delimiters: { thousands: ".", decimal: "," },
-  abbreviations: { thousand: "k", million: "tr", billion: "tỷ", trillion: "ng" },
+  abbreviations: {
+    thousand: "k",
+    million: "tr",
+    billion: "tỷ",
+    trillion: "ng",
+  },
   ordinal: () => "º",
   currency: { symbol: "đ" },
 });
@@ -37,10 +53,16 @@ interface LegacyInvoice {
 
 type LineBase = { total: number };
 export type ServiceLine = LineBase & {
-  quantity: number; price: number; service_id: number; name: string;
+  quantity: number;
+  price: number;
+  service_id: number;
+  name: string;
 };
 export type AmenityLine = LineBase & {
-  quantity: number; price: number; amenity_id: number; amenity_name: string;
+  quantity: number;
+  price: number;
+  amenity_id: number;
+  amenity_name: string;
   room_number?: string | number;
 };
 
@@ -88,7 +110,11 @@ interface InvoiceDialogProps {
 
 /* ===== Helpers ===== */
 const isPayload = (x: any): x is InvoicePayload =>
-  !!x && typeof x === "object" && "invoice" in x && "meta" in x && "totals" in x;
+  !!x &&
+  typeof x === "object" &&
+  "invoice" in x &&
+  "meta" in x &&
+  "totals" in x;
 
 const formatCurrency = (value?: string | number | null): string => {
   const n = Number(value);
@@ -113,13 +139,19 @@ type StatusColor = "default" | "warning" | "success" | "info" | "error";
 type StatusChip = { label: string; color: StatusColor };
 const getStatusChip = (status: string): StatusChip => {
   switch ((status || "").toLowerCase()) {
-    case "pending":    return { label: "Chờ xác nhận", color: "warning" };
-    case "confirmed":  return { label: "Đã xác nhận",  color: "success" };
-    case "checked-in": return { label: "Đã nhận phòng", color: "info" };
-    case "checked-out":return { label: "Đã trả phòng",  color: "default" };
+    case "pending":
+      return { label: "Chờ xác nhận", color: "warning" };
+    case "confirmed":
+      return { label: "Đã xác nhận", color: "success" };
+    case "checked-in":
+      return { label: "Đã nhận phòng", color: "info" };
+    case "checked-out":
+      return { label: "Đã trả phòng", color: "default" };
     case "canceled":
-    case "cancelled":  return { label: "Đã hủy",        color: "error" };
-    default:           return { label: "Không xác định", color: "default" };
+    case "cancelled":
+      return { label: "Đã hủy", color: "error" };
+    default:
+      return { label: "Không xác định", color: "default" };
   }
 };
 
@@ -146,7 +178,10 @@ type ViewModel = {
 };
 
 /* ===== Small UI pieces ===== */
-const SectionCard: React.FC<{ title: React.ReactNode; children: React.ReactNode }> = ({ title, children }) => (
+const SectionCard: React.FC<{
+  title: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ title, children }) => (
   <Paper
     elevation={0}
     sx={{
@@ -166,14 +201,37 @@ const SectionCard: React.FC<{ title: React.ReactNode; children: React.ReactNode 
 const KVRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2 }}>
     <Typography fontWeight={700}>{label}:</Typography>
-    <Typography sx={{ textAlign: "right", wordBreak: "break-word" }}>{value}</Typography>
+    <Typography sx={{ textAlign: "right", wordBreak: "break-word" }}>
+      {value}
+    </Typography>
   </Box>
 );
 
-const MoneyRow = ({ label, value, isDiscount = false }: { label: string; value: string; isDiscount?: boolean }) => (
-  <Box sx={{ display: "flex", justifyContent: "space-between", py: 1, borderBottom: "1px solid #eee" }}>
+const MoneyRow = ({
+  label,
+  value,
+  isDiscount = false,
+}: {
+  label: string;
+  value: string;
+  isDiscount?: boolean;
+}) => (
+  <Box
+    sx={{
+      display: "flex",
+      justifyContent: "space-between",
+      py: 1,
+      borderBottom: "1px solid #eee",
+    }}
+  >
     <Typography fontWeight={700}>{label}:</Typography>
-    <Typography sx={{ fontWeight: 600, color: isDiscount ? "#4caf50" : "inherit", fontVariantNumeric: "tabular-nums" }}>
+    <Typography
+      sx={{
+        fontWeight: 600,
+        color: isDiscount ? "#4caf50" : "inherit",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
       {value}
     </Typography>
   </Box>
@@ -198,9 +256,15 @@ const ServiceGrid: React.FC<{ items: ServiceLine[] }> = ({ items }) => {
         }}
       >
         <Typography variant="body2">Tên dịch vụ</Typography>
-        <Typography variant="body2" sx={{ textAlign: "right" }}>SL</Typography>
-        <Typography variant="body2" sx={{ textAlign: "right" }}>Đơn giá</Typography>
-        <Typography variant="body2" sx={{ textAlign: "right" }}>Thành tiền</Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>
+          SL
+        </Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>
+          Đơn giá
+        </Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>
+          Thành tiền
+        </Typography>
       </Box>
 
       {/* Rows */}
@@ -220,7 +284,9 @@ const ServiceGrid: React.FC<{ items: ServiceLine[] }> = ({ items }) => {
               {s.name}
             </Typography>
             <Typography sx={{ textAlign: "right" }}>{s.quantity}</Typography>
-            <Typography sx={{ textAlign: "right" }}>{formatCurrency(s.price)}</Typography>
+            <Typography sx={{ textAlign: "right" }}>
+              {formatCurrency(s.price)}
+            </Typography>
             <Typography sx={{ textAlign: "right", fontWeight: 700 }}>
               {formatCurrency(s.total)}
             </Typography>
@@ -255,10 +321,20 @@ const AmenityGrid: React.FC<{ items: AmenityLine[] }> = ({ items }) => {
         }}
       >
         <Typography variant="body2">Tên tiện nghi</Typography>
-        {hasRoom && <Typography variant="body2" sx={{ textAlign: "center" }}>Phòng</Typography>}
-        <Typography variant="body2" sx={{ textAlign: "right" }}>SL</Typography>
-        <Typography variant="body2" sx={{ textAlign: "right" }}>Đơn giá</Typography>
-        <Typography variant="body2" sx={{ textAlign: "right" }}>Thành tiền</Typography>
+        {hasRoom && (
+          <Typography variant="body2" sx={{ textAlign: "center" }}>
+            Phòng
+          </Typography>
+        )}
+        <Typography variant="body2" sx={{ textAlign: "right" }}>
+          SL
+        </Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>
+          Đơn giá
+        </Typography>
+        <Typography variant="body2" sx={{ textAlign: "right" }}>
+          Thành tiền
+        </Typography>
       </Box>
 
       {/* Rows */}
@@ -283,7 +359,9 @@ const AmenityGrid: React.FC<{ items: AmenityLine[] }> = ({ items }) => {
               </Typography>
             )}
             <Typography sx={{ textAlign: "right" }}>{a.quantity}</Typography>
-            <Typography sx={{ textAlign: "right" }}>{formatCurrency(a.price)}</Typography>
+            <Typography sx={{ textAlign: "right" }}>
+              {formatCurrency(a.price)}
+            </Typography>
             <Typography sx={{ textAlign: "right", fontWeight: 700 }}>
               {formatCurrency(a.total)}
             </Typography>
@@ -436,7 +514,11 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                 textAlign: "center",
               }}
             >
-              <Typography variant="h5" fontWeight={800} sx={{ color: "#0288d1", mb: 0.5 }}>
+              <Typography
+                variant="h5"
+                fontWeight={800}
+                sx={{ color: "#0288d1", mb: 0.5 }}
+              >
                 {vm.code}
               </Typography>
               <Typography variant="body1" sx={{ color: "#666" }}>
@@ -461,13 +543,19 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                       size="small"
                       label={vm.statusChip.label}
                       color={vm.statusChip.color}
-                      variant={vm.statusChip.color === "default" ? "outlined" : "filled"}
+                      variant={
+                        vm.statusChip.color === "default"
+                          ? "outlined"
+                          : "filled"
+                      }
                     />
                   }
                 />
                 <KVRow label="Check-in" value={vm.checkIn} />
                 <KVRow label="Check-out" value={vm.checkOut} />
-                {vm.durationText && <KVRow label="Hình thức tính" value={vm.durationText} />}
+                {vm.durationText && (
+                  <KVRow label="Hình thức tính" value={vm.durationText} />
+                )}
               </Box>
             </SectionCard>
 
@@ -503,11 +591,23 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
             {/* Chi tiết thanh toán */}
             <SectionCard title="💰 Chi tiết thanh toán">
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                <MoneyRow label="Tiền phòng" value={formatCurrency(vm.amounts.room)} />
-                <MoneyRow label="Tiền dịch vụ" value={formatCurrency(vm.amounts.service)} />
-                <MoneyRow label="Tiền tiện nghi" value={formatCurrency(vm.amounts.amenity)} />
+                <MoneyRow
+                  label="Tiền phòng"
+                  value={formatCurrency(vm.amounts.room)}
+                />
+                <MoneyRow
+                  label="Tiền dịch vụ"
+                  value={formatCurrency(vm.amounts.service)}
+                />
+                <MoneyRow
+                  label="Tiền tiện nghi"
+                  value={formatCurrency(vm.amounts.amenity)}
+                />
                 <MoneyRow label="Giảm giá" value={discountText} isDiscount />
-                <MoneyRow label="Tiền đặt cọc" value={formatCurrency(vm.amounts.deposit)} />
+                <MoneyRow
+                  label="Tiền đặt cọc"
+                  value={formatCurrency(vm.amounts.deposit)}
+                />
 
                 <Divider sx={{ my: 1 }} />
                 <Box
@@ -523,10 +623,18 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
                     fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  <Typography variant="h6" fontWeight={800} sx={{ color: "#0288d1" }}>
+                  <Typography
+                    variant="h6"
+                    fontWeight={800}
+                    sx={{ color: "#0288d1" }}
+                  >
                     TỔNG CỘNG:
                   </Typography>
-                  <Typography variant="h6" fontWeight={800} sx={{ color: "#0288d1" }}>
+                  <Typography
+                    variant="h6"
+                    fontWeight={800}
+                    sx={{ color: "#0288d1" }}
+                  >
                     {formatCurrency(vm.amounts.total)}
                   </Typography>
                 </Box>
@@ -551,7 +659,16 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2, justifyContent: "space-between" }}>
-        <Button onClick={onClose} color="inherit" sx={{ fontWeight: 700, textTransform: "none", borderRadius: 2, fontSize: 15 }}>
+        <Button
+          onClick={onClose}
+          color="inherit"
+          sx={{
+            fontWeight: 700,
+            textTransform: "none",
+            borderRadius: 2,
+            fontSize: 15,
+          }}
+        >
           Đóng
         </Button>
         <Button
@@ -560,7 +677,13 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({
           color="primary"
           onClick={onPrintInvoice}
           disabled={invoiceLoading}
-          sx={{ borderRadius: 2, px: 3, fontWeight: 800, textTransform: "none", fontSize: 15 }}
+          sx={{
+            borderRadius: 2,
+            px: 3,
+            fontWeight: 800,
+            textTransform: "none",
+            fontSize: 15,
+          }}
         >
           {invoiceLoading ? <CircularProgress size={24} /> : "🖨️ In hóa đơn"}
         </Button>

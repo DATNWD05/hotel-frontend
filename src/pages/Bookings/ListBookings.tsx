@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useRef } from "react";
 import {
   Table,
@@ -48,11 +49,11 @@ interface Invoice {
   invoice_code: string;
   booking_id: number;
   issued_date: string;
-  room_amount: string;
-  service_amount: string;
-  discount_amount: string;
-  deposit_amount: string;
-  total_amount: string;
+  room_amount: number; // đổi string -> number
+  service_amount: number; // đổi string -> number
+  discount_amount: number; // đổi string -> number
+  deposit_amount: number; // đổi string -> number
+  total_amount: number; // đổi string -> number
   created_at: string;
   updated_at: string;
   booking: {
@@ -65,10 +66,10 @@ interface Invoice {
     check_out_at: string;
     status: string;
     note: string | null;
-    deposit_amount: string;
-    raw_total: string;
-    discount_amount: string;
-    total_amount: string;
+    deposit_amount: number; // đổi string -> number
+    raw_total: number; // đổi string -> number
+    discount_amount: number; // đổi string -> number
+    total_amount: number; // đổi string -> number
     created_at: string;
     updated_at: string;
   };
@@ -526,12 +527,39 @@ const ListBookings: React.FC = () => {
       setInvoiceLoading(true);
       setSelectedBookingId(bookingId);
       setOpenInvoiceDialog(true);
-      const { data } = await api.get(`/invoices/${bookingId}`);
-      setInvoiceInfo(data);
+
+      // 1) Thử endpoint theo booking_id (nếu BE đã có)
+      try {
+        const { data } = await api.get(`/invoices/booking/${bookingId}`);
+        setInvoiceInfo(data);
+        return; // xong sớm
+      } catch (err: any) {
+        // tiếp tục fallback ở dưới
+        if (!(err?.response?.status === 404 || err?.response?.status === 405)) {
+          throw err;
+        }
+      }
+
+      // 2) Fallback FE-only: lấy list rồi tìm invoice theo booking_id
+      const listRes = await api.get(`/invoices`);
+      const invoices: any[] = Array.isArray(listRes.data)
+        ? listRes.data
+        : Array.isArray(listRes.data?.data)
+        ? listRes.data.data
+        : [];
+
+      const inv = invoices.find(
+        (i) => Number(i.booking_id) === Number(bookingId)
+      );
+      if (!inv?.id) {
+        throw new Error("Không có hóa đơn cho booking này");
+      }
+
+      // Gọi chi tiết theo invoice_id (route hiện tại của bạn)
+      const detailRes = await api.get(`/invoices/${inv.id}`);
+      setInvoiceInfo(detailRes.data);
     } catch (error) {
       console.error("Lỗi khi lấy thông tin hóa đơn:", error);
-      setError("Không thể tải thông tin hóa đơn");
-      setSnackbarOpen(true);
       toast.error("Không thể tải thông tin hóa đơn");
       setOpenInvoiceDialog(false);
     } finally {

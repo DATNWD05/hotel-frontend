@@ -176,15 +176,14 @@ const AddRoomType: React.FC = () => {
             </span>
           </div>
         )}
-
-        <h3 className="text-3xl font-bold text-gray-800 mb-4 border-b-4 border-blue-500 inline-block pb-1">
+        <h3 className="inline-block pb-1 mb-4 text-3xl font-bold text-gray-800 border-b-4 border-blue-500">
           Thêm Loại Phòng
         </h3>
 
         <div className="card">
           <div className="tab-content">
             {/* Row 1: code + name */}
-            <div className="form-grid form-grid-2 mb-4">
+            <div className="mb-4 form-grid form-grid-2">
               <div className="form-group">
                 <label htmlFor="code" className="form-label required">
                   Mã loại phòng
@@ -233,7 +232,7 @@ const AddRoomType: React.FC = () => {
             </div>
 
             {/* Row 2: max_occupancy + base_rate */}
-            <div className="form-grid form-grid-2 mb-4">
+            <div className="mb-4 form-grid form-grid-2">
               <div className="form-group">
                 <label htmlFor="max_occupancy" className="form-label required">
                   Số người tối đa
@@ -286,7 +285,7 @@ const AddRoomType: React.FC = () => {
             </div>
 
             {/* Row 3: hourly_rate + description (side-by-side) */}
-            <div className="form-grid form-grid-2 mb-4">
+            <div className="mb-4 form-grid form-grid-2">
               {/* Hourly rate */}
               <div className="form-group">
                 <label htmlFor="hourly_rate" className="form-label">

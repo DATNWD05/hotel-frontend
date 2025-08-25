@@ -1,4 +1,4 @@
-  /* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
   import React, { useState, useEffect, useCallback } from "react";
   import {
     Box,
@@ -101,7 +101,6 @@
     message?: string;
     error?: string;
   }
-
   interface CreateOvertimeResponse {
     created: Array<{
       employee_id: number;
@@ -202,7 +201,6 @@
       }
     }
   }
-
   const overtimeApi = new OvertimeApiService();
 
   // ==================== THEME ====================
@@ -511,7 +509,6 @@
         setStartTime("");
         setEndTime("");
       }
-
       setIsModalOpen(true);
     };
 
