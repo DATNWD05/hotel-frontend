@@ -758,7 +758,7 @@
             {/* Data Table */}
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom sx={{ padding: "10px 12px" }}>
                   Danh sách đăng ký tăng ca
                 </Typography>
 
