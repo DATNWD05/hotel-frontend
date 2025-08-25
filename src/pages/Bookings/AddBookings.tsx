@@ -577,6 +577,7 @@ export default function HotelBooking() {
     value: string | number | boolean | ""
   ) => {
     const errors = { ...validationErrors };
+    const now = new Date();
 
     switch (field) {
       case "checkInDate": {
@@ -584,7 +585,6 @@ export default function HotelBooking() {
           errors.booking.checkInDate = "Vui lòng chọn thời gian nhận phòng";
         } else {
           const checkInDate = new Date(formatDateTime(value as string, true));
-          const now = new Date();
           if (checkInDate < now) {
             errors.booking.checkInDate =
               "Thời gian nhận phòng không thể là quá khứ";
@@ -602,8 +602,6 @@ export default function HotelBooking() {
             formatDateTime(bookingData.checkInDate, true)
           );
           const checkOutDate = new Date(formatDateTime(value as string, false));
-          const now = new Date();
-
           if (checkOutDate <= checkInDate) {
             errors.booking.checkOutDate =
               "Thời gian trả phòng phải sau thời gian nhận phòng";
@@ -727,7 +725,6 @@ export default function HotelBooking() {
     if (!date) return "";
 
     if (bookingData.is_hourly) {
-      // Đặt theo giờ: giữ nguyên giờ người dùng chọn
       return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
     }
 
@@ -1206,14 +1203,6 @@ export default function HotelBooking() {
 
   return (
     <div className="booking-container">
-      {/* Tắt animation cho Autocomplete giống CheckoutDialog */}
-      <GlobalStyles
-        styles={{
-          ".MuiAutocomplete-popper, .MuiAutocomplete-listbox, .MuiAutocomplete-paper":
-            { transition: "none !important", animation: "none !important" },
-        }}
-      />
-
       <div className="booking-wrapper">
         {submitStatus && (
           <div
@@ -1323,7 +1312,7 @@ export default function HotelBooking() {
                     <div className="mb-4 form-grid form-grid-2">
                       <div className="form-group">
                         <label className="form-label required">Giới tính</label>
-                        <SelectCompact
+                        <CustomSelect
                           id="gender"
                           value={bookingData.customer.gender}
                           onChange={(value) =>
@@ -1520,7 +1509,7 @@ export default function HotelBooking() {
                       <label className="form-label required">
                         Loại đặt phòng
                       </label>
-                      <SelectCompact
+                      <CustomSelect
                         id="is_hourly"
                         value={bookingData.is_hourly ? "hourly" : "daily"}
                         onChange={(value) =>
@@ -1721,7 +1710,6 @@ export default function HotelBooking() {
                                 />
                               )}
                           </div>
-
                           <div className="form-group">
                             <label className="form-label required">
                               Loại phòng
@@ -1731,7 +1719,7 @@ export default function HotelBooking() {
                                 Đang tải loại phòng...
                               </div>
                             ) : (
-                              <SelectCompact
+                              <CustomSelect
                                 id={`room-type-${room.id}`}
                                 value={room.type}
                                 onChange={(value) =>
@@ -1745,7 +1733,7 @@ export default function HotelBooking() {
                                     bookingData.is_hourly
                                       ? type.hourly_rate || "0"
                                       : type.base_rate
-                                  ).toLocaleString()} VND/${
+                                  ).toLocaleString()} VNĐ/${
                                     bookingData.is_hourly ? "giờ" : "đêm"
                                   } (Tối đa ${type.max_occupancy} khách)`,
                                 }))}
@@ -1771,7 +1759,6 @@ export default function HotelBooking() {
                                 />
                               )}
                           </div>
-
                           <div className="form-group">
                             <label className="form-label required">
                               Số phòng
@@ -1781,7 +1768,7 @@ export default function HotelBooking() {
                                 Đang tải số phòng...
                               </div>
                             ) : (
-                              <SelectCompact
+                              <CustomSelect
                                 id={`room-number-${room.id}`}
                                 value={room.number}
                                 onChange={(value) =>
@@ -1817,7 +1804,7 @@ export default function HotelBooking() {
                           <div className="price-info price-info-green">
                             <p>
                               <strong>Giá phòng:</strong>{" "}
-                              {room.price.toLocaleString()} VND/
+                              {room.price.toLocaleString()} VNĐ/
                               {bookingData.is_hourly ? "giờ" : "đêm"}
                             </p>
                           </div>
@@ -1881,7 +1868,7 @@ export default function HotelBooking() {
                           0
                         )
                         .toLocaleString()}{" "}
-                      VND
+                      VNĐ
                     </span>
                   </div>
                   <div className="summary-row">
@@ -1890,12 +1877,12 @@ export default function HotelBooking() {
                       {bookingData.depositAmount
                         ? bookingData.depositAmount.toLocaleString()
                         : "0"}{" "}
-                      VND
+                      VNĐ
                     </span>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Khuyến mãi</label>
-                    <SelectCompact
+                    <CustomSelect
                       id="promotion"
                       value={
                         promotions
@@ -1912,7 +1899,7 @@ export default function HotelBooking() {
                           label: `${promo.code} - ${promo.description} (${
                             promo.discount_type === "percent"
                               ? `${promo.discount_value}%`
-                              : `${promo.discount_value.toLocaleString()} VND`
+                              : `${promo.discount_value.toLocaleString()} VNĐ`
                           }, Hết hạn: ${new Date(
                             promo.end_date
                           ).toLocaleDateString("vi-VN")}, Còn ${
@@ -1933,7 +1920,7 @@ export default function HotelBooking() {
                   {bookingData.promotion_code && (
                     <div className="summary-row">
                       <span>Giảm giá:</span>
-                      <span>-{calculateDiscount().toLocaleString()} VND</span>
+                      <span>-{calculateDiscount().toLocaleString()} VNĐ</span>
                     </div>
                   )}
                 </div>
@@ -1943,7 +1930,7 @@ export default function HotelBooking() {
                 <div className="summary-total">
                   <span>Tổng cộng:</span>
                   <span className="total-amount">
-                    {calculateTotal().toLocaleString()} VND
+                    {calculateTotal().toLocaleString()} VNĐ
                   </span>
                 </div>
 
@@ -1981,7 +1968,7 @@ export default function HotelBooking() {
                               {(
                                 room.price * calculateDuration()
                               ).toLocaleString()}{" "}
-                              VND
+                              VNĐ
                             </div>
                           )
                       )}
