@@ -487,22 +487,11 @@ export default function HotelBooking() {
           errors.booking.checkInDate = "Vui lòng chọn thời gian nhận phòng";
         } else {
           const checkInDate = new Date(formatDateTime(value as string, true));
-          if (!bookingData.is_hourly) {
-            const checkInDay = dayjs(checkInDate).startOf("day");
-            const currentDay = dayjs(now).startOf("day");
-            if (checkInDay.isBefore(currentDay)) {
-              errors.booking.checkInDate =
-                "Ngày nhận phòng không thể là quá khứ";
-            } else {
-              delete errors.booking.checkInDate;
-            }
+          if (checkInDate < now) {
+            errors.booking.checkInDate =
+              "Thời gian nhận phòng không thể là quá khứ";
           } else {
-            if (checkInDate < now) {
-              errors.booking.checkInDate =
-                "Thời gian nhận phòng không thể là quá khứ";
-            } else {
-              delete errors.booking.checkInDate;
-            }
+            delete errors.booking.checkInDate;
           }
         }
         break;
@@ -647,8 +636,10 @@ export default function HotelBooking() {
     if (bookingData.is_hourly) {
       return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
     }
-    const time = isCheckIn ? "14:00:00" : "12:00:00";
-    return dayjs(date).format(`YYYY-MM-DD ${time}`);
+    if (!isCheckIn) {
+      return dayjs(date).format("YYYY-MM-DD 12:00:00");
+    }
+    return dayjs(date).format("YYYY-MM-DD HH:mm:ss");
   };
 
   const calculateDuration = () => {
