@@ -681,7 +681,7 @@ const OvertimeManagement: React.FC = () => {
           <Card sx={{ mb: 3 }}>
             <CardContent>
               <Grid container spacing={3} alignItems="end">
-                <Grid item xs={12} md={4}>
+                <Grid item xs={12} md={4} mt={2} pb={2} >
                   <DatePicker
                     label="Lọc theo ngày"
                     value={filterDate}
@@ -709,7 +709,7 @@ const OvertimeManagement: React.FC = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid item xs={12} md={6} mt={2} pb={2}>
                   <Box
                     display="flex"
                     gap={2}
