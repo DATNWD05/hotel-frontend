@@ -132,7 +132,9 @@ const getStatusView = (status: string) => {
   if (k === "cancelled") return { text: "Đã hủy", color: "#C62828" };
   return { text: status || "Không xác định", color: "#757575" };
 };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const clampNonNegative = (v: any) => { const n = Number(v); return Number.isFinite(n) && n >= 0 ? n : 0; };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const clampPositiveInt = (v: any) => { const n = parseInt(`${v}`, 10); return Number.isFinite(n) && n >= 1 ? n : 1; };
 
 const theme = createTheme({
@@ -213,14 +215,18 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
         const rooms = Array.isArray(data.rooms) ? data.rooms : [];
         const incurred = Array.isArray(data.incurred) ? data.incurred : [];
         const map: Record<number, AmenityOption[]> = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const opts: RoomOption[] = rooms.map((r: any) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           map[Number(r.id)] = (r.amenities ?? []).map((a: any) => ({ id: Number(a.id), name: a.name, price: clampNonNegative(a.price) }));
           return { id: Number(r.id), label: r.room_number };
         });
         if (!mounted) return;
         setAmenityOptionsByRoom(map);
         setRoomOptions(opts);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const prefillFromIncurred: AmenityRow[] = incurred.flatMap((g: any) =>
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (g.items ?? []).map((x: any) => ({ room_id: Number(g.room_id), amenity_id: Number(x.amenity_id), name: x.name, price: clampNonNegative(x.price), quantity: clampPositiveInt(x.quantity), subtotal: clampNonNegative(x.price) * clampPositiveInt(x.quantity) }))
         );
         let initialRows: AmenityRow[] = prefillFromIncurred;
@@ -250,6 +256,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
       try {
         const res = await api.get(`/bookings/${checkoutInfo.booking_id}/services-used`);
         const arr = Array.isArray(res?.data) ? res.data : Array.isArray(res?.data?.data) ? res.data.data : [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const mapped: ServiceRow[] = arr.map((x: any) => {
           const price = clampNonNegative(x.price ?? x.unit_price ?? 0);
           const quantity = clampPositiveInt(x.quantity ?? x.qty ?? 0);
@@ -311,6 +318,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
       setSavingAmenities(true);
       await api.post(`/bookings/${checkoutInfo.booking_id}/amenities-incurred`, { items: payload.map((it) => ({ room_id: Number(it.room_id), amenity_id: Number(it.amenity_id), price: Number(it.price), quantity: Number(it.quantity) })) });
       return true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       const data = e?.response?.data;
       const errs = (data?.errors && Object.values(data.errors).flat().join("\n")) || data?.message || "Lưu tiện nghi phát sinh thất bại.";
