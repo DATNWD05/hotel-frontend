@@ -36,6 +36,7 @@ import { styled } from "@mui/material/styles";
 import Popper from "@mui/material/Popper";
 import { SelectChangeEvent } from "@mui/material/Select";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff"; // <-- thêm icon đóng
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { SearchIcon } from "lucide-react";
@@ -173,8 +174,11 @@ const Promotions: React.FC = () => {
   const [statusFilters, setStatusFilters] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // <-- giống Service: id đang mở + id đang edit
   const [viewDetailId, setViewDetailId] = useState<number | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<number | null>(null);
+
   const [editedDetail, setEditedDetail] = useState<Partial<Promotion>>({});
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -275,16 +279,18 @@ const Promotions: React.FC = () => {
     return errors;
   };
 
+  // 🔄 Toggle mắt giống Service: mở/đóng + thoát edit nếu đang edit chính item đó
   const handleViewDetail = (id: number) => {
-    setViewDetailId((prev) => {
-      const newValue = prev === id ? null : id;
-      if (prev !== id) setEditingDetailId(null), setValidationErrors({});
-      return newValue;
-    });
+    setViewDetailId((prev) => (prev === id && editingDetailId !== id ? null : id));
+    if (editingDetailId === id) {
+      setEditingDetailId(null);
+      setEditedDetail({});
+      setValidationErrors({});
+    }
   };
 
   const handleEditDetail = (promotion: Promotion) => {
-    setViewDetailId(promotion.id);
+    setViewDetailId(promotion.id); // đảm bảo phần chi tiết mở
     setEditingDetailId(promotion.id);
     setEditedDetail({
       id: promotion.id,
@@ -313,7 +319,7 @@ const Promotions: React.FC = () => {
 
   const handleSelectChange = (e: SelectChangeEvent<DiscountType>) => {
     const { name, value } = e.target;
-    if (name && editedDetail) {
+    if (name) {
       setEditedDetail((prev) => ({ ...prev, [name]: value } as Partial<Promotion>));
       setValidationErrors((prev) => {
         const newErrors = { ...prev };
@@ -388,7 +394,7 @@ const Promotions: React.FC = () => {
       if (!promotion) throw new Error("Không tìm thấy mã khuyến mãi để xóa");
 
       if (promotion.used_count > 0) {
-        const updatedPromotion = { ...promotion, status: "cancelled" };
+        const updatedPromotion = { ...promotion, status: "cancelled" as StatusType };
         const updateResponse = await api.put(`/promotions/${promotionToDelete}`, updatedPromotion);
         if (updateResponse.status !== 200) throw new Error("Không thể hủy khuyến mãi do lỗi từ phía server");
         toast.success("Hủy khuyến mãi thành công!");
@@ -602,6 +608,7 @@ const Promotions: React.FC = () => {
                   <TableBody>
                     {promotions.map((promotion) => {
                       const { status, color } = getPromotionStatus(promotion.status);
+                      const isOpen = viewDetailId === promotion.id;
                       return (
                         <React.Fragment key={promotion.id}>
                           <TableRow hover>
@@ -623,7 +630,7 @@ const Promotions: React.FC = () => {
                             <TableCell align="center">
                               <Box display="flex" justifyContent="center" gap={1}>
                                 <IconButton
-                                  title="Xem chi tiết"
+                                  title={isOpen ? "Ẩn chi tiết" : "Xem chi tiết"}   // <-- đổi tooltip
                                   sx={{
                                     color: "#1976d2",
                                     bgcolor: "#e3f2fd",
@@ -632,7 +639,11 @@ const Promotions: React.FC = () => {
                                   }}
                                   onClick={() => handleViewDetail(promotion.id)}
                                 >
-                                  <VisibilityIcon fontSize="small" />
+                                  {isOpen ? (                                          // <-- đổi icon
+                                    <VisibilityOffIcon fontSize="small" />
+                                  ) : (
+                                    <VisibilityIcon fontSize="small" />
+                                  )}
                                 </IconButton>
                                 <IconButton
                                   title="Sửa"
@@ -722,7 +733,6 @@ const Promotions: React.FC = () => {
                                                 value={editedDetail.discount_type || "amount"}
                                                 onChange={handleSelectChange}
                                                 label="Loại giảm giá"
-                                                // 🔒 Không portal cho menu Select
                                                 MenuProps={{
                                                   disablePortal: true,
                                                   transitionDuration: 0,
