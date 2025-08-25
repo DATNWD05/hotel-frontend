@@ -1,64 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Button,
-  Grid,
-  TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  FormControlLabel,
-  Radio,
-  RadioGroup,
-  FormLabel,
-  Alert,
-  Snackbar,
-  IconButton,
-  InputAdornment,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-  ThemeProvider,
-  createTheme,
-  CssBaseline,
-  AlertTitle,
-  DialogContentText,
-  GlobalStyles,
-} from "@mui/material";
-import {
-  Add as AddIcon,
-  CalendarToday as CalendarIcon,
-  Person as PersonIcon,
-  Schedule as ScheduleIcon,
-  Settings as SettingsIcon,
-  Group as GroupIcon,
-  Close as CloseIcon,
-  Refresh as RefreshIcon,
-  Clear as ClearIcon,
-  Warning as WarningIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-} from "@mui/icons-material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { format, parseISO, isBefore, startOfDay } from "date-fns";
+  Plus,
+  Calendar,
+  Users,
+  Clock,
+  Settings,
+  X,
+  RefreshCw,
+  Trash2,
+  Edit,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+} from "lucide-react";
+import { format, parseISO } from "date-fns";
 import api from "../../api/axios";
+import "../../css/OvertimeManagement.css";
 
 // ==================== TYPES & INTERFACES ====================
 interface Employee {
@@ -205,66 +163,6 @@ class OvertimeApiService {
 
 const overtimeApi = new OvertimeApiService();
 
-// ==================== THEME ====================
-const theme = createTheme({
-  palette: {
-    primary: { main: "#3b82f6" },
-    secondary: { main: "#8b5cf6" },
-    background: { default: "#f8fafc" },
-  },
-  typography: {
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: { borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: { borderRadius: 8, textTransform: "none", fontWeight: 500 },
-      },
-    },
-  },
-});
-
-// ==================== STAT CARD COMPONENT ====================
-const StatCard: React.FC<{
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  color: string;
-}> = ({ title, value, icon, color }) => (
-  <Card>
-    <CardContent>
-      <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Box>
-          <Typography color="textSecondary" gutterBottom variant="body2">
-            {title}
-          </Typography>
-          <Typography variant="h4" component="div">
-            {value}
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            backgroundColor: color,
-            borderRadius: 2,
-            p: 1.5,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          {icon}
-        </Box>
-      </Box>
-    </CardContent>
-  </Card>
-);
-
 // ==================== MAIN COMPONENT ====================
 const OvertimeManagement: React.FC = () => {
   // State management
@@ -287,7 +185,6 @@ const OvertimeManagement: React.FC = () => {
   // Edit/Delete helpers
   const [isEditing, setIsEditing] = useState(false);
   const [, setEditingRow] = useState<OvertimeRequest | null>(null);
-
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<OvertimeRequest | null>(
     null
@@ -415,14 +312,13 @@ const OvertimeManagement: React.FC = () => {
     return true;
   };
 
-  // Helpers (chỉ còn dùng để prefill duration khi sửa)
+  // Helpers
   const toDateTime = (dateStr: string, hm: string) =>
     new Date(`${dateStr}T${hm}:00`);
   const hoursBetween = (start: Date, end: Date) =>
     (end.getTime() - start.getTime()) / 3_600_000;
 
   const handleSubmit = async () => {
-    // Chỉ validate form cơ bản ở FE; mọi business rule giao cho BE
     if (!validateForm()) return;
 
     try {
@@ -475,7 +371,7 @@ const OvertimeManagement: React.FC = () => {
     }
   };
 
-  // === Edit ===
+  // Edit
   const openEditModal = (row: OvertimeRequest) => {
     setIsEditing(true);
     setEditingRow(row);
@@ -491,7 +387,6 @@ const OvertimeManagement: React.FC = () => {
     setOvertimeType(row.overtime_type);
     setReason(row.reason || "");
 
-    // Prefill time/duration
     const startHM = safeFormatHM(row.start_datetime);
     const endHM = safeFormatHM(row.end_datetime);
 
@@ -515,7 +410,7 @@ const OvertimeManagement: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // === Delete ===
+  // Delete
   const askDelete = (row: OvertimeRequest) => {
     setDeleteTarget(row);
     setConfirmDeleteOpen(true);
@@ -536,7 +431,6 @@ const OvertimeManagement: React.FC = () => {
         );
         setConfirmDeleteOpen(false);
         setDeleteTarget(null);
-        // Có thể xoá lạc quan khỏi state thay vì reload; ở đây mình reload cho chắc
         loadOvertimeRequests();
       } else {
         showNotification(res?.message || "Không xóa được bản ghi", "warning");
@@ -547,7 +441,7 @@ const OvertimeManagement: React.FC = () => {
   };
 
   const clearFilters = () => {
-    setFilterDate(new Date()); // luôn trở lại hôm nay
+    setFilterDate(new Date());
     setFilterEmployeeId("");
   };
 
@@ -569,595 +463,506 @@ const OvertimeManagement: React.FC = () => {
     try {
       return format(parseISO(dateTimeString), "HH:mm");
     } catch {
-      // trường hợp BE trả sẵn "HH:mm"
       return dateTimeString.length === 5 ? dateTimeString : "00:00";
     }
   };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <GlobalStyles
-        styles={{
-          ".MuiPickersPopper-root .MuiPaper-root": {
-            transition: "none !important",
-          },
-          ".MuiPickersPopper-root .MuiFade-root": {
-            transition: "none !important",
-          },
-          ".MuiPickersSlideTransition-root": {
-            transition: "none !important",
-          },
-          ".MuiPickersFadeTransitionGroup-root": {
-            transition: "none !important",
-          },
-        }}
-      />
-
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <Box sx={{ maxWidth: 1200, margin: "0 auto", p: 3 }}>
-          {/* Header */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Box display="flex" alignItems="center" gap={2}>
-                  <Box
-                    sx={{
-                      backgroundColor: "#3b82f6",
-                      borderRadius: 2,
-                      p: 1.5,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <ScheduleIcon sx={{ color: "white", fontSize: 24 }} />
-                  </Box>
-                  <Box>
-                    <Typography variant="h5" component="h1" fontWeight={600}>
-                      Quản lý tăng ca
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Hệ thống đăng ký và quản lý tăng ca nhân viên
-                    </Typography>
-                  </Box>
-                </Box>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    resetForm();
-                    setIsModalOpen(true);
-                  }}
-                  sx={{ backgroundColor: "#3b82f6" }}
-                >
-                  Đăng ký tăng ca
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {/* Statistics */}
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Tổng đăng ký"
-                value={statistics.total}
-                icon={<CalendarIcon sx={{ color: "#3b82f6" }} />}
-                color="#dbeafe"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Sau ca chính"
-                value={statistics.afterShift}
-                icon={<ScheduleIcon sx={{ color: "#0ea5e9" }} />}
-                color="#e0f2fe"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Tùy chỉnh"
-                value={statistics.custom}
-                icon={<SettingsIcon sx={{ color: "#8b5cf6" }} />}
-                color="#f3e8ff"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Nhân viên"
-                value={statistics.employees}
-                icon={<GroupIcon sx={{ color: "#22c55e" }} />}
-                color="#dcfce7"
-              />
-            </Grid>
-          </Grid>
-
-          {/* Filters */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Grid container spacing={3} alignItems="end">
-                <Grid item xs={12} md={4}>
-                  <DatePicker
-                    label="Lọc theo ngày"
-                    value={filterDate}
-                    onChange={setFilterDate}
-                    format="dd/MM/yyyy"
-                    // KHÔNG dùng shouldDisableDate ở filter (để vẫn chọn được ngày quá khứ)
-                    slotProps={{
-                      textField: { fullWidth: true },
-                      day: (ownerState) => {
-                        const d = ownerState.day as Date;
-                        const past = isBefore(
-                          startOfDay(d),
-                          startOfDay(new Date())
-                        );
-                        return {
-                          sx: past
-                            ? {
-                                color: "#000", // chữ đen
-                                bgcolor: "#f2f2f2", // nền xám nhẹ
-                                opacity: 0.9,
-                              }
-                            : {},
-                        };
-                      },
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Box
-                    display="flex"
-                    gap={2}
-                    alignItems="center"
-                    flexWrap="wrap"
-                  >
-                    <TextField
-                      sx={{ minWidth: 200, flex: 1 }}
-                      label="Lọc theo ID nhân viên"
-                      type="number"
-                      value={filterEmployeeId}
-                      onChange={(e) =>
-                        setFilterEmployeeId(
-                          e.target.value ? Number(e.target.value) : ""
-                        )
-                      }
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <PersonIcon />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                    <Button
-                      variant="contained"
-                      startIcon={<RefreshIcon />}
-                      onClick={loadOvertimeRequests}
-                      disabled={loading}
-                    >
-                      Tải lại
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<ClearIcon />}
-                      onClick={clearFilters}
-                    >
-                      Xóa bộ lọc
-                    </Button>
-                  </Box>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* Data Table */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Danh sách đăng ký tăng ca
-              </Typography>
-
-              {loading ? (
-                <Box display="flex" justifyContent="center" p={4}>
-                  <CircularProgress />
-                </Box>
-              ) : overtimeRequests.length === 0 ? (
-                <Box textAlign="center" py={8}>
-                  <CalendarIcon
-                    sx={{ fontSize: 64, color: "text.secondary", mb: 2 }}
-                  />
-                  <Typography variant="h6" gutterBottom>
-                    Không có dữ liệu
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Không tìm thấy đăng ký tăng ca nào phù hợp với bộ lọc.
-                  </Typography>
-                </Box>
-              ) : (
-                <TableContainer component={Paper} variant="outlined">
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Nhân viên</TableCell>
-                        <TableCell>Ngày làm việc</TableCell>
-                        <TableCell>Loại tăng ca</TableCell>
-                        <TableCell>Thời gian</TableCell>
-                        <TableCell>Lý do</TableCell>
-                        <TableCell>Ngày tạo</TableCell>
-                        <TableCell align="right">Hành động</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {overtimeRequests.map((request) => (
-                        <TableRow key={request.id}>
-                          <TableCell>
-                            <Box>
-                              <Typography variant="body2" fontWeight={500}>
-                                {request.employee?.name}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="textSecondary"
-                              >
-                                ID: {request.employee_id}
-                              </Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>{formatDate(request.work_date)}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={
-                                request.overtime_type === "after_shift"
-                                  ? "Sau ca chính"
-                                  : "Tùy chỉnh"
-                              }
-                              color={
-                                request.overtime_type === "after_shift"
-                                  ? "primary"
-                                  : "secondary"
-                              }
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {formatDateTime(request.start_datetime)} -{" "}
-                            {formatDateTime(request.end_datetime)}
-                          </TableCell>
-                          <TableCell>{request.reason || "-"}</TableCell>
-                          <TableCell>
-                            <Typography variant="caption" color="textSecondary">
-                              {formatDate(request.created_at)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="right">
-                            <Box
-                              display="flex"
-                              justifyContent="flex-end"
-                              gap={1.5}
-                            >
-                              <IconButton
-                                size="small"
-                                onClick={() => openEditModal(request)}
-                                color="primary"
-                                aria-label="Sửa"
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-
-                              <IconButton
-                                size="small"
-                                onClick={() => askDelete(request)}
-                                color="error"
-                                aria-label="Xóa"
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Registration / Edit Modal */}
-          <Dialog
-            open={isModalOpen}
-            onClose={() => !submitting && setIsModalOpen(false)}
-            maxWidth="sm"
-            fullWidth
+    <div className="payroll-container">
+      <div className="payroll-wrapper">
+        {/* Alert */}
+        {notification.open && (
+          <div
+            className={`alert ${
+              notification.severity === "success"
+                ? "alert-success"
+                : "alert-error"
+            }`}
           >
-            <DialogTitle>
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                {isEditing ? "Cập nhật đăng ký tăng ca" : "Đăng ký tăng ca"}
-                <IconButton
-                  onClick={() => setIsModalOpen(false)}
-                  disabled={submitting}
-                  aria-label="Đóng"
-                >
-                  <CloseIcon />
-                </IconButton>
-              </Box>
-            </DialogTitle>
+            {notification.severity === "success" ? (
+              <CheckCircle className="alert-icon alert-icon-success" />
+            ) : (
+              <AlertCircle className="alert-icon alert-icon-error" />
+            )}
+            <span>{notification.message}</span>
+            <button
+              title="Đóng thông báo"
+              onClick={handleCloseNotification}
+              className="alert-close"
+            >
+              <X style={{ width: "1rem", height: "1rem" }} />
+            </button>
+          </div>
+        )}
 
-            <DialogContent>
-              <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+        {/* Header */}
+        <div className="card card-padding">
+          <div className="header-content">
+            <div>
+              <h1 className="header-title">Quản lý tăng ca</h1>
+              <p className="header-subtitle">
+                Hệ thống đăng ký và quản lý tăng ca nhân viên
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                resetForm();
+                setIsModalOpen(true);
+              }}
+              className="btn-primary"
+            >
+              <Plus style={{ width: "1rem", height: "1rem" }} />
+              Đăng ký tăng ca
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="stats-grid">
+          <div className="stats-card">
+            <div className="stats-content">
+              <div>
+                <p className="stats-text">Tổng đăng ký</p>
+                <p className="stats-number">{statistics.total}</p>
+              </div>
+              <div className="stats-icon stats-icon-blue">
+                <Calendar style={{ width: "1.25rem", height: "1.25rem" }} />
+              </div>
+            </div>
+          </div>
+          <div className="stats-card">
+            <div className="stats-content">
+              <div>
+                <p className="stats-text">Sau ca chính</p>
+                <p className="stats-number">{statistics.afterShift}</p>
+              </div>
+              <div className="stats-icon stats-icon-green">
+                <Clock style={{ width: "1.25rem", height: "1.25rem" }} />
+              </div>
+            </div>
+          </div>
+          <div className="stats-card">
+            <div className="stats-content">
+              <div>
+                <p className="stats-text">Tùy chỉnh</p>
+                <p className="stats-number">{statistics.custom}</p>
+              </div>
+              <div className="stats-icon stats-icon-purple">
+                <Settings style={{ width: "1.25rem", height: "1.25rem" }} />
+              </div>
+            </div>
+          </div>
+          <div className="stats-card">
+            <div className="stats-content">
+              <div>
+                <p className="stats-text">Nhân viên</p>
+                <p className="stats-number">{statistics.employees}</p>
+              </div>
+              <div className="stats-icon stats-icon-orange">
+                <Users style={{ width: "1.25rem", height: "1.25rem" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="card card-padding">
+          <h2 className="filter-title">Bộ lọc</h2>
+          <div className="filter-content">
+            <div className="filter-input-group">
+              <label className="filter-label">Lọc theo ngày</label>
+              <input
+                title="Lọc theo ngày"
+                type="date"
+                value={filterDate ? format(filterDate, "yyyy-MM-dd") : ""}
+                onChange={(e) =>
+                  setFilterDate(
+                    e.target.value ? new Date(e.target.value) : null
+                  )
+                }
+                className="filter-input"
+              />
+            </div>
+            <div className="filter-input-group">
+              <label className="filter-label">Lọc theo ID nhân viên</label>
+              <input
+                title="Lọc theo ID nhân viên"
+                type="number"
+                value={filterEmployeeId}
+                onChange={(e) =>
+                  setFilterEmployeeId(
+                    e.target.value ? Number(e.target.value) : ""
+                  )
+                }
+                className="filter-input"
+                placeholder="Nhập ID nhân viên"
+              />
+            </div>
+            <div className="filter-buttons">
+              <button
+                onClick={loadOvertimeRequests}
+                disabled={loading}
+                className="btn-primary"
+              >
+                {loading && (
+                  <Loader2
+                    style={{ width: "1rem", height: "1rem" }}
+                    className="animate-spin"
+                  />
+                )}
+                <RefreshCw style={{ width: "1rem", height: "1rem" }} />
+                Tải lại
+              </button>
+              <button onClick={clearFilters} className="btn-secondary">
+                <X style={{ width: "1rem", height: "1rem" }} />
+                Xóa bộ lọc
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Data Table */}
+        <div className="card">
+          <div className="table-header">
+            <h2 className="table-title">Danh sách đăng ký tăng ca</h2>
+            <p className="table-subtitle">
+              Hiển thị {overtimeRequests.length} trên tổng số {statistics.total}{" "}
+              bản ghi
+            </p>
+          </div>
+
+          <div className="table-container">
+            {loading ? (
+              <div className="loading-container">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="skeleton"></div>
+                ))}
+              </div>
+            ) : overtimeRequests.length === 0 ? (
+              <div className="empty-state">
+                <Calendar className="empty-state-icon" />
+                <h3 className="empty-state-title">Không có dữ liệu</h3>
+                <p className="empty-state-text">
+                  Không tìm thấy đăng ký tăng ca nào phù hợp với bộ lọc.
+                </p>
+              </div>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Nhân viên</th>
+                    <th>Ngày làm việc</th>
+                    <th>Loại tăng ca</th>
+                    <th>Thời gian</th>
+                    <th>Lý do</th>
+                    <th>Ngày tạo</th>
+                    <th className="text-center">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overtimeRequests.map((request) => (
+                    <tr key={request.id}>
+                      <td className="font-medium">
+                        {request.employee?.name} (ID: {request.employee_id})
+                      </td>
+                      <td>{formatDate(request.work_date)}</td>
+                      <td>
+                        <span className="badge">
+                          {request.overtime_type === "after_shift"
+                            ? "Sau ca chính"
+                            : "Tùy chỉnh"}
+                        </span>
+                      </td>
+                      <td>
+                        {formatDateTime(request.start_datetime)} -{" "}
+                        {formatDateTime(request.end_datetime)}
+                      </td>
+                      <td>{request.reason || "-"}</td>
+                      <td>{formatDate(request.created_at)}</td>
+                      <td className="text-center">
+                        <button
+                          title="Sửa"
+                          onClick={() => openEditModal(request)}
+                          className="icon-btn"
+                        >
+                          <Edit style={{ width: "1rem", height: "1rem" }} />
+                        </button>
+                        <button
+                          title="Xóa"
+                          onClick={() => askDelete(request)}
+                          className="icon-btn icon-btn-danger"
+                        >
+                          <Trash2 style={{ width: "1rem", height: "1rem" }} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* Registration / Edit Modal */}
+        {isModalOpen && (
+          <div className="modal-overlay">
+            <div className="modal">
+              <div className="modal-header">
+                <h3 className="modal-title">
+                  {isEditing ? "Cập nhật đăng ký tăng ca" : "Đăng ký tăng ca"}
+                </h3>
+                <button
+                  title="Đóng"
+                  onClick={() => !submitting && setIsModalOpen(false)}
+                  className="modal-close"
+                  disabled={submitting}
+                >
+                  <X style={{ width: "1.25rem", height: "1.25rem" }} />
+                </button>
+              </div>
+              <p className="modal-description">
                 {isEditing
                   ? "Chỉnh sửa thông tin tăng ca cho nhân viên đã chọn."
                   : "Vui lòng điền đầy đủ thông tin để đăng ký tăng ca."}
-              </Typography>
+              </p>
 
               {submitErrors.length > 0 && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                  <AlertTitle>Lỗi xử lý tăng ca</AlertTitle>
-                  {submitErrors.map((error, index) => (
-                    <Typography key={index} variant="body2">
-                      • {error.employee_name ? `${error.employee_name}: ` : ""}
-                      {error.reason}
-                    </Typography>
-                  ))}
-                </Alert>
+                <div className="alert alert-error">
+                  <AlertCircle className="alert-icon alert-icon-error" />
+                  <div>
+                    <h4>Lỗi xử lý tăng ca</h4>
+                    {submitErrors.map((error, index) => (
+                      <p key={index}>
+                        •{" "}
+                        {error.employee_name ? `${error.employee_name}: ` : ""}
+                        {error.reason}
+                      </p>
+                    ))}
+                  </div>
+                </div>
               )}
 
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                <DatePicker
-                  label="Ngày làm việc *"
-                  value={workDate}
-                  onChange={setWorkDate}
-                  format="dd/MM/yyyy"
-                  reduceAnimations
-                  disabled={submitting}
-                  shouldDisableDate={(day) => {
-                    if (!day) return false;
-                    return isBefore(startOfDay(day), startOfDay(new Date()));
-                  }}
-                  slotProps={{
-                    day: (ownerState) => {
-                      const d = ownerState.day as Date;
-                      const past = isBefore(
-                        startOfDay(d),
-                        startOfDay(new Date())
-                      );
-                      return {
-                        sx: past
-                          ? {
-                              color: "#000",
-                              bgcolor: "#f2f2f2",
-                              opacity: 0.8,
-                              "&.Mui-disabled": {
-                                WebkitTextFillColor: "#000",
-                                opacity: 1,
-                              },
-                            }
-                          : {},
-                      };
-                    },
-                    textField: { fullWidth: true },
-                  }}
-                />
-
-                <FormControl fullWidth disabled={submitting}>
-                  <InputLabel>Chọn nhân viên *</InputLabel>
-                  <Select
-                    value={selectedEmployee}
+              <div className="modal-grid">
+                <div className="modal-field">
+                  <label className="modal-label">Ngày làm việc *</label>
+                  <input
+                    title="Ngày làm việc"
+                    type="date"
+                    value={workDate ? format(workDate, "yyyy-MM-dd") : ""}
                     onChange={(e) =>
-                      setSelectedEmployee(e.target.value as number)
-                    }
-                    startAdornment={
-                      <InputAdornment position="start">
-                        <PersonIcon />
-                      </InputAdornment>
-                    }
-                  >
-                    {employees.map((employee) => (
-                      <MenuItem key={employee.id} value={employee.id}>
-                        {employee.name} - {employee.employee_code}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl component="fieldset" disabled={submitting}>
-                  <FormLabel component="legend">Loại tăng ca *</FormLabel>
-                  <RadioGroup
-                    value={overtimeType}
-                    onChange={(e) =>
-                      setOvertimeType(
-                        e.target.value as "after_shift" | "custom"
+                      setWorkDate(
+                        e.target.value ? new Date(e.target.value) : null
                       )
                     }
+                    className="modal-input"
+                    disabled={submitting}
+                    max={format(new Date(), "yyyy-MM-dd")}
+                  />
+                </div>
+                <div className="modal-field">
+                  <label className="modal-label">Nhân viên *</label>
+                  <select
+                    title="nhanvien"
+                    value={selectedEmployee}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedEmployee(value === "" ? "" : Number(value));
+                    }}
+                    className="modal-select"
+                    disabled={submitting}
                   >
-                    <Card variant="outlined" sx={{ mb: 1 }}>
-                      <CardContent sx={{ py: 2 }}>
-                        <FormControlLabel
-                          value="after_shift"
-                          control={<Radio />}
-                          label={
-                            <Box>
-                              <Typography variant="body1" fontWeight={500}>
-                                Sau ca chính
-                              </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                Tăng ca ngay sau ca làm việc cuối cùng
-                              </Typography>
-                            </Box>
-                          }
-                        />
-                      </CardContent>
-                    </Card>
-
-                    <Card variant="outlined">
-                      <CardContent sx={{ py: 2 }}>
-                        <FormControlLabel
-                          value="custom"
-                          control={<Radio />}
-                          label={
-                            <Box>
-                              <Typography variant="body1" fontWeight={500}>
-                                Tùy chỉnh
-                              </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                Chọn thời gian tăng ca cụ thể
-                              </Typography>
-                            </Box>
-                          }
-                        />
-                      </CardContent>
-                    </Card>
-                  </RadioGroup>
-                </FormControl>
-
+                    <option value="">Chọn nhân viên</option>
+                    {employees.map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.name} - {employee.employee_code}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="modal-field">
+                  <label className="modal-label">Loại tăng ca *</label>
+                  <div className="modal-radio-group">
+                    <label className="modal-radio">
+                      <input
+                        type="radio"
+                        value="after_shift"
+                        checked={overtimeType === "after_shift"}
+                        onChange={(e) =>
+                          setOvertimeType(
+                            e.target.value as "after_shift" | "custom"
+                          )
+                        }
+                        disabled={submitting}
+                      />
+                      <div>
+                        <span className="modal-radio-label">Sau ca chính</span>
+                        <p className="modal-radio-description">
+                          Tăng ca ngay sau ca làm việc cuối cùng
+                        </p>
+                      </div>
+                    </label>
+                    <label className="modal-radio">
+                      <input
+                        type="radio"
+                        value="custom"
+                        checked={overtimeType === "custom"}
+                        onChange={(e) =>
+                          setOvertimeType(
+                            e.target.value as "after_shift" | "custom"
+                          )
+                        }
+                        disabled={submitting}
+                      />
+                      <div>
+                        <span className="modal-radio-label">Tùy chỉnh</span>
+                        <p className="modal-radio-description">
+                          Chọn thời gian tăng ca cụ thể
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
                 {overtimeType === "after_shift" ? (
-                  <FormControl fullWidth disabled={submitting}>
-                    <InputLabel>Số giờ tăng ca *</InputLabel>
-                    <Select
+                  <div className="modal-field">
+                    <label className="modal-label">Số giờ tăng ca *</label>
+                    <select
+                      title="Số giờ tăng ca"
                       value={duration}
-                      onChange={(e) => setDuration(e.target.value as number)}
+                      onChange={(e) => setDuration(Number(e.target.value))}
+                      className="modal-select"
+                      disabled={submitting}
                     >
                       {[1, 2, 3, 4, 5, 6].map((hour) => (
-                        <MenuItem key={hour} value={hour}>
+                        <option key={hour} value={hour}>
                           {hour} giờ
-                        </MenuItem>
+                        </option>
                       ))}
-                    </Select>
-                  </FormControl>
+                    </select>
+                  </div>
                 ) : (
-                  <Grid container spacing={2}>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Thời gian bắt đầu *"
+                  <div className="modal-grid">
+                    <div className="modal-field">
+                      <label className="modal-label">Thời gian bắt đầu *</label>
+                      <input
+                        title="Thời gian bắt đầu"
                         type="time"
                         value={startTime}
                         onChange={(e) => setStartTime(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
+                        className="modal-input"
                         disabled={submitting}
                       />
-                    </Grid>
-                    <Grid item xs={6}>
-                      <TextField
-                        fullWidth
-                        label="Thời gian kết thúc *"
+                    </div>
+                    <div className="modal-field">
+                      <label className="modal-label">
+                        Thời gian kết thúc *
+                      </label>
+                      <input
+                        title="Thời gian kết thúc"
                         type="time"
                         value={endTime}
                         onChange={(e) => setEndTime(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
+                        className="modal-input"
                         disabled={submitting}
                       />
-                    </Grid>
-                  </Grid>
+                    </div>
+                  </div>
                 )}
+                <div className="modal-field">
+                  <label className="modal-label">Lý do tăng ca</label>
+                  <textarea
+                    rows={3}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Mô tả lý do cần tăng ca (không bắt buộc)"
+                    className="modal-input"
+                    disabled={submitting}
+                  />
+                </div>
+                <div className="alert alert-warning">
+                  <AlertCircle className="alert-icon alert-icon-warning" />
+                  <div>
+                    <h4>Lưu ý quan trọng:</h4>
+                    <ul>
+                      <li>Không thể đăng ký tăng ca cho ngày đã qua</li>
+                      <li>Nhân viên làm đủ 2 ca chính không được tăng ca</li>
+                      <li>Nhân viên làm 1 ca chính tối đa 4 giờ tăng ca</li>
+                      <li>Nhân viên không có ca chính tối đa 6 giờ tăng ca</li>
+                      <li>Thời gian tăng ca không được trùng với ca chính</li>
+                    </ul>
+                    <p className="text-sm text-gray-600">
+                      * Các quy tắc trên được kiểm tra và phản hồi bởi máy chủ.
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-                <TextField
-                  fullWidth
-                  label="Lý do tăng ca"
-                  multiline
-                  rows={3}
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Mô tả lý do cần tăng ca (không bắt buộc)"
+              <div className="modal-actions">
+                <button
+                  onClick={() => setIsModalOpen(false)}
                   disabled={submitting}
-                />
+                  className="btn-secondary btn-flex"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="btn-primary btn-flex"
+                >
+                  {submitting && (
+                    <Loader2
+                      style={{ width: "1rem", height: "1rem" }}
+                      className="animate-spin"
+                    />
+                  )}
+                  {isEditing ? "Cập nhật" : "Đăng ký"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-                <Alert severity="warning" icon={<WarningIcon />}>
-                  <AlertTitle>Lưu ý quan trọng:</AlertTitle>
-                  <ul style={{ margin: 0, paddingLeft: 20 }}>
-                    <li>Không thể đăng ký tăng ca cho ngày đã qua</li>
-                    <li>Nhân viên làm đủ 2 ca chính không được tăng ca</li>
-                    <li>Nhân viên làm 1 ca chính tối đa 4 giờ tăng ca</li>
-                    <li>Nhân viên không có ca chính tối đa 6 giờ tăng ca</li>
-                    <li>Thời gian tăng ca không được trùng với ca chính</li>
-                  </ul>
-                  <Typography variant="caption" color="textSecondary">
-                    * Các quy tắc trên được kiểm tra và phản hồi bởi máy chủ.
-                  </Typography>
-                </Alert>
-              </Box>
-            </DialogContent>
-
-            <DialogActions sx={{ p: 3 }}>
-              <Button
-                onClick={() => setIsModalOpen(false)}
-                disabled={submitting}
-              >
-                Hủy
-              </Button>
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={submitting}
-                sx={{ backgroundColor: "#3b82f6" }}
-              >
-                {submitting ? (
-                  <>
-                    <CircularProgress size={20} sx={{ mr: 1 }} />
-                    Đang xử lý...
-                  </>
-                ) : isEditing ? (
-                  "Cập nhật"
-                ) : (
-                  "Đăng ký"
-                )}
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          {/* Confirm Delete */}
-          <Dialog
-            open={confirmDeleteOpen}
-            onClose={() => setConfirmDeleteOpen(false)}
-            maxWidth="xs"
-            fullWidth
-          >
-            <DialogTitle>Xóa đăng ký tăng ca</DialogTitle>
-            <DialogContent>
-              <DialogContentText>
+        {/* Confirm Delete */}
+        {confirmDeleteOpen && (
+          <div className="modal-overlay">
+            <div className="modal">
+              <div className="modal-header">
+                <h3 className="modal-title">Xóa đăng ký tăng ca</h3>
+                <button
+                  title="Đóng"
+                  onClick={() => setConfirmDeleteOpen(false)}
+                  className="modal-close"
+                >
+                  <X style={{ width: "1.25rem", height: "1.25rem" }} />
+                </button>
+              </div>
+              <p className="modal-description">
                 Bạn có chắc muốn xóa tăng ca của{" "}
                 <strong>{deleteTarget?.employee?.name}</strong> vào ngày{" "}
                 <strong>
                   {deleteTarget ? formatDate(deleteTarget.work_date) : ""}
                 </strong>
                 ?
-              </DialogContentText>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setConfirmDeleteOpen(false)}>Hủy</Button>
-              <Button color="error" variant="contained" onClick={doDelete}>
-                Xóa
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          {/* Notification Snackbar */}
-          <Snackbar
-            open={notification.open}
-            autoHideDuration={6000}
-            onClose={handleCloseNotification}
-            anchorOrigin={{ vertical: "top", horizontal: "right" }}
-          >
-            <Alert
-              onClose={handleCloseNotification}
-              severity={notification.severity}
-              sx={{ width: "100%" }}
-            >
-              {notification.message}
-            </Alert>
-          </Snackbar>
-        </Box>
-      </LocalizationProvider>
-    </ThemeProvider>
+              </p>
+              <div className="modal-actions">
+                <button
+                  onClick={() => setConfirmDeleteOpen(false)}
+                  className="btn-secondary btn-flex"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={doDelete}
+                  className="btn-primary btn-danger btn-flex"
+                >
+                  Xóa
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

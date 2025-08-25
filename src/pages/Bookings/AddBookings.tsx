@@ -487,11 +487,22 @@ export default function HotelBooking() {
           errors.booking.checkInDate = "Vui lòng chọn thời gian nhận phòng";
         } else {
           const checkInDate = new Date(formatDateTime(value as string, true));
-          if (checkInDate < now) {
-            errors.booking.checkInDate =
-              "Thời gian nhận phòng không thể là quá khứ";
+          if (!bookingData.is_hourly) {
+            const checkInDay = dayjs(checkInDate).startOf("day");
+            const currentDay = dayjs(now).startOf("day");
+            if (checkInDay.isBefore(currentDay)) {
+              errors.booking.checkInDate =
+                "Ngày nhận phòng không thể là quá khứ";
+            } else {
+              delete errors.booking.checkInDate;
+            }
           } else {
-            delete errors.booking.checkInDate;
+            if (checkInDate < now) {
+              errors.booking.checkInDate =
+                "Thời gian nhận phòng không thể là quá khứ";
+            } else {
+              delete errors.booking.checkInDate;
+            }
           }
         }
         break;
@@ -561,13 +572,16 @@ export default function HotelBooking() {
       );
       const diffHours =
         (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60);
+      const diffDays = Math.ceil(
+        (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
       if (bookingData.is_hourly && diffHours > 24) {
         errors.booking.dateRange =
           "Thời gian lưu trú theo giờ không được vượt quá 24 giờ";
-      } else if (!bookingData.is_hourly && diffHours < 24) {
+      } else if (!bookingData.is_hourly && diffDays < 1) {
         errors.booking.dateRange =
           "Thời gian lưu trú theo ngày phải ít nhất 1 đêm";
-      } else if (!bookingData.is_hourly && diffHours > 30 * 24) {
+      } else if (!bookingData.is_hourly && diffDays > 30) {
         errors.booking.dateRange =
           "Thời gian lưu trú theo ngày không được vượt quá 30 ngày";
       } else {
