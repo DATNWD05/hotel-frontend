@@ -198,13 +198,13 @@ export default function HotelBooking() {
     booking: {},
     rooms: {},
   });
-  const [touchedFields, setTouchedFields] = useState<{ [key: string]: boolean }>(
-    {}
-  );
+  const [touchedFields, setTouchedFields] = useState<{
+    [key: string]: boolean;
+  }>({});
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
-  const [roomNumbers, setRoomNumbers] = useState<{ [key: string]: RoomNumber[] }>(
-    {}
-  );
+  const [roomNumbers, setRoomNumbers] = useState<{
+    [key: string]: RoomNumber[];
+  }>({});
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [loadingRooms, setLoadingRooms] = useState(false);
@@ -539,31 +539,23 @@ export default function HotelBooking() {
     const now = new Date();
 
     switch (field) {
-      case "checkInDate":
+      case "checkInDate": {
         if (!value) {
           errors.booking.checkInDate = "Vui lòng chọn thời gian nhận phòng";
         } else {
           const checkInDate = new Date(formatDateTime(value as string, true));
-          if (!bookingData.is_hourly) {
-            const checkInDay = dayjs(checkInDate).startOf("day");
-            const currentDay = dayjs(now).startOf("day");
-            if (checkInDay.isBefore(currentDay)) {
-              errors.booking.checkInDate =
-                "Ngày nhận phòng không thể là quá khứ";
-            } else {
-              delete errors.booking.checkInDate;
-            }
+          const now = new Date();
+          if (checkInDate < now) {
+            errors.booking.checkInDate =
+              "Thời gian nhận phòng không thể là quá khứ";
           } else {
-            if (checkInDate < now) {
-              errors.booking.checkInDate =
-                "Thời gian nhận phòng không thể là quá khứ";
-            } else {
-              delete errors.booking.checkInDate;
-            }
+            delete errors.booking.checkInDate;
           }
         }
         break;
-      case "checkOutDate":
+      }
+
+      case "checkOutDate": {
         if (!value) {
           errors.booking.checkOutDate = "Vui lòng chọn thời gian trả phòng";
         } else if (bookingData.checkInDate) {
@@ -571,27 +563,20 @@ export default function HotelBooking() {
             formatDateTime(bookingData.checkInDate, true)
           );
           const checkOutDate = new Date(formatDateTime(value as string, false));
+          const now = new Date();
+
           if (checkOutDate <= checkInDate) {
             errors.booking.checkOutDate =
               "Thời gian trả phòng phải sau thời gian nhận phòng";
           } else if (checkOutDate < now) {
             errors.booking.checkOutDate =
               "Thời gian trả phòng không thể là quá khứ";
-          } else if (!bookingData.is_hourly) {
-            const checkOutHour = checkOutDate.getHours();
-            if (checkOutHour !== 12) {
-              errors.booking.checkOutDate =
-                "Thời gian trả phòng phải là 12:00 trưa";
-            } else {
-              delete errors.booking.checkOutDate;
-            }
           } else {
             delete errors.booking.checkOutDate;
           }
-        } else {
-          delete errors.booking.checkOutDate;
         }
         break;
+      }
       case "depositAmount":
         if (value && Number(value) > 0 && Number(value) < 100000) {
           errors.booking.depositAmount =
@@ -718,20 +703,19 @@ export default function HotelBooking() {
 
   const calculateDuration = () => {
     if (bookingData.checkInDate && bookingData.checkOutDate) {
-      const checkIn = new Date(formatDateTime(bookingData.checkInDate, true));
-      const checkOut = new Date(
-        formatDateTime(bookingData.checkOutDate, false)
-      );
+      const checkIn = dayjs(formatDateTime(bookingData.checkInDate, true));
+      const checkOut = dayjs(formatDateTime(bookingData.checkOutDate, false));
+
       if (bookingData.is_hourly) {
-        return Math.max(
-          1,
-          Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60))
-        );
+        // Theo giờ: làm tròn lên theo giờ như cũ
+        const hours = Math.ceil(checkOut.diff(checkIn, "minute") / 60);
+        return Math.max(1, hours);
       } else {
-        const diffDays = Math.ceil(
-          (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        return Math.max(1, diffDays);
+        // ✅ Theo ngày: tính số ĐÊM theo ngày lịch, không phụ thuộc giờ
+        const nights = checkOut
+          .startOf("day")
+          .diff(checkIn.startOf("day"), "day");
+        return Math.max(1, nights);
       }
     }
     return 0;
@@ -1030,6 +1014,24 @@ export default function HotelBooking() {
     setIsSubmitting(true);
     setErrorMessage("");
     try {
+      // ⛔ Chặn đặt nếu thời gian đã qua ngay tại thời điểm submit
+      const now = new Date();
+      const checkIn = new Date(formatDateTime(bookingData.checkInDate, true));
+      const checkOut = new Date(
+        formatDateTime(bookingData.checkOutDate, false)
+      );
+
+      if (!bookingData.checkInDate || !bookingData.checkOutDate) {
+        throw new Error("Vui lòng chọn đầy đủ thời gian nhận/trả phòng.");
+      }
+
+      if (checkIn < now) {
+        throw new Error("Không thể đặt vì thời gian nhận phòng đã qua.");
+      }
+      if (checkOut < now) {
+        throw new Error("Không thể đặt vì thời gian trả phòng đã qua.");
+      }
+
       const validRoomIds = bookingData.rooms
         .filter(
           (room) =>
@@ -1192,7 +1194,9 @@ export default function HotelBooking() {
               <AlertCircle className="w-5 h-5" />
             )}
             <span>
-              {submitStatus === "success" ? "Đặt phòng thành công!" : errorMessage}
+              {submitStatus === "success"
+                ? "Đặt phòng thành công!"
+                : errorMessage}
             </span>
           </div>
         )}
@@ -1213,7 +1217,9 @@ export default function HotelBooking() {
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`tab-button ${activeTab === tab.id ? "active" : ""}`}
+                      className={`tab-button ${
+                        activeTab === tab.id ? "active" : ""
+                      }`}
                       aria-label={`Chuyển đến tab ${tab.label}`}
                     >
                       <Icon className="w-4 h-4" />
@@ -1250,7 +1256,9 @@ export default function HotelBooking() {
                         />
                         {touchedFields["customer.cccd"] &&
                           validationErrors.customer.cccd && (
-                            <ErrorMessage message={validationErrors.customer.cccd} />
+                            <ErrorMessage
+                              message={validationErrors.customer.cccd}
+                            />
                           )}
                       </div>
                       <div className="form-group">
@@ -1265,12 +1273,16 @@ export default function HotelBooking() {
                             validationErrors.customer.name ? "error" : ""
                           }`}
                           value={bookingData.customer.name}
-                          onChange={(e) => handleCustomerChange("name", e.target.value)}
+                          onChange={(e) =>
+                            handleCustomerChange("name", e.target.value)
+                          }
                           onBlur={() => markFieldAsTouched("customer.name")}
                         />
                         {touchedFields["customer.name"] &&
                           validationErrors.customer.name && (
-                            <ErrorMessage message={validationErrors.customer.name} />
+                            <ErrorMessage
+                              message={validationErrors.customer.name}
+                            />
                           )}
                       </div>
                     </div>
@@ -1281,7 +1293,9 @@ export default function HotelBooking() {
                         <SelectCompact
                           id="gender"
                           value={bookingData.customer.gender}
-                          onChange={(value) => handleCustomerChange("gender", value)}
+                          onChange={(value) =>
+                            handleCustomerChange("gender", value)
+                          }
                           options={[
                             { value: "male", label: "Nam" },
                             { value: "female", label: "Nữ" },
@@ -1291,11 +1305,16 @@ export default function HotelBooking() {
                         />
                         {touchedFields["customer.gender"] &&
                           validationErrors.customer.gender && (
-                            <ErrorMessage message={validationErrors.customer.gender} />
+                            <ErrorMessage
+                              message={validationErrors.customer.gender}
+                            />
                           )}
                       </div>
                       <div className="form-group">
-                        <label htmlFor="dateOfBirth" className="form-label required">
+                        <label
+                          htmlFor="dateOfBirth"
+                          className="form-label required"
+                        >
                           Ngày sinh
                         </label>
                         <input
@@ -1308,7 +1327,9 @@ export default function HotelBooking() {
                           onChange={(e) =>
                             handleCustomerChange("dateOfBirth", e.target.value)
                           }
-                          onBlur={() => markFieldAsTouched("customer.dateOfBirth")}
+                          onBlur={() =>
+                            markFieldAsTouched("customer.dateOfBirth")
+                          }
                         />
                         {touchedFields["customer.dateOfBirth"] &&
                           validationErrors.customer.dateOfBirth && (
@@ -1334,13 +1355,17 @@ export default function HotelBooking() {
                               validationErrors.customer.email ? "error" : ""
                             }`}
                             value={bookingData.customer.email}
-                            onChange={(e) => handleCustomerChange("email", e.target.value)}
+                            onChange={(e) =>
+                              handleCustomerChange("email", e.target.value)
+                            }
                             onBlur={() => markFieldAsTouched("customer.email")}
                           />
                         </div>
                         {touchedFields["customer.email"] &&
                           validationErrors.customer.email && (
-                            <ErrorMessage message={validationErrors.customer.email} />
+                            <ErrorMessage
+                              message={validationErrors.customer.email}
+                            />
                           )}
                       </div>
                       <div className="form-group">
@@ -1357,20 +1382,27 @@ export default function HotelBooking() {
                               validationErrors.customer.phone ? "error" : ""
                             }`}
                             value={bookingData.customer.phone}
-                            onChange={(e) => handleCustomerChange("phone", e.target.value)}
+                            onChange={(e) =>
+                              handleCustomerChange("phone", e.target.value)
+                            }
                             onBlur={() => markFieldAsTouched("customer.phone")}
                           />
                         </div>
                         {touchedFields["customer.phone"] &&
                           validationErrors.customer.phone && (
-                            <ErrorMessage message={validationErrors.customer.phone} />
+                            <ErrorMessage
+                              message={validationErrors.customer.phone}
+                            />
                           )}
                       </div>
                     </div>
 
                     <div className="mb-4 form-grid form-grid-2">
                       <div className="form-group">
-                        <label htmlFor="address" className="form-label required">
+                        <label
+                          htmlFor="address"
+                          className="form-label required"
+                        >
                           Địa chỉ
                         </label>
                         <div className="form-input-icon">
@@ -1383,13 +1415,19 @@ export default function HotelBooking() {
                               validationErrors.customer.address ? "error" : ""
                             }`}
                             value={bookingData.customer.address}
-                            onChange={(e) => handleCustomerChange("address", e.target.value)}
-                            onBlur={() => markFieldAsTouched("customer.address")}
+                            onChange={(e) =>
+                              handleCustomerChange("address", e.target.value)
+                            }
+                            onBlur={() =>
+                              markFieldAsTouched("customer.address")
+                            }
                           />
                         </div>
                         {touchedFields["customer.address"] &&
                           validationErrors.customer.address && (
-                            <ErrorMessage message={validationErrors.customer.address} />
+                            <ErrorMessage
+                              message={validationErrors.customer.address}
+                            />
                           )}
                       </div>
                       <div className="form-group">
@@ -1406,12 +1444,16 @@ export default function HotelBooking() {
                               validationErrors.customer.cccdImage ? "error" : ""
                             }`}
                             onChange={handleCccdImageChange}
-                            onBlur={() => markFieldAsTouched("customer.cccdImage")}
+                            onBlur={() =>
+                              markFieldAsTouched("customer.cccdImage")
+                            }
                           />
                         </div>
                         {touchedFields["customer.cccdImage"] &&
                           validationErrors.customer.cccdImage && (
-                            <ErrorMessage message={validationErrors.customer.cccdImage} />
+                            <ErrorMessage
+                              message={validationErrors.customer.cccdImage}
+                            />
                           )}
                         {bookingData.customer.cccdImage && (
                           <div className="mt-2 text-sm text-gray-600">
@@ -1430,7 +1472,9 @@ export default function HotelBooking() {
                         placeholder="Ghi chú thêm (nếu có)"
                         className="form-textarea"
                         value={bookingData.customer.note}
-                        onChange={(e) => handleCustomerChange("note", e.target.value)}
+                        onChange={(e) =>
+                          handleCustomerChange("note", e.target.value)
+                        }
                       />
                     </div>
                   </div>
@@ -1439,11 +1483,15 @@ export default function HotelBooking() {
                 {activeTab === "booking" && (
                   <div>
                     <div className="mb-4 form-group">
-                      <label className="form-label required">Loại đặt phòng</label>
+                      <label className="form-label required">
+                        Loại đặt phòng
+                      </label>
                       <SelectCompact
                         id="is_hourly"
                         value={bookingData.is_hourly ? "hourly" : "daily"}
-                        onChange={(value) => handleBookingChange("is_hourly", value === "hourly")}
+                        onChange={(value) =>
+                          handleBookingChange("is_hourly", value === "hourly")
+                        }
                         options={[
                           { value: "daily", label: "Theo ngày" },
                           { value: "hourly", label: "Theo giờ" },
@@ -1452,13 +1500,18 @@ export default function HotelBooking() {
                       />
                       {touchedFields["booking.is_hourly"] &&
                         validationErrors.booking.is_hourly && (
-                          <ErrorMessage message={validationErrors.booking.is_hourly} />
+                          <ErrorMessage
+                            message={validationErrors.booking.is_hourly}
+                          />
                         )}
                     </div>
 
                     <div className="mb-6 form-grid form-grid-3">
                       <div className="form-group">
-                        <label htmlFor="checkIn" className="form-label required">
+                        <label
+                          htmlFor="checkIn"
+                          className="form-label required"
+                        >
                           Thời gian nhận phòng
                         </label>
                         <input
@@ -1468,17 +1521,26 @@ export default function HotelBooking() {
                             validationErrors.booking.checkInDate ? "error" : ""
                           }`}
                           value={bookingData.checkInDate}
-                          onChange={(e) => handleBookingChange("checkInDate", e.target.value)}
-                          onBlur={() => markFieldAsTouched("booking.checkInDate")}
+                          onChange={(e) =>
+                            handleBookingChange("checkInDate", e.target.value)
+                          }
+                          onBlur={() =>
+                            markFieldAsTouched("booking.checkInDate")
+                          }
                           min={dayjs().format("YYYY-MM-DDTHH:mm")}
                         />
                         {touchedFields["booking.checkInDate"] &&
                           validationErrors.booking.checkInDate && (
-                            <ErrorMessage message={validationErrors.booking.checkInDate} />
+                            <ErrorMessage
+                              message={validationErrors.booking.checkInDate}
+                            />
                           )}
                       </div>
                       <div className="form-group">
-                        <label htmlFor="checkOut" className="form-label required">
+                        <label
+                          htmlFor="checkOut"
+                          className="form-label required"
+                        >
                           Thời gian trả phòng
                         </label>
                         <input
@@ -1496,12 +1558,19 @@ export default function HotelBooking() {
                                 : formatDateTime(e.target.value, false)
                             )
                           }
-                          onBlur={() => markFieldAsTouched("booking.checkOutDate")}
-                          min={bookingData.checkInDate || dayjs().format("YYYY-MM-DDTHH:mm")}
+                          onBlur={() =>
+                            markFieldAsTouched("booking.checkOutDate")
+                          }
+                          min={
+                            bookingData.checkInDate ||
+                            dayjs().format("YYYY-MM-DDTHH:mm")
+                          }
                         />
                         {touchedFields["booking.checkOutDate"] &&
                           validationErrors.booking.checkOutDate && (
-                            <ErrorMessage message={validationErrors.booking.checkOutDate} />
+                            <ErrorMessage
+                              message={validationErrors.booking.checkOutDate}
+                            />
                           )}
                       </div>
                       <div className="form-group">
@@ -1515,35 +1584,46 @@ export default function HotelBooking() {
                             type="number"
                             placeholder="0"
                             className={`form-input form-input-small ${
-                              validationErrors.booking.depositAmount ? "error" : ""
+                              validationErrors.booking.depositAmount
+                                ? "error"
+                                : ""
                             }`}
                             value={bookingData.depositAmount}
                             onChange={(e) =>
                               handleBookingChange(
                                 "depositAmount",
-                                e.target.value === "" ? "" : Number(e.target.value)
+                                e.target.value === ""
+                                  ? ""
+                                  : Number(e.target.value)
                               )
                             }
-                            onBlur={() => markFieldAsTouched("booking.depositAmount")}
+                            onBlur={() =>
+                              markFieldAsTouched("booking.depositAmount")
+                            }
                           />
                         </div>
                         {touchedFields["booking.depositAmount"] &&
                           validationErrors.booking.depositAmount && (
-                            <ErrorMessage message={validationErrors.booking.depositAmount} />
+                            <ErrorMessage
+                              message={validationErrors.booking.depositAmount}
+                            />
                           )}
                       </div>
                     </div>
 
                     {validationErrors.booking.dateRange && (
                       <div className="mb-4">
-                        <ErrorMessage message={validationErrors.booking.dateRange} />
+                        <ErrorMessage
+                          message={validationErrors.booking.dateRange}
+                        />
                       </div>
                     )}
 
                     {calculateDuration() > 0 && (
                       <div className="mb-4 price-info price-info-blue">
                         <p>
-                          <strong>Thời gian lưu trú:</strong> {calculateDuration()}{" "}
+                          <strong>Thời gian lưu trú:</strong>{" "}
+                          {calculateDuration()}{" "}
                           {bookingData.is_hourly ? "giờ" : "đêm"}
                         </p>
                       </div>
@@ -1552,7 +1632,9 @@ export default function HotelBooking() {
                     {bookingData.rooms.map((room, index) => (
                       <div key={room.id} className="mb-4 item-card">
                         <div className="item-header">
-                          <span className="badge badge-secondary">Phòng #{index + 1}</span>
+                          <span className="badge badge-secondary">
+                            Phòng #{index + 1}
+                          </span>
                           {bookingData.rooms.length > 1 && (
                             <button
                               onClick={() => removeRoom(room.id)}
@@ -1566,7 +1648,10 @@ export default function HotelBooking() {
 
                         <div className="form-grid form-grid-3">
                           <div className="form-group">
-                            <label htmlFor={`guests-${room.id}`} className="form-label required">
+                            <label
+                              htmlFor={`guests-${room.id}`}
+                              className="form-label required"
+                            >
                               Số khách
                             </label>
                             <input
@@ -1575,31 +1660,51 @@ export default function HotelBooking() {
                               min="1"
                               max="10"
                               className={`form-input form-input-small ${
-                                validationErrors.rooms[room.id]?.guests ? "error" : ""
+                                validationErrors.rooms[room.id]?.guests
+                                  ? "error"
+                                  : ""
                               }`}
                               value={room.guests || ""}
                               onChange={(e) =>
-                                handleRoomChange(room.id, "guests", Number(e.target.value) || 0)
+                                handleRoomChange(
+                                  room.id,
+                                  "guests",
+                                  Number(e.target.value) || 0
+                                )
                               }
-                              onBlur={() => markFieldAsTouched(`rooms.${room.id}.guests`)}
+                              onBlur={() =>
+                                markFieldAsTouched(`rooms.${room.id}.guests`)
+                              }
                               placeholder="Số khách"
                             />
                             {touchedFields[`rooms.${room.id}.guests`] &&
                               validationErrors.rooms[room.id]?.guests && (
-                                <ErrorMessage message={validationErrors.rooms[room.id].guests!} />
+                                <ErrorMessage
+                                  message={
+                                    validationErrors.rooms[room.id].guests!
+                                  }
+                                />
                               )}
                           </div>
 
                           <div className="form-group">
-                            <label className="form-label required">Loại phòng</label>
+                            <label className="form-label required">
+                              Loại phòng
+                            </label>
                             {loadingRooms ? (
-                              <div className="loading">Đang tải loại phòng...</div>
+                              <div className="loading">
+                                Đang tải loại phòng...
+                              </div>
                             ) : (
                               <SelectCompact
                                 id={`room-type-${room.id}`}
                                 value={room.type}
-                                onChange={(value) => handleRoomChange(room.id, "type", value)}
-                                options={getFilteredRoomTypes(room.guests || 0).map((type) => ({
+                                onChange={(value) =>
+                                  handleRoomChange(room.id, "type", value)
+                                }
+                                options={getFilteredRoomTypes(
+                                  room.guests || 0
+                                ).map((type) => ({
                                   value: type.id.toString(),
                                   label: `${type.name} - ${parseFloat(
                                     bookingData.is_hourly
@@ -1612,7 +1717,8 @@ export default function HotelBooking() {
                                 placeholder="Chọn loại phòng"
                                 disabled={
                                   !room.guests ||
-                                  getFilteredRoomTypes(room.guests || 0).length === 0 ||
+                                  getFilteredRoomTypes(room.guests || 0)
+                                    .length === 0 ||
                                   !bookingData.checkInDate ||
                                   !bookingData.checkOutDate
                                 }
@@ -1620,29 +1726,48 @@ export default function HotelBooking() {
                             )}
                             {touchedFields[`rooms.${room.id}.type`] &&
                               validationErrors.rooms[room.id]?.type && (
-                                <ErrorMessage message={validationErrors.rooms[room.id].type!} />
+                                <ErrorMessage
+                                  message={
+                                    validationErrors.rooms[room.id].type!
+                                  }
+                                />
                               )}
                           </div>
 
                           <div className="form-group">
-                            <label className="form-label required">Số phòng</label>
+                            <label className="form-label required">
+                              Số phòng
+                            </label>
                             {loadingRooms ? (
-                              <div className="loading">Đang tải số phòng...</div>
+                              <div className="loading">
+                                Đang tải số phòng...
+                              </div>
                             ) : (
                               <SelectCompact
                                 id={`room-number-${room.id}`}
                                 value={room.number}
-                                onChange={(value) => handleRoomChange(room.id, "number", value)}
-                                options={getAvailableRoomNumbers(room.type, room.id)}
+                                onChange={(value) =>
+                                  handleRoomChange(room.id, "number", value)
+                                }
+                                options={getAvailableRoomNumbers(
+                                  room.type,
+                                  room.id
+                                )}
                                 placeholder="Chọn số phòng"
                                 disabled={
-                                  !room.type || !bookingData.checkInDate || !bookingData.checkOutDate
+                                  !room.type ||
+                                  !bookingData.checkInDate ||
+                                  !bookingData.checkOutDate
                                 }
                               />
                             )}
                             {touchedFields[`rooms.${room.id}.number`] &&
                               validationErrors.rooms[room.id]?.number && (
-                                <ErrorMessage message={validationErrors.rooms[room.id].number!} />
+                                <ErrorMessage
+                                  message={
+                                    validationErrors.rooms[room.id].number!
+                                  }
+                                />
                               )}
                           </div>
                         </div>
@@ -1732,8 +1857,11 @@ export default function HotelBooking() {
                     <SelectCompact
                       id="promotion"
                       value={
-                        promotions.find((promo) => promo.code === bookingData.promotion_code)?.id.toString() ||
-                        ""
+                        promotions
+                          .find(
+                            (promo) => promo.code === bookingData.promotion_code
+                          )
+                          ?.id.toString() || ""
                       }
                       onChange={handlePromotionChange}
                       options={[
@@ -1744,7 +1872,9 @@ export default function HotelBooking() {
                             promo.discount_type === "percent"
                               ? `${promo.discount_value}%`
                               : `${promo.discount_value.toLocaleString()} VND`
-                          }, Hết hạn: ${new Date(promo.end_date).toLocaleDateString("vi-VN")}, Còn ${
+                          }, Hết hạn: ${new Date(
+                            promo.end_date
+                          ).toLocaleDateString("vi-VN")}, Còn ${
                             promo.usage_limit - promo.used_count
                           } lượt)`,
                         })),
@@ -1753,7 +1883,9 @@ export default function HotelBooking() {
                     />
                     {touchedFields["booking.promotion"] &&
                       validationErrors.booking.promotion && (
-                        <ErrorMessage message={validationErrors.booking.promotion} />
+                        <ErrorMessage
+                          message={validationErrors.booking.promotion}
+                        />
                       )}
                   </div>
                   {bookingData.promotion_code && (
@@ -1775,13 +1907,13 @@ export default function HotelBooking() {
 
                 {bookingData.checkInDate && bookingData.checkOutDate && (
                   <div className="date-info">
-                    {dayjs(formatDateTime(bookingData.checkInDate, true)).format(
-                      "DD/MM/YYYY HH:mm"
-                    )}{" "}
+                    {dayjs(
+                      formatDateTime(bookingData.checkInDate, true)
+                    ).format("DD/MM/YYYY HH:mm")}{" "}
                     -{" "}
-                    {dayjs(formatDateTime(bookingData.checkOutDate, false)).format(
-                      "DD/MM/YYYY HH:mm"
-                    )}
+                    {dayjs(
+                      formatDateTime(bookingData.checkOutDate, false)
+                    ).format("DD/MM/YYYY HH:mm")}
                   </div>
                 )}
 
@@ -1798,11 +1930,16 @@ export default function HotelBooking() {
                             <div key={room.id} className="mb-1">
                               {index + 1}.{" "}
                               {
-                                roomTypes.find((rt) => rt.id.toString() === room.type)?.name
+                                roomTypes.find(
+                                  (rt) => rt.id.toString() === room.type
+                                )?.name
                               }{" "}
                               (Phòng {room.number}) x {calculateDuration()}{" "}
                               {bookingData.is_hourly ? "giờ" : "đêm"} ={" "}
-                              {(room.price * calculateDuration()).toLocaleString()} VND
+                              {(
+                                room.price * calculateDuration()
+                              ).toLocaleString()}{" "}
+                              VND
                             </div>
                           )
                       )}
