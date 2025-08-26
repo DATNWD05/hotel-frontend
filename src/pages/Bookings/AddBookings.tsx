@@ -614,14 +614,6 @@ export default function HotelBooking() {
         }
         break;
       }
-      case "depositAmount":
-        if (value && Number(value) > 0 && Number(value) < 100000) {
-          errors.booking.depositAmount =
-            "Số tiền đặt cọc tối thiểu là 100,000 VNĐ";
-        } else {
-          delete errors.booking.depositAmount;
-        }
-        break;
       case "promotion":
         if (value) {
           const selectedPromotion = promotions.find(

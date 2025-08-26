@@ -269,11 +269,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       toast.error("Số tiền đặt cọc không hợp lệ");
       return;
     }
-    if (depNum !== 0 && depNum < 100000) {
-      setError("Số tiền đặt cọc phải là 0 hoặc ít nhất 100,000 VNĐ");
-      toast.error("Số tiền đặt cọc phải là 0 hoặc ít nhất 100,000 VNĐ");
-      return;
-    }
 
     const ciForApi = toApiDate(checkInDate);
     const coForApi = toApiDate(checkOutDate);
@@ -302,12 +297,6 @@ const EditBookingDialog: React.FC<EditBookingDialogProps> = ({
       const hoursDiff = (co.getTime() - ci.getTime()) / (1000 * 60 * 60);
       if (hoursDiff < 1) {
         const msg = "Thời gian trả phòng phải sau thời gian nhận phòng ít nhất 1 giờ";
-        setError(msg);
-        toast.error(msg);
-        return;
-      }
-      if (ci.getHours() >= 20) {
-        const msg = "Booking theo giờ không được bắt đầu sau 20:00";
         setError(msg);
         toast.error(msg);
         return;

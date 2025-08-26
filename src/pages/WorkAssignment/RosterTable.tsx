@@ -524,27 +524,7 @@ const RosterTable: React.FC = () => {
           <button onClick={handleExportPDF} className="btn-primari btn-danger">
             <Download style={{ width: "1rem", height: "1rem" }} />
             PDF
-          </button>
-          <Button
-            variant="contained"
-            component="label"
-            sx={{
-              borderRadius: "6px",
-              padding: "6px 24px",
-              fontWeight: "bold",
-              backgroundColor: "#d32f2f",
-              color: "#fff",
-              "&:hover": { backgroundColor: "#9a0007" },
-            }}
-          >
-            Import
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              hidden
-              onChange={handleFileChange}
-            />
-          </Button>
+          </button>:
         </Box>
       </Box>
 
