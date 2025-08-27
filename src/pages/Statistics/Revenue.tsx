@@ -260,8 +260,8 @@ export default function Revenue() {
 
             {/* Summary */}
             {summary && (
-              <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mt: 3, mb: 2 }}>
-                <Box sx={{ flex: 1, minWidth: 200 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", mt: 3, mb: 2 }}>
+                <Box sx={{ flex: 1, minWidth: 150 }}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Tổng cộng
                   </Typography>
@@ -270,7 +270,7 @@ export default function Revenue() {
                   </Typography>
                 </Box>
 
-                <Box sx={{ flex: 1, minWidth: 200 }}>
+                <Box sx={{ flex: 10, minWidth: 200 }}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Đặt cọc
                   </Typography>
@@ -279,14 +279,14 @@ export default function Revenue() {
                   </Typography>
                 </Box>
 
-                <Box sx={{ flex: 1, minWidth: 200 }}>
+                {/* <Box sx={{ flex: 1, minWidth: 200 }}>
                   <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Còn lại
                   </Typography>
                   <Typography variant="h5" fontWeight="bold" sx={{ color: "red" }}>
                     {Number(summary.remaining_amount).toLocaleString()} ₫
                   </Typography>
-                </Box>
+                </Box> */}
               </Box>
             )}
 
