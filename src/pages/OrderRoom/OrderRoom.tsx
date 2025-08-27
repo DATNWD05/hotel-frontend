@@ -879,16 +879,6 @@ const OrderRoom: React.FC = () => {
                                 : "N/A"}
                             </span>
                           </div>
-                          <div className="financial-item total">
-                            <span className="financial-label">Tổng cuối</span>
-                            <span className="financial-value">
-                              {selectedRoom.total_amount
-                                ? `${Number(
-                                    selectedRoom.total_amount
-                                  ).toLocaleString("vi-VN")} VNĐ`
-                                : "N/A"}
-                            </span>
-                          </div>
                         </div>
                       </div>
                     </CardContent>

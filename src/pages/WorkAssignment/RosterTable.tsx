@@ -26,7 +26,7 @@ import {
   Typography,
   styled,
 } from "@mui/material";
-import { ChevronLeft, ChevronRight } from "@mui/icons-material";
+import { ChevronLeft, ChevronRight, FileText, Download } from "lucide-react"; // Thêm FileText và Download
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
@@ -121,54 +121,41 @@ const RosterTable: React.FC = () => {
     const toDate = currentWeekStart.add(6, "day").format("YYYY-MM-DD");
 
     api
-
       .get("/work-assignments", {
         params: {
           from_date: fromDate,
-
           to_date: toDate,
-
           per_page: 1000,
         },
       })
-
       .then((res) => {
         const data = res.data.data?.data || res.data.data || [];
-
         const mapped = data.reduce((acc: AssignmentCell[], a: any) => {
           const existing = acc.find(
             (item) =>
               item.employeeId === a.employee_id && item.date === a.work_date
           );
-
           if (existing) {
             existing.shiftIds.push(a.shift_id);
           } else {
             acc.push({
               employeeId: a.employee_id,
-
               date: a.work_date,
-
               shiftIds: a.shift_id ? [a.shift_id] : [],
             });
           }
-
           return acc;
         }, []);
 
         // Sắp xếp lại sau khi tải dữ liệu
-
         const sortedAssignments = mapped.map(
           (assignment: { shiftIds: (number | null)[] }) => ({
             ...assignment,
-
             shiftIds: sortShifts(assignment.shiftIds),
           })
         );
-
         setAssignments(sortedAssignments);
       })
-
       .catch((err) => console.error("Lỗi lấy danh sách phân công:", err));
   }, [currentWeekStart]);
 
@@ -200,7 +187,7 @@ const RosterTable: React.FC = () => {
           setAssignments(
             data.map((a: any) => ({
               employeeId: a.employee_id,
-              date: a.work_date,
+              date: a.work_date,  
               shiftIds: sortShifts(a.shift_ids || []),
             }))
           );
@@ -360,17 +347,19 @@ const RosterTable: React.FC = () => {
   const OWNER_ROLE_ID = 1;
 
   const filteredEmployees = employees
-  .filter((e) => e.user?.status !== "not_active") // ẩn user not_active
-  .filter((e) => {
-    const name = e.user?.role?.name?.toLowerCase();
-    const id = e.user?.role_id;
-    return !(name === "owner" || id === OWNER_ROLE_ID); // ẩn owner
-  })
-  .filter(
-    (e) =>
-      e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (e.user?.role?.name || e.position).toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    .filter((e) => e.user?.status !== "not_active") // ẩn user not_active
+    .filter((e) => {
+      const name = e.user?.role?.name?.toLowerCase();
+      const id = e.user?.role_id;
+      return !(name === "owner" || id === OWNER_ROLE_ID); // ẩn owner
+    })
+    .filter(
+      (e) =>
+        e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (e.user?.role?.name || e.position)
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
+    );
 
   // past-day check
   const isPast = (d: string) => dayjs(d).isBefore(today, "day");
@@ -525,34 +514,17 @@ const RosterTable: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-field"
           />
-          <Button
-            variant="contained"
-            color="success"
+          <button
             onClick={handleExportExcel}
-            className="export-button"
+            className="btn-primari btn-success"
           >
+            <FileText style={{ width: "1rem", height: "1rem" }} />
             Excel
-          </Button>
-          <Button
-            variant="contained"
-            component="label"
-            sx={{
-              borderRadius: "999px",
-              padding: "6px 24px",
-              fontWeight: "bold",
-              backgroundColor: "#d32f2f",
-              color: "#fff",
-              "&:hover": { backgroundColor: "#9a0007" },
-            }}
-          >
-            Import
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              hidden
-              onChange={handleFileChange}
-            />
-          </Button>
+          </button>
+          <button onClick={handleExportPDF} className="btn-primari btn-danger">
+            <Download style={{ width: "1rem", height: "1rem" }} />
+            PDF
+          </button>:
         </Box>
       </Box>
 

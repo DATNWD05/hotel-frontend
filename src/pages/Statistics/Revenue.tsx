@@ -31,7 +31,7 @@ interface RevenueItem {
   check_out_date: string;
   total_amount: number;
   deposit_amount: number;
-  remaining_amount: number;
+  remaining_amount: number; // BE đã xử lý rồi
   status: string;
 }
 
@@ -55,17 +55,17 @@ export default function Revenue() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const params: any = { page };
       if (fromDate) params.from_date = fromDate.format("YYYY-MM-DD");
       if (toDate) params.to_date = toDate.format("YYYY-MM-DD");
 
       const res = await api.get(`/statistics/revenue-table`, { params });
+
       setData(res.data.data || []);
       setFiltered(res.data.data || []);
       setTotalPage(res.data.pagination?.last_page || 1);
+      // dùng summary từ BE, không tự tính lại
       setSummary(res.data.summary || { total_amount: 0, deposit_amount: 0, remaining_amount: 0 });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       const msg = error.response?.data?.message || "Lỗi khi tải dữ liệu doanh thu";
       toast.error(msg);
@@ -98,6 +98,7 @@ export default function Revenue() {
 
   return (
     <Box sx={{ p: 4 }}>
+      {/* Header */}
       <Box
         sx={{
           display: "flex",
@@ -194,16 +195,10 @@ export default function Revenue() {
         </Box>
       </Box>
 
+      {/* Table */}
       <Paper sx={{ p: 2, borderRadius: 3, boxShadow: 3 }}>
         {loading ? (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: 200,
-            }}
-          >
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", height: 200 }}>
             <CircularProgress />
           </Box>
         ) : filtered.length === 0 ? (
@@ -242,10 +237,10 @@ export default function Revenue() {
                       <TableCell>{row.room_type}</TableCell>
                       <TableCell>{row.room_number}</TableCell>
                       <TableCell>
-                        {new Date(row.check_in_date).toLocaleDateString("vi-VN")}
+                        {row.check_in_date ? new Date(row.check_in_date).toLocaleDateString("vi-VN") : "-"}
                       </TableCell>
                       <TableCell>
-                        {new Date(row.check_out_date).toLocaleDateString("vi-VN")}
+                        {row.check_out_date ? new Date(row.check_out_date).toLocaleDateString("vi-VN") : "-"}
                       </TableCell>
                       <TableCell align="right">
                         {Number(row.total_amount).toLocaleString()} ₫
@@ -263,80 +258,39 @@ export default function Revenue() {
               </Table>
             </TableContainer>
 
+            {/* Summary */}
             {summary && (
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 2,
-                  flexWrap: "wrap",
-                  mt: 3,
-                  mb: 2,
-                }}
-              >
+              <Box sx={{ display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap", mt: 3, mb: 2 }}>
                 <Box sx={{ flex: 1, minWidth: 200 }}>
-                  <Typography
-                    variant="subtitle2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Tổng cộng
                   </Typography>
-                  <Typography
-                    variant="h5"
-                    fontWeight="bold"
-                    sx={{ color: "#3f51b5" }}
-                  >
-                    {Number(summary.total_amount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                    })}{" "}
-                    ₫
+                  <Typography variant="h5" fontWeight="bold" sx={{ color: "#3f51b5" }}>
+                    {Number(summary.total_amount).toLocaleString()} ₫
                   </Typography>
                 </Box>
 
                 <Box sx={{ flex: 1, minWidth: 200 }}>
-                  <Typography
-                    variant="subtitle2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Đặt cọc
                   </Typography>
-                  <Typography
-                    variant="h5"
-                    fontWeight="bold"
-                    sx={{ color: "#1a237e" }}
-                  >
-                    {Number(summary.deposit_amount).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                    })}{" "}
-                    ₫
+                  <Typography variant="h5" fontWeight="bold" sx={{ color: "#1a237e" }}>
+                    {Number(summary.deposit_amount).toLocaleString()} ₫
                   </Typography>
                 </Box>
 
                 <Box sx={{ flex: 1, minWidth: 200 }}>
-                  <Typography
-                    variant="subtitle2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
+                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                     Còn lại
                   </Typography>
-                  <Typography
-                    variant="h5"
-                    fontWeight="bold"
-                    sx={{ color: "red" }}
-                  >
-                    {Number(summary.remaining_amount).toLocaleString(
-                      undefined,
-                      { minimumFractionDigits: 2 }
-                    )}{" "}
-                    ₫
+                  <Typography variant="h5" fontWeight="bold" sx={{ color: "red" }}>
+                    {Number(summary.remaining_amount).toLocaleString()} ₫
                   </Typography>
                 </Box>
               </Box>
             )}
 
+            {/* Pagination */}
             <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
               <Pagination
                 count={totalPage}
@@ -347,23 +301,6 @@ export default function Revenue() {
                 showLastButton
                 siblingCount={1}
                 boundaryCount={0}
-                sx={{
-                  "& .MuiPaginationItem-root": {
-                    color: "#666",
-                    fontWeight: 500,
-                    borderRadius: "8px",
-                    border: "none",
-                  },
-                  "& .MuiPaginationItem-page.Mui-selected": {
-                    backgroundColor: "#5B3EFF",
-                    color: "#fff",
-                    fontWeight: "bold",
-                  },
-                  "& .MuiPaginationItem-previousNext, & .MuiPaginationItem-firstLast":
-                    {
-                      color: "#999",
-                    },
-                }}
               />
             </Box>
           </>

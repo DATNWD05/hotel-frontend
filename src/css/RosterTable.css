@@ -1,24 +1,32 @@
+/* Container */
 .roster-container {
   background: linear-gradient(to bottom, #e6f0fa, #ffffff);
   border-radius: 16px;
-  padding: 20px;
+  padding: 16px; /* giảm padding để gọn hơn */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
+  font-size: 13px; /* thu nhỏ font mặc định */
 }
 
+/* Title */
 .roster-title {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   color: #1e3a8a;
   text-align: left;
+  font-size: 18px; /* nhỏ hơn mặc định */
+  font-weight: 600;
 }
 
+/* Stats */
 .stats-container {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .stat-box {
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  padding: 12px !important;
+  font-size: 13px;
 }
 
 .stat-box:hover {
@@ -26,71 +34,78 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+/* Toolbar */
 .toolbar-container {
   background: #fff;
-  padding: 12px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 8px 12px; /* giảm padding */
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
-}
-
-.nav-buttons, .export-buttons {
-  transition: all 0.3s ease;
+  font-size: 13px;
 }
 
 .nav-button, .export-button {
-  border-radius: 20px !important;
-  padding: 6px 16px !important;
+  border-radius: 6px !important;
+  padding: 4px 12px !important; /* giảm kích thước nút */
+  font-size: 13px !important;
   transition: all 0.3s ease;
 }
 
-.nav-button:hover, .export-button:hover {
-  transform: scale(1.05);
+.nav-button {
+  color: #0b090e !important;
+  border-color: #c4b5fd !important;
+  font-weight: 600;
 }
 
 .search-field {
-  border-radius: 20px !important;
-  transition: all 0.3s ease;
+  border-radius: 16px !important;
+  font-size: 13px !important;
+  height: 36px;
 }
 
-.search-field:hover {
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
-}
-
+/* Table */
 .table-container {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  overflow: auto;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
+  font-size: 13px;
 }
 
+.table-container .MuiTableCell-root {
+  padding: 6px 8px !important; /* thu nhỏ padding cell */
+  font-size: 13px !important;
+}
+
+.table-container .MuiChip-root {
+  font-size: 11px !important;
+  height: 22px;
+}
+
+.table-container .MuiSelect-select {
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+}
+
+/* Hover effect */
 .table-row {
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
 }
 
 .table-row:hover {
-  background-color: #f1f5f9;
-  transform: scale(1.01);
+  background-color: #f8fafc;
 }
 
-.date-cell, .shift-cell {
-  padding: 8px !important;
-  transition: all 0.3s ease;
-}
-
+/* Shift select */
 .shift-select {
-  border-radius: 20px !important;
-  transition: all 0.3s ease;
+  border-radius: 16px !important;
+  transition: all 0.2s ease;
+  font-size: 12px !important;
+  height: 30px;
 }
-
-.shift-select:hover {
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+.css-1whjd5t-MuiTypography-root {
+    font-size: 14px !important;
 }
-.nav-button {
-  border-radius: 10px !important;
-  padding: 6px 16px !important;
-  transition: all 0.3s ease;
-  color: #0b090e !important;      /* <-- chỉnh màu chữ */
-  border-color: #c4b5fd !important;  /* chỉnh màu viền nếu muốn */
-  font-weight: 600;
+.css-6jr2zt-MuiTypography-root {
+    font-size: 14px !important;
 }

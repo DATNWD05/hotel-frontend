@@ -593,7 +593,7 @@ const Customer: React.FC = () => {
     <div className="customer-wrapper">
       <div className="customer-title">
         <Typography variant="body2" sx={{ color: "gray", mb: 1 }}>
-          Khách Hàng Danh sách
+          Khách Hàng {">"} Danh sách
         </Typography>
         <Box
           display="flex"
