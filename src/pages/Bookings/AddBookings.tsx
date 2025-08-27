@@ -1508,7 +1508,7 @@ export default function HotelBooking() {
                           handleBookingChange("is_hourly", value === "hourly")
                         }
                         options={[
-                          { value: "daily", label: "Theo ngày" },
+                          { value: "daily", label: "Theo đêm" },
                           { value: "hourly", label: "Theo giờ" },
                         ]}
                         placeholder="Chọn loại đặt phòng"

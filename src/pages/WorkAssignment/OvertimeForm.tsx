@@ -601,7 +601,7 @@
                   justifyContent="space-between"
                   alignItems="center"
                 >
-                  <Box display="flex" alignItems="center" gap={2}>
+                  <Box display="flex" alignItems="center" gap={2} pl={2}>
                     <Box
                       sx={{
                         backgroundColor: "#3b82f6",
@@ -615,10 +615,10 @@
                       <ScheduleIcon sx={{ color: "white", fontSize: 24 }} />
                     </Box>
                     <Box>
-                      <Typography variant="h5" component="h1" fontWeight={600}>
+                      <Typography variant="h5" component="h1" fontWeight={600} pt={3}>
                         Quản lý tăng ca
                       </Typography>
-                      <Typography variant="body2" color="textSecondary">
+                      <Typography variant="body2" color="textSecondary" pb={3}>
                         Hệ thống đăng ký và quản lý tăng ca nhân viên
                       </Typography>
                     </Box>
@@ -630,7 +630,7 @@
                       resetForm();
                       setIsModalOpen(true);
                     }}
-                    sx={{ backgroundColor: "#3b82f6" }}
+                    sx={{ backgroundColor: "#3b82f6" , marginRight: 3}}
                   >
                     Đăng ký tăng ca
                   </Button>
@@ -754,8 +754,8 @@
 
             {/* Data Table */}
             <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ padding: "10px 12px" }}>
+              <CardContent sx={{ mt: 1 }}>
+                <Typography variant="h6" gutterBottom sx={{ padding: "8px 12px" }}>
                   Danh sách đăng ký tăng ca
                 </Typography>
 
@@ -776,7 +776,7 @@
                     </Typography>
                   </Box>
                 ) : (
-                  <TableContainer component={Paper} variant="outlined">
+                  <TableContainer component={Paper} variant="outlined" >
                     <Table>
                       <TableHead>
                         <TableRow>

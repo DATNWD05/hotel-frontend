@@ -901,7 +901,7 @@ const ListBookings: React.FC = () => {
                 },
               }}
             >
-              + Thêm mới
+              + Đặt Phòng
             </Button>
           </Box>
         </Box>
