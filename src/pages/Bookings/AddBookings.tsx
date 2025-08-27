@@ -602,6 +602,8 @@ export default function HotelBooking() {
             formatDateTime(bookingData.checkInDate, true)
           );
           const checkOutDate = new Date(formatDateTime(value as string, false));
+          const now = new Date();
+
           if (checkOutDate <= checkInDate) {
             errors.booking.checkOutDate =
               "Thời gian trả phòng phải sau thời gian nhận phòng";

@@ -1104,20 +1104,22 @@ const BookingManagement = () => {
                     </div>
                   </div>
                   <div className="service-item-actions">
-                    <button
-                      title="Xóa dịch vụ"
-                      className="icon-btn icon-btn-danger"
-                      onClick={() =>
-                        handleOpenRemoveServiceDialog(
-                          room.id,
-                          service.service_id ??
-                            service.pivot?.service_id ??
-                            service.id
-                        )
-                      }
-                    >
-                      <Trash2 className="icon-small" />
-                    </button>
+                    {booking?.status !== "Checked-out" && (
+                      <button
+                        title="Xóa dịch vụ"
+                        className="icon-btn icon-btn-danger"
+                        onClick={() =>
+                          handleOpenRemoveServiceDialog(
+                            room.id,
+                            service.service_id ??
+                              service.pivot?.service_id ??
+                              service.id
+                          )
+                        }
+                      >
+                        <Trash2 className="icon-small" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
